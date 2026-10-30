@@ -1,0 +1,63 @@
+<!doctype html>
+<html lang="en">
+<head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Blackbox Apprentice · Discovery lab</title><link rel="stylesheet" href="/style.css"></head>
+<body>
+<aside class="sidebar">
+  <a class="brand" href="/" aria-label="Blackbox Apprentice home"><span class="brand-icon">▧</span><span>BLACKBOX<br><strong>APPRENTICE</strong></span></a>
+  <div class="nav-label">WORKSPACE</div>
+  <a class="nav active" href="#lab"><span>◈</span> Discovery lab <i>01</i></a>
+  <a class="nav" href="#evidence"><span>≡</span> Experiment ledger</a>
+  <a class="nav" href="/api/evidence" download><span>↗</span> Export evidence</a>
+  <div class="sidebar-note"><span class="little-dot"></span> OBSERVE. TEST. LEARN.<p>A device without a manual.<br>An apprentice with a method.</p></div>
+  <div class="sidebar-bottom">META AI HACKATHON <span>2026</span></div>
+</aside>
+<main id="lab">
+  <header><div class="breadcrumb">WORKSPACE <span>/</span> DISCOVERY LAB</div><div class="connection"><span class="little-dot"></span><span id="connection">Connecting</span></div></header>
+  <section class="heading"><div><div class="eyebrow">EXPERIMENTAL SYSTEM / 001</div><h1>Meet the unknown.</h1><p>Discover how a device works. One useful experiment at a time.</p></div><button id="reset" class="button subtle">↻ New device</button></section>
+  <div class="mode-banner"><span class="tag" id="device-mode">SIMULATION</span><span id="mode-detail">Rules are hidden in a separate process. The learner receives observations only.</span><span class="mode-end">36 possible mechanisms</span></div>
+  <section class="metrics" aria-label="Learning metrics">
+    <div class="metric"><span>EXPERIMENTS</span><strong id="experiments">00</strong><small>Every action recorded</small></div>
+    <div class="metric"><span>SURVIVING HYPOTHESES</span><strong id="hypotheses">36<span> / 36</span></strong><small id="model-status">Waiting for the first observation</small></div>
+    <div class="metric"><span>VERIFIED TASKS</span><strong id="tasks">00</strong><small id="revision-count">0 model revisions</small></div>
+  </section>
+  <section class="workspace">
+    <article class="panel device-panel">
+      <div class="panel-head"><h2><span class="little-dot"></span> Device observatory</h2><span class="mono">BB–001 / LIVE STATE</span></div>
+      <div class="device-stage">
+        <div class="stage-grid"></div><span class="stage-label">OBSERVATION SURFACE</span>
+        <div class="device-box">
+          <div class="screw tl"></div><div class="screw tr"></div><div class="screw bl"></div><div class="screw br"></div>
+          <div class="device-brand">BLACKBOX <span>EXPERIMENT UNIT 01</span></div>
+          <div class="device-inside">
+            <div class="indicators"><div><span id="power-light" class="led green"></span><small>POWER</small></div><div><span id="direction-light" class="led amber"></span><small>AMBER</small></div></div>
+            <div class="motor-wrap"><div id="motor" class="motor"><span></span><span></span><span></span><b></b></div><small>DRIVE OUTPUT</small></div>
+          </div>
+          <div class="control-row"><div><div class="physical-button">A</div><small>CONTROL A</small></div><div><div class="physical-button">B</div><small>CONTROL B</small></div><div><div class="physical-button">C</div><small>CONTROL C</small></div></div>
+          <div class="device-footer"><span>NO MANUAL. NO RULE ACCESS.</span><span>● ● ●</span></div>
+        </div>
+        <div class="state-readout"><span><i id="power-dot"></i> Power <b id="power-state">OFF</b></span><span><i id="amber-dot"></i> Amber <b id="amber-state">OFF</b></span><span><i id="motor-dot"></i> Motor <b id="motor-state">STOPPED</b></span></div>
+      </div>
+      <div class="experiment-controls"><div><span class="eyebrow">EXPERIMENT PLANNER</span><select id="provider" aria-label="Experiment planner"><option value="local">Local · information gain</option><option value="meta">Muse Spark · Meta API</option></select></div><div class="control-buttons"><button id="step" class="button subtle">Single step ↗</button><button id="explore" class="button primary">▶ Start discovery</button></div></div>
+    </article>
+    <article class="panel reasoning-panel">
+      <div class="panel-head"><h2>Learning notebook</h2><span class="tag neutral" id="phase">UNEXPLORED</span></div>
+      <div class="notebook-body">
+        <div class="eyebrow">NEXT USEFUL EXPERIMENT</div><div id="next-action" class="next-action">Press <span>—</span></div>
+        <p id="reason">The apprentice will compare predicted outcomes and choose a test that separates its hypotheses.</p>
+        <div class="information"><span>EXPECTED INFORMATION</span><strong id="gain">— bits</strong></div><div class="gain-track"><div id="gain-bar"></div></div>
+        <div class="model-heading"><span class="eyebrow">WHAT THE EVIDENCE SUPPORTS</span><span id="candidate-count" class="mono">36 candidates</span></div>
+        <div id="rules" class="rules"></div>
+        <div class="confidence-note">Claims are limited to the declared family of mechanisms. A single surviving hypothesis is not proof of general understanding.</div>
+      </div>
+    </article>
+  </section>
+  <section class="lower-grid">
+    <article class="panel task-panel"><div class="panel-head"><h2>Put learning to work</h2><span class="mono">PLAN → ACT → VERIFY</span></div><div class="task-body"><p>Set an outcome. Execute a plan supported by the learned model, then check the device.</p><div class="task-actions"><select id="goal" aria-label="Task goal"><option value="run">Run the motor</option><option value="stop">Stop the motor</option><option value="shutdown">Power down</option><option value="signal">Amber on · motor stopped</option></select><button id="task" class="button primary">Run task ↗</button></div><div id="task-result" class="result-box" role="status">No task executed yet.</div></div></article>
+    <article class="panel recovery-panel"><div class="panel-head"><h2>Expect the unexpected</h2><span class="tag neutral">RECOVERY TEST</span></div><div class="task-body"><p>Change the hidden mechanism without telling the learner. Test its predictions and watch it revise.</p><div class="recovery-actions"><button id="mutate" class="button subtle">⇄ Change hidden rules</button><button id="verify" class="button subtle">Check & relearn ↗</button></div><div id="recovery-result" class="result-box" role="status">The learner gets no rule-change notification.</div></div></article>
+  </section>
+  <section id="evidence" class="panel evidence-panel"><div class="panel-head"><h2>Experiment ledger <span id="ledger-count" class="count">0</span></h2><a class="text-link" href="/api/evidence" download>Export session JSON ↗</a></div><div class="ledger-scroll"><table><thead><tr><th>STEP</th><th>DECISION / ACTION</th><th>OBSERVED OUTCOME</th><th>HYPOTHESES</th><th>RESULT</th></tr></thead><tbody id="ledger"></tbody></table></div><div id="empty" class="empty-ledger"><span>⌁</span><strong>Every discovery starts with a question.</strong><p>Start discovery to record the first experiment.</p></div></section>
+  <footer><span>BLACKBOX APPRENTICE <b>v0.1</b></span><span>Evidence before confidence.</span><span id="session-id"></span></footer>
+</main>
+<div id="toast" class="toast" role="status" aria-live="polite" hidden></div>
+<script src="/app.js" type="module"></script>
+</body></html>
