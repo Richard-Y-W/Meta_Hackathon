@@ -1,0 +1,99 @@
+{
+  "version": "ProtocolV1",
+  "protocolRevision": 1,
+  "suite": "pilot",
+  "status": "frozen before any meta-controller result",
+  "frozenAt": "2026-11-01",
+  "frozenAtCommit": "d8eb0ae",
+  "evidenceLevel": "exploratory development comparison (G4a); not a held-out evaluation",
+  "controllers": [
+    "priority",
+    "adaptive",
+    "meta"
+  ],
+  "repetitions": 2,
+  "episodeMs": 120000,
+  "orderSeed": 20261101,
+  "policy": {
+    "path": "fixtures/lifeline/policy-v1.json",
+    "sha256File": "7d62a65f5b13ca77ccb80b8ae26ea7159cc540c33380eb2ed691be17b22bf09c"
+  },
+  "cases": [
+    {
+      "caseId": "p1-no-fault",
+      "path": "fixtures/lifeline/development/pilot/p1-no-fault.json",
+      "sha256": "0d3088f8dcd846bfe2bbca142855d8d627cd10575f02d0e7400b9af4c1edf79d",
+      "recoverable": true,
+      "noFault": true
+    },
+    {
+      "caseId": "p2-outage-adequate",
+      "path": "fixtures/lifeline/development/pilot/p2-outage-adequate.json",
+      "sha256": "58ddf794eb395d24cfe863ee4528ccf35c02213b79fdb74e53d568f9de792464",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p3-outage-competing",
+      "path": "fixtures/lifeline/development/pilot/p3-outage-competing.json",
+      "sha256": "65165e57fe9e5822215940a6d2043e20d35ea5dceac481b7e2d17b359bdb6dfa",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p4-capacity-drop",
+      "path": "fixtures/lifeline/development/pilot/p4-capacity-drop.json",
+      "sha256": "9d78c98b5530af371f6775dc80c8e539f5ed6995e2a8e7578151f28b9cbc7d2b",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p5-outage-then-backup-drop",
+      "path": "fixtures/lifeline/development/pilot/p5-outage-then-backup-drop.json",
+      "sha256": "ffc4f2967d59862a35fc532bfa339c15550a691ceb1f43816017dcd64aa3120a",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p6-gray-failure",
+      "path": "fixtures/lifeline/development/pilot/p6-gray-failure.json",
+      "sha256": "bc0dba240e0069e16ac2c628abe1cf2ba472ca606dd384ca76435352208cb8e9",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p7-stale-compound",
+      "path": "fixtures/lifeline/development/pilot/p7-stale-compound.json",
+      "sha256": "0347a817098621983980350c1b6bcbcf637540ebdc8854b3d51403f2834b013e",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "p8-partition",
+      "path": "fixtures/lifeline/development/pilot/p8-partition.json",
+      "sha256": "fd067eb3caa76a4160e87a71b3801b827cb51ba252f6a5ef792c796c7e2a76e2",
+      "recoverable": false,
+      "noFault": false
+    }
+  ],
+  "primaryOutcome": "on-time essential delivery over [first incident, 120 s), receipt-scored; p1 uses [20 s, 120 s)",
+  "secondaryOutcomes": [
+    "per-flow on-time",
+    "recovery time",
+    "background delivered fraction",
+    "retry amplification",
+    "actions proposed/rejected/confirmed",
+    "probe bytes",
+    "provider calls, latency, tokens, failures"
+  ],
+  "infrastructureInvalid": [
+    "host or worker crash before complete capture",
+    "corrupted offered manifest",
+    "controller-view audit finding (information leak)",
+    "run_incomplete from missing receiver capture"
+  ],
+  "infrastructureInvalidRule": "rerun the whole paired case for every controller; retain the original attempt",
+  "methodOutcomes": "model timeout or error, rejected proposals, partial actions and failed recovery are controller outcomes and stay in the population",
+  "analysis": "paired per-case differences (mean of repetitions); report every case; no improvement claim from this pilot beyond a labeled preliminary difference",
+  "selectionNote": "Cases p5-p7 were designed after observing that the adaptive baseline saturated dev-cascade-1, to probe conditions where measurement-driven control may be misled; p6 was revised twice so its declared mechanism (silent lossy link) holds. All revisions preceded any meta result. The suite is therefore biased toward baseline weaknesses and is exploratory."
+}

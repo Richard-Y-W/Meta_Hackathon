@@ -100,6 +100,8 @@ Freeze eight development cases for the first comparison:
 7. Compound failure with delayed telemetry.
 8. A partition that makes one essential service unreachable.
 
+**Revision 1 (frozen November 1, 2026, owner-approved, before any `meta` result):** the eight cases are fixed in `fixtures/lifeline/protocol-v1.json` as `fixtures/lifeline/development/pilot/p1`–`p8`. Case 6 (traffic surge) is replaced by a gray failure: both ends of r1-r2 stop reporting counters while the link drops 40% of packets, followed by the r0-r3 outage. Surge needs workload features that do not exist yet. Case 5 reduces r3-r4, the path the adaptive baseline moves to after the first outage, and case 7 adds a capacity drop after the telemetry gap. These cases were chosen after the adaptive baseline saturated `dev-cascade-1`, so the suite leans toward baseline weaknesses; it remains exploratory. Before the freeze the adaptive baseline gained one conventional rule: probe an alternative and move on persistent degradation that its capacity model cannot explain. Development checks on that baseline: p5 0.974, p6 0.994, p7 1.000.
+
 Run `priority`, `adaptive`, and `meta` twice per case: 48 episodes. At 120 seconds each, packet time alone is 96 minutes, excluding setup, deadline tails, provider preflight, and interruptions. This small pilot is exploratory development evidence. Do not interpret it as a powered population study.
 
 ### Held-out qualification
