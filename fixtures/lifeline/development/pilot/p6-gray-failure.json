@@ -270,12 +270,12 @@
   },
   "developmentNote": "bulk-field 6.5 Mbit/s chosen so failover onto r1-r2 exceeds 8 Mbit/s on the wire; confirm by packet measurement before freezing.",
   "scenarioId": "p6-gray-failure",
-  "note": "Gray failure: r2 stops reporting counters at 18 s; r1-r2 loses 40% of packets from 20 s with the link up; r0-r3 fails at 65 s, pushing dispatch-clinic onto the lossy ring by fast-failover.",
+  "note": "Gray failure: switch r1 stops reporting counters at 18 s and, from 20 s, drops 40% of packets on r1-r2 with the link up (the misbehaving device is the silent one); r0-r3 fails at 65 s, pushing dispatch-clinic onto the lossy ring by fast-failover.",
   "faults": [
     {
       "atMs": 18000,
       "kind": "counter_loss",
-      "switchId": "r2"
+      "switchId": "r1"
     },
     {
       "atMs": 20000,
