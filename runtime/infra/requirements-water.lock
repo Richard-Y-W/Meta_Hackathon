@@ -1,0 +1,19 @@
+# LIFELINE water worker environment (P08), CPython 3.12.15 (uv-managed, installed under .work/python) on Darwin arm64.
+# Install: UV_PYTHON_INSTALL_DIR=.work/python UV_CACHE_DIR=.work/cache/uv uv python install 3.12 && uv venv --python 3.12 --managed-python .work/environments/water && VIRTUAL_ENV=.work/environments/water uv pip install -r runtime/infra/requirements-water.lock
+# six is an undeclared runtime dependency of wntr 1.5.0.
+contourpy==1.4.0
+cycler==0.12.1
+fonttools==4.68.0
+kiwisolver==1.5.1
+matplotlib==3.11.2
+networkx==3.7
+numpy==2.5.4
+packaging==26.3
+pandas==3.1.0
+pillow==13.0.0
+pyparsing==3.3.3
+python-dateutil==4.0.0
+scipy==1.18.1
+six==1.17.0
+tzdata==2026.6
+wntr==1.5.0

@@ -18,7 +18,8 @@
     "link.state": "state",
     "time.duration": "us",
     "comms.messages": "msg",
-    "power.switch_state": "state"
+    "power.switch_state": "state",
+    "water.level": "m"
   },
   "conversions": {
     "kW->W": 1000,

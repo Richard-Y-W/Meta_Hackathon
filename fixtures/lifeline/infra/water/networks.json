@@ -1,0 +1,185 @@
+{
+ "schemaVersion": "lifeline.water-network.v1",
+ "note": "Essential designations, service pressures and envelopes are scenario engineering assumptions, not public-health or utility standards. Delivered volume measures hydraulic delivery only; no water-quality model is qualified.",
+ "networks": {
+  "analytic": {
+   "schemaVersion": "lifeline.water-network.v1",
+   "networkId": "analytic-tank-v1",
+   "inp": "analytic.inp",
+   "provenance": "hand-built LIFELINE fixture (P08)",
+   "hydraulicStepS": 60,
+   "durationS": 86400,
+   "demandModel": {
+    "type": "PDA",
+    "requiredPressureM": 15.0,
+    "minimumPressureM": 0.0,
+    "exponent": 0.5
+   },
+   "essentialNodes": [
+    "JD"
+   ],
+   "consumers": [
+    "JD",
+    "JX"
+   ],
+   "actuators": {
+    "pumps": [
+     "PU1"
+    ],
+    "links": [
+     "P3"
+    ]
+   },
+   "sensors": [
+    {
+     "id": "pr-JD",
+     "assetId": "JD",
+     "metric": "water.pressure"
+    },
+    {
+     "id": "lv-T1",
+     "assetId": "T1",
+     "metric": "water.level"
+    },
+    {
+     "id": "fl-PU1",
+     "assetId": "PU1",
+     "metric": "water.flow"
+    },
+    {
+     "id": "st-PU1",
+     "assetId": "PU1",
+     "metric": "link.state"
+    },
+    {
+     "id": "st-P3",
+     "assetId": "P3",
+     "metric": "link.state"
+    }
+   ],
+   "limits": {
+    "servicePressureM": 15.0
+   },
+   "envelope": {
+    "demandScale": [
+     0,
+     5
+    ],
+    "emitterM3sPerSqrtM": [
+     0,
+     0.01
+    ]
+   },
+   "tolerances": {
+    "volumeM3": 0.001,
+    "flowM3s": 1e-07,
+    "timeS": 60,
+    "levelM": 0.0001,
+    "note": "levelM: EPANET reports an emptied tank about 9e-6 m above its minimum; a tank within levelM of its minimum is empty"
+   }
+  },
+  "reference": {
+   "schemaVersion": "lifeline.water-network.v1",
+   "networkId": "epanet-net3-v1",
+   "inp": "reference.inp",
+   "provenance": "see provenance.json",
+   "hydraulicStepS": 300,
+   "durationS": 172800,
+   "demandModel": {
+    "type": "PDA",
+    "requiredPressureM": 14.0,
+    "minimumPressureM": 0.0,
+    "exponent": 0.5
+   },
+   "essentialNodes": [
+    "109",
+    "101",
+    "119"
+   ],
+   "consumers": null,
+   "actuators": {
+    "pumps": [
+     "10",
+     "335"
+    ],
+    "links": [
+     "20",
+     "40",
+     "50",
+     "330"
+    ]
+   },
+   "sensors": [
+    {
+     "id": "pr-109",
+     "assetId": "109",
+     "metric": "water.pressure"
+    },
+    {
+     "id": "pr-101",
+     "assetId": "101",
+     "metric": "water.pressure"
+    },
+    {
+     "id": "pr-119",
+     "assetId": "119",
+     "metric": "water.pressure"
+    },
+    {
+     "id": "lv-1",
+     "assetId": "1",
+     "metric": "water.level"
+    },
+    {
+     "id": "lv-2",
+     "assetId": "2",
+     "metric": "water.level"
+    },
+    {
+     "id": "lv-3",
+     "assetId": "3",
+     "metric": "water.level"
+    },
+    {
+     "id": "fl-10",
+     "assetId": "10",
+     "metric": "water.flow"
+    },
+    {
+     "id": "fl-335",
+     "assetId": "335",
+     "metric": "water.flow"
+    },
+    {
+     "id": "st-10",
+     "assetId": "10",
+     "metric": "link.state"
+    },
+    {
+     "id": "st-335",
+     "assetId": "335",
+     "metric": "link.state"
+    }
+   ],
+   "limits": {
+    "servicePressureM": 14.0
+   },
+   "envelope": {
+    "demandScale": [
+     0,
+     3
+    ],
+    "emitterM3sPerSqrtM": [
+     0,
+     0.01
+    ]
+   },
+   "tolerances": {
+    "volumeM3": 0.01,
+    "flowM3s": 1e-06,
+    "timeS": 300,
+    "levelM": 0.0001
+   }
+  }
+ }
+}

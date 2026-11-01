@@ -1,0 +1,2 @@
+# EPANET input files are pinned by SHA-256 (fixtures/lifeline/infra/water/provenance.json): keep their exact bytes.
+fixtures/lifeline/infra/water/*.inp -text -whitespace

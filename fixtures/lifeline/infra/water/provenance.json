@@ -1,0 +1,20 @@
+{
+ "schemaVersion": "lifeline.water-provenance.v1",
+ "analytic.inp": {
+  "sha256": "78510b505f5892c40b5a2d5ddc18602ed82763314e8f31f221c72c40f643169e",
+  "source": "hand-built with wntr.network.WaterNetworkModel and written by wntr.network.write_inpfile(units='LPS')",
+  "license": "project fixture"
+ },
+ "reference.inp": {
+  "sha256": "ea3e825c4fef0b5cba47fb06301bc85253f18b6364dc96c44d9fb492c40faa52",
+  "source": "EPANET 2 example network 3 (Net3), US EPA; copied unmodified from wntr 1.5.0 wntr/library/networks/Net3.inp",
+  "license": "US Government work (EPANET examples, public domain); WNTR is Revised BSD",
+  "units": "GPM / US customary in the file; the plant converts to SI at load",
+  "modifications": "none to the file; at load the plant switches demand to PDA with the declared pressures and sets hydraulic step 300 s and duration 48 h"
+ },
+ "assumptions": [
+  "Junctions 109, 101 and 119 (largest base demands) are designated essential consumers.",
+  "Required pressure 14 m (about 20 psi) and minimum pressure 0 m for pressure-driven demand.",
+  "Pump efficiency is EPANET's default (75%) unless the file declares one; electricity use is the EPANET pump energy."
+ ]
+}

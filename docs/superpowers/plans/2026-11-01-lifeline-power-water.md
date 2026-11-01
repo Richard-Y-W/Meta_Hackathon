@@ -67,13 +67,13 @@ Here `plant` is the adapter fixture implementing the design's lifecycle; `previe
 
 **Files:** Create `runtime/infra/water_wntr.py`, `runtime/infra/tests/test_water.py`, `src/lifeline/domains/water.mjs`, `test/lifeline/infra/water-adapter.test.mjs`, `fixtures/lifeline/infra/water/analytic.inp`, `fixtures/lifeline/infra/water/reference.inp`, `fixtures/lifeline/infra/water/provenance.json`. Extend `checkpoints.py` with backend-specific state.
 
-- [ ] Choose and pin the hydraulic backend after testing pressure-dependent shortage behavior, pump controls, tanks, leak/failure representation, restart and observation sampling.
-- [ ] RED: a pump outage must affect delivered demand or storage according to the equations; an isolated demand node cannot receive its requested demand by accounting convention.
-- [ ] GREEN: implement observations and measurements in canonical m, m3, m3/s and declared energy units. Use actual pressure-dependent supply for shortage scoring.
-- [ ] Test a tank's mass balance, reserve depletion time, closed valve, leak, pump unavailable, low-pressure service and zero demand. Compare a simple constant-flow depletion case against an analytic calculation.
-- [ ] Demonstrate a decision at an intermediate time and reproduce uninterrupted simulation from a checkpoint. Include tank levels, controls, elapsed time and any quality state.
-- [ ] If native stepping/restart is unsuitable, implement replay from the initial state plus the complete action history and verify equivalence; charge its computational cost. Reject unsupported closed-loop claims if neither method qualifies.
-- [ ] Retain numerical-tolerance and step-size sensitivity results; solver errors and missing capture remain explicit.
+- [x] Choose and pin the hydraulic backend after testing pressure-dependent shortage behavior, pump controls, tanks, leak/failure representation, restart and observation sampling.
+- [x] RED: a pump outage must affect delivered demand or storage according to the equations; an isolated demand node cannot receive its requested demand by accounting convention.
+- [x] GREEN: implement observations and measurements in canonical m, m3, m3/s and declared energy units. Use actual pressure-dependent supply for shortage scoring.
+- [x] Test a tank's mass balance, reserve depletion time, closed valve, leak, pump unavailable, low-pressure service and zero demand. Compare a simple constant-flow depletion case against an analytic calculation.
+- [x] Demonstrate a decision at an intermediate time and reproduce uninterrupted simulation from a checkpoint. Include tank levels, controls, elapsed time and any quality state.
+- [x] If native stepping/restart is unsuitable, implement replay from the initial state plus the complete action history and verify equivalence; charge its computational cost. Reject unsupported closed-loop claims if neither method qualifies.
+- [x] Retain numerical-tolerance and step-size sensitivity results; solver errors and missing capture remain explicit.
 
 **Behavioral specification:**
 
@@ -87,6 +87,8 @@ self.assertFalse(result["quality_model_qualified"])
 This tank control checks accounting; the reference network separately checks hydraulic pressure and pump behavior.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_water.py`; `node --test test/lifeline/infra/water-adapter.test.mjs`.
+
+**State (Nov 1):** `qualified` in [P08 run 0](../../trials/lifeline-infra-p08-run-0.md): EPANET 2.2 via WNTR 1.5.0, replay restart; the separate files `networks.json`, `requirements-water.lock` and `water_evidence.py` were added; `checkpoints.py` needed no backend-specific extension because the water state is the change history.
 
 **Gate:** Distribution hydraulics and closed-loop state handling qualify. Hydraulic delivery alone does not establish potable-water quality or treatment-plant control.
 
