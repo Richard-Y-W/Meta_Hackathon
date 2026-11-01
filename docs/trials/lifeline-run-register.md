@@ -11,7 +11,7 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P02: fresh v2 cases and frozen protocol; adaptive, priority, repaired meta, model-disabled meta. Then P03–P05, then P06–P10. |
+| Next task | Finish P02 (v2 comparison running in the `lifeline` guest), freeze the P04 scheduling budget, P03 live adapter run; continue P07–P10 on the host infra environment. |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
 | Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
@@ -29,8 +29,8 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 
 | New phase | State | Next evidence |
 | --- | --- | --- |
-| P00–P05 foundation / Q1 | Active: P00, P01 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md)) | P02 communications v2 comparison |
-| P06–P10 power and water / Q2 | Planned | Domain solver/control/forecast qualification |
+| P00–P05 foundation / Q1 | Active: P00, P01, P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [P05](lifeline-infra-p05-run-0.md)); P03 active ([P03](lifeline-infra-p03-run-0.md)); P04 kernel built, scheduling budget pending P02 data | P02 communications v2 comparison (running); P03 live adapter run |
+| P06–P10 power and water / Q2 | Active: P06 qualified ([P06](lifeline-infra-p06-run-0.md): pandapower adapter, restart/fork, CIGRE MV reference run) | P07 electrical control and Grid2Op profile; P08 water adapter |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |

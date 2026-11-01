@@ -1,0 +1,231 @@
+{
+  "schemaVersion": "lifeline.power-network.v1",
+  "networkId": "cigre-mv-der-v1",
+  "provenance": {
+    "source": "CIGRE Task Force C6.04.02, Benchmark Systems for Network Integration of Renewable and Distributed Energy Resources, CIGRE Technical Brochure 575 (2014): European medium-voltage benchmark network",
+    "implementation": "pandapower.networks.create_cigre_network_mv(with_der='all'), pandapower 3.2.2 (BSD-3-Clause)",
+    "builtNetworkSha256": "f742f489c1e9f9b56ef7fb9ffd9420288b85d5120e06ae72bd7af0cc7fa15f28",
+    "builtNetworkHashMethod": "sha256 of canonical JSON of bus/line/trafo/switch/load/sgen/storage/ext_grid tables (pandas orient=split, 15 digits)",
+    "assumptions": [
+      "Essential designations are scenario assumptions: CI3 emergency operations centre, CI7 water pumping station, CI9 hospital.",
+      "Battery energy capacities are not given by the benchmark builder; 4-hour duration at rated power and 50% initial energy are scenario assumptions. Builder charging set-points are replaced by an explicit zero command.",
+      "Voltage band 0.90-1.10 pu and 100% thermal loading are scenario engineering limits, not equipment ratings; the unfaulted benchmark operates near 0.945 pu.",
+      "The 120 s tie-closure delay stands in for fault location and manual switching; it is not a measured utility response time."
+    ]
+  },
+  "builder": {
+    "function": "pandapower.networks.create_cigre_network_mv",
+    "args": {
+      "with_der": "all"
+    }
+  },
+  "frequencyHz": 50,
+  "defaultStepUs": 5000000,
+  "assetMap": {
+    "buses": {
+      "bus-0": "Bus 0",
+      "bus-1": "Bus 1",
+      "bus-2": "Bus 2",
+      "bus-3": "Bus 3",
+      "bus-4": "Bus 4",
+      "bus-5": "Bus 5",
+      "bus-6": "Bus 6",
+      "bus-7": "Bus 7",
+      "bus-8": "Bus 8",
+      "bus-9": "Bus 9",
+      "bus-10": "Bus 10",
+      "bus-11": "Bus 11",
+      "bus-12": "Bus 12",
+      "bus-13": "Bus 13",
+      "bus-14": "Bus 14"
+    },
+    "lines": {
+      "line-1-2": "Line 1-2",
+      "line-2-3": "Line 2-3",
+      "line-3-4": "Line 3-4",
+      "line-4-5": "Line 4-5",
+      "line-5-6": "Line 5-6",
+      "line-7-8": "Line 7-8",
+      "line-8-9": "Line 8-9",
+      "line-9-10": "Line 9-10",
+      "line-10-11": "Line 10-11",
+      "line-3-8": "Line 3-8",
+      "line-12-13": "Line 12-13",
+      "line-13-14": "Line 13-14",
+      "line-6-7": "Line 6-7",
+      "line-11-4": "Line 11-4",
+      "line-14-8": "Line 14-8"
+    },
+    "switches": {
+      "sw-S1": "S1",
+      "sw-S2": "S2",
+      "sw-S3": "S3"
+    },
+    "loads": {
+      "load-r1": "Load R1",
+      "load-r3": "Load R3",
+      "load-r4": "Load R4",
+      "load-r5": "Load R5",
+      "load-r6": "Load R6",
+      "load-r8": "Load R8",
+      "load-r10": "Load R10",
+      "load-r11": "Load R11",
+      "load-r12": "Load R12",
+      "load-r14": "Load R14",
+      "load-ci1": "Load CI1",
+      "load-ci3": "Load CI3",
+      "load-ci7": "Load CI7",
+      "load-ci9": "Load CI9",
+      "load-ci10": "Load CI10",
+      "load-ci12": "Load CI12",
+      "load-ci13": "Load CI13",
+      "load-ci14": "Load CI14"
+    },
+    "sources": {
+      "grid-hv": {
+        "index": 0
+      }
+    },
+    "storage": {
+      "bess-1": "Battery 1",
+      "bess-2": "Battery 2"
+    },
+    "generators": {}
+  },
+  "actuators": [
+    "sw-S1",
+    "sw-S2",
+    "sw-S3"
+  ],
+  "essentialLoads": [
+    "load-ci3",
+    "load-ci7",
+    "load-ci9"
+  ],
+  "storageState": {
+    "bess-1": {
+      "capacityJ": 8640000000,
+      "energyJ": 4320000000,
+      "pMaxW": 600000
+    },
+    "bess-2": {
+      "capacityJ": 2880000000,
+      "energyJ": 1440000000,
+      "pMaxW": 200000
+    }
+  },
+  "sensors": [
+    {
+      "id": "v-bus-3",
+      "assetId": "bus-3",
+      "metric": "power.voltage"
+    },
+    {
+      "id": "v-bus-7",
+      "assetId": "bus-7",
+      "metric": "power.voltage"
+    },
+    {
+      "id": "v-bus-9",
+      "assetId": "bus-9",
+      "metric": "power.voltage"
+    },
+    {
+      "id": "v-bus-14",
+      "assetId": "bus-14",
+      "metric": "power.voltage"
+    },
+    {
+      "id": "p-ci3",
+      "assetId": "load-ci3",
+      "metric": "power.active"
+    },
+    {
+      "id": "p-ci7",
+      "assetId": "load-ci7",
+      "metric": "power.active"
+    },
+    {
+      "id": "p-ci9",
+      "assetId": "load-ci9",
+      "metric": "power.active"
+    },
+    {
+      "id": "ld-line-1-2",
+      "assetId": "line-1-2",
+      "metric": "power.loading"
+    },
+    {
+      "id": "ld-line-14-8",
+      "assetId": "line-14-8",
+      "metric": "power.loading"
+    },
+    {
+      "id": "st-s1",
+      "assetId": "sw-S1",
+      "metric": "power.switch_state"
+    },
+    {
+      "id": "st-s2",
+      "assetId": "sw-S2",
+      "metric": "power.switch_state"
+    },
+    {
+      "id": "st-s3",
+      "assetId": "sw-S3",
+      "metric": "power.switch_state"
+    },
+    {
+      "id": "e-bess-1",
+      "assetId": "bess-1",
+      "metric": "energy.stored"
+    }
+  ],
+  "limits": {
+    "vmPu": [
+      0.9,
+      1.1
+    ],
+    "maxLoading": 1.0
+  },
+  "envelope": {
+    "vmPu": [
+      0.5,
+      1.5
+    ],
+    "loadScale": [
+      0,
+      2
+    ],
+    "maxIterations": 30,
+    "stepUs": [
+      100000,
+      60000000
+    ]
+  },
+  "tolerances": {
+    "voltagePu": 1e-09,
+    "powerW": 0.001,
+    "energyJ": 1.0
+  },
+  "scenario": {
+    "durationUs": 600000000,
+    "faults": [
+      {
+        "faultId": "trip-2-3",
+        "atUs": 60000000,
+        "type": "line_trip",
+        "assetId": "line-2-3"
+      }
+    ],
+    "conventionalRestoration": {
+      "atUs": 180000000,
+      "capabilityId": "power.set_switch",
+      "parameters": {
+        "switchId": "sw-S1",
+        "closed": true
+      },
+      "basis": "conventional manual tie closure 120 s after the trip; line 2-3 is already isolated by its own protection"
+    }
+  }
+}

@@ -20,13 +20,13 @@ The first fixtures are small enough to inspect by hand. Qualification then uses 
 
 **Files:** Create `runtime/infra/protocol.py`, `runtime/infra/power_pandapower.py`, `runtime/infra/checkpoints.py`, `runtime/infra/tests/test_power.py`, `test/lifeline/infra/power-adapter.test.mjs`, `src/lifeline/domains/power.mjs`, `fixtures/lifeline/infra/power/analytic.json`, `fixtures/lifeline/infra/power/reference.json`, `runtime/infra/requirements.lock`.
 
-- [ ] Implement a capability spike: initialize, solve, observe, change one admitted load/switch, advance, checkpoint, restore, and fork. Record timings and complete state required for repeatability, including storage and controller memory.
-- [ ] RED: a disconnected critical load must create unserved demand; a nonconverged solve cannot report full service; a stale command cannot switch a changed topology.
-- [ ] GREEN: return canonical W/Wh or J, V/per-unit with declared base, current/loading and timestamps. Expose only declared sensors. Private scoring reads actual supplied load independently.
-- [ ] Test a simple known-flow case, AC balance including losses, voltage/thermal bounds, islanded unsupplied loads, storage energy conservation, and response to unavailable generation.
-- [ ] Compare restored/forked rollouts with an uninterrupted reference within predeclared tolerances; test that a preview cannot mutate the live plant or read future faults.
-- [ ] Fail explicitly outside the admitted numerical/model envelope. Distinguish lack of a feasible operating point from solver failure using retained diagnostics.
-- [ ] Retain one reference-network run with source provenance and measurements checked independently of the controller.
+- [x] Implement a capability spike: initialize, solve, observe, change one admitted load/switch, advance, checkpoint, restore, and fork. Record timings and complete state required for repeatability, including storage and controller memory.
+- [x] RED: a disconnected critical load must create unserved demand; a nonconverged solve cannot report full service; a stale command cannot switch a changed topology.
+- [x] GREEN: return canonical W/Wh or J, V/per-unit with declared base, current/loading and timestamps. Expose only declared sensors. Private scoring reads actual supplied load independently.
+- [x] Test a simple known-flow case, AC balance including losses, voltage/thermal bounds, islanded unsupplied loads, storage energy conservation, and response to unavailable generation.
+- [x] Compare restored/forked rollouts with an uninterrupted reference within predeclared tolerances; test that a preview cannot mutate the live plant or read future faults.
+- [x] Fail explicitly outside the admitted numerical/model envelope. Distinguish lack of a feasible operating point from solver failure using retained diagnostics.
+- [x] Retain one reference-network run with source provenance and measurements checked independently of the controller.
 
 **Behavioral specification:**
 
@@ -40,6 +40,8 @@ self.assertGreater(preview["essential_unserved_j"], 0)
 Here `plant` is the adapter fixture implementing the design's lifecycle; `preview` returns a result record and never an execution receipt.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_power.py`; `node --test test/lifeline/infra/power-adapter.test.mjs`.
+
+**State (Nov 1):** `qualified` in [P06 run 0](../../trials/lifeline-infra-p06-run-0.md). pandapower 3.2.2 pinned; CIGRE MV reference run retained; infra environment is host-only until the guest is provisioned.
 
 **Gate:** Electrical behavior, scoring and restart/fork are qualified. Do not claim transient stability, black start or protection correctness from a steady-state solution.
 

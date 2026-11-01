@@ -1,0 +1,88 @@
+{
+  "schemaVersion": "lifeline.power-network.v1",
+  "note": "Hand-built networks small enough to check by hand. Limits, essential designations and envelopes are scenario engineering assumptions, not equipment ratings or standards. Line shunt capacitance is zero so the two-bus case has a closed-form solution.",
+  "networks": {
+    "feeder": {
+      "schemaVersion": "lifeline.power-network.v1",
+      "networkId": "analytic-feeder-v1",
+      "provenance": "hand-built LIFELINE fixture (P06)",
+      "frequencyHz": 60,
+      "baseMva": 1.0,
+      "defaultStepUs": 1000000,
+      "buses": [
+        { "id": "sub", "kv": 12.47 },
+        { "id": "n1", "kv": 12.47 },
+        { "id": "hosp", "kv": 12.47 },
+        { "id": "res", "kv": 12.47 },
+        { "id": "sub-b", "kv": 12.47 },
+        { "id": "clinic", "kv": 12.47 }
+      ],
+      "sources": [
+        { "id": "grid-a", "bus": "sub", "vmPu": 1.0 },
+        { "id": "grid-b", "bus": "sub-b", "vmPu": 1.0 }
+      ],
+      "lines": [
+        { "id": "L1", "from": "sub", "to": "n1", "lengthKm": 2.0, "rOhmPerKm": 0.3, "xOhmPerKm": 0.4, "maxIKa": 0.2 },
+        { "id": "L2", "from": "n1", "to": "hosp", "lengthKm": 1.0, "rOhmPerKm": 0.3, "xOhmPerKm": 0.4, "maxIKa": 0.1 },
+        { "id": "L3", "from": "n1", "to": "res", "lengthKm": 1.0, "rOhmPerKm": 0.3, "xOhmPerKm": 0.4, "maxIKa": 0.05 },
+        { "id": "L4", "from": "sub-b", "to": "hosp", "lengthKm": 3.0, "rOhmPerKm": 0.3, "xOhmPerKm": 0.4, "maxIKa": 0.1 }
+      ],
+      "switches": [
+        { "id": "sw-main", "bus": "n1", "line": "L2", "closed": true, "actuator": true },
+        { "id": "sw-tie", "bus": "hosp", "line": "L4", "closed": false, "actuator": true }
+      ],
+      "loads": [
+        { "id": "hospital", "bus": "hosp", "pW": 400000, "qVar": 80000, "essential": true },
+        { "id": "housing", "bus": "res", "pW": 600000, "qVar": 150000, "essential": false },
+        { "id": "clinic-load", "bus": "clinic", "pW": 150000, "qVar": 30000, "essential": true }
+      ],
+      "generators": [
+        { "id": "diesel-clinic", "bus": "clinic", "vmPu": 1.0, "slack": true, "pMaxW": 300000 }
+      ],
+      "storage": [
+        { "id": "bess-clinic", "bus": "clinic", "capacityJ": 180000000, "energyJ": 90000000, "pMaxW": 100000 }
+      ],
+      "sensors": [
+        { "id": "v-hosp", "assetId": "hosp", "metric": "power.voltage" },
+        { "id": "v-res", "assetId": "res", "metric": "power.voltage" },
+        { "id": "v-clinic", "assetId": "clinic", "metric": "power.voltage" },
+        { "id": "p-hospital", "assetId": "hospital", "metric": "power.active" },
+        { "id": "ld-L2", "assetId": "L2", "metric": "power.loading" },
+        { "id": "ld-L3", "assetId": "L3", "metric": "power.loading" },
+        { "id": "st-sw-main", "assetId": "sw-main", "metric": "power.switch_state" },
+        { "id": "st-sw-tie", "assetId": "sw-tie", "metric": "power.switch_state" },
+        { "id": "e-bess", "assetId": "bess-clinic", "metric": "energy.stored" }
+      ],
+      "limits": { "vmPu": [0.95, 1.05], "maxLoading": 1.0 },
+      "envelope": { "vmPu": [0.5, 1.5], "loadScale": [0, 8], "maxIterations": 30, "stepUs": [100000, 60000000] },
+      "tolerances": { "voltagePu": 1e-9, "powerW": 0.001, "energyJ": 1.0 }
+    },
+    "two-bus": {
+      "schemaVersion": "lifeline.power-network.v1",
+      "networkId": "analytic-two-bus-v1",
+      "provenance": "hand-built LIFELINE fixture (P06); closed-form receiving-end voltage",
+      "frequencyHz": 60,
+      "baseMva": 1.0,
+      "defaultStepUs": 1000000,
+      "buses": [
+        { "id": "sub", "kv": 12.47 },
+        { "id": "far", "kv": 12.47 }
+      ],
+      "sources": [ { "id": "grid", "bus": "sub", "vmPu": 1.0 } ],
+      "lines": [
+        { "id": "L", "from": "sub", "to": "far", "lengthKm": 10.0, "rOhmPerKm": 0.3, "xOhmPerKm": 0.4, "maxIKa": 1.0 }
+      ],
+      "switches": [],
+      "loads": [ { "id": "far-load", "bus": "far", "pW": 2000000, "qVar": 400000, "essential": true } ],
+      "generators": [],
+      "storage": [],
+      "sensors": [
+        { "id": "v-far", "assetId": "far", "metric": "power.voltage" },
+        { "id": "p-far", "assetId": "far-load", "metric": "power.active" }
+      ],
+      "limits": { "vmPu": [0.9, 1.1], "maxLoading": 1.0 },
+      "envelope": { "vmPu": [0.5, 1.5], "loadScale": [0, 8], "maxIterations": 30, "stepUs": [100000, 60000000] },
+      "tolerances": { "voltagePu": 1e-9, "powerW": 0.001, "energyJ": 1.0 }
+    }
+  }
+}

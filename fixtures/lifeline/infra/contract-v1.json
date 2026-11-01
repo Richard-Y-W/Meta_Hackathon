@@ -17,7 +17,8 @@
     "comms.on_time_fraction": "1",
     "link.state": "state",
     "time.duration": "us",
-    "comms.messages": "msg"
+    "comms.messages": "msg",
+    "power.switch_state": "state"
   },
   "conversions": {
     "kW->W": 1000,
