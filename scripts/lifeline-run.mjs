@@ -121,7 +121,7 @@ async function main() {
   const socketPath = `${runDir}/worker.sock`;
   mkdirSync(out, { recursive: true });
   const events = join(out, 'events.jsonl');
-  const record = (type, data) => appendFileSync(events, `${JSON.stringify({ type, atUnixMs: Date.now(), ...data })}\n`);
+  const record = (type, data) => appendFileSync(events, `${JSON.stringify({ ...data, type, atUnixMs: Date.now() })}\n`); // the event type is never overwritten by data
 
   execFileSync('sudo', ['-n', 'mkdir', '-p', runDir]);
   const worker = spawn('sudo', ['-n', 'python3', join(REPO, 'runtime/mininet/worker.py'), '--run-id', runId, '--socket', socketPath, '--dir', runDir, '--tag', opt.tag],

@@ -119,10 +119,19 @@ test('only one model call is outstanding at a time', async () => {
   release(ok(decision(['obs-60'], { type: 'retain_policy', reasonCode: 'wait' })));
 });
 
-test('stop with retain_policy is a recorded model decision and changes nothing', async () => {
+test('stop with retain_policy is recorded as a model decision without spending intervention budget', async () => {
   const { c } = controller([prompt => ok(JSON.stringify({ ...JSON.parse(decision(evidenceFrom(prompt), { type: 'retain_policy', reasonCode: 'transient' })), stop: true }))]);
   let intent = await persist(c);
-  for (let i = 0; i < 3 && !intent; i++) { await flush(); intent = c.decide(degradedState(33_500 + i * 500)); }
-  assert.equal(intent.source, 'meta');
-  assert.deepEqual(intent.actions.map(a => a.type), ['retain_policy']);
+  for (let i = 0; i < 3; i++) { await flush(); intent = intent ?? c.decide(degradedState(33_500 + i * 500)); }
+  assert.equal(intent, null);
+  const recorded = c.drainEvents().find(e => e.type === 'model_decision');
+  assert.equal(recorded.stop, true);
+  assert.equal(recorded.selected, 'h1');
+  assert.match(recorded.responseId, /^resp-/);
+});
+
+test('a persisting outage with no degraded flow is investigated once, not every interval', async () => {
+  const { c, calls } = controller([ok(decision(['obs-10'], { type: 'retain_policy', reasonCode: 'handled' })), ok(decision(['obs-10'], { type: 'retain_policy', reasonCode: 'handled' }))]);
+  for (let i = 0; i < 80; i++) { c.decide(state({ obs: { down: ['r0-r3'], seq: 10 + i }, nowMs: 30_000 + i * 500 })); await flush(); }
+  assert.equal(calls.length, 1);
 });

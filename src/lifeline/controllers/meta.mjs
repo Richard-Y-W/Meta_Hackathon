@@ -145,13 +145,24 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
       if (!observation.stale) {
         const down = Object.entries(observation.links).filter(([, l]) => l.state !== 'up').map(([id]) => id).sort();
         const trigger = [...down.map(d => `down:${d}`), ...adaptive.degradedFlows().map(f => `degraded:${f}`)].join(',');
-        if (trigger && !pending && !ready && mode === 'normal' && (trigger !== lastTrigger || nowMs - lastInvestigationAt > REINVESTIGATE_MS)) {
+        // Investigate a new incident once; re-investigate an unchanged one only while a flow stays degraded.
+        const stillDegraded = adaptive.degradedFlows().length > 0;
+        if (trigger && !pending && !ready && mode === 'normal' && (trigger !== lastTrigger || (stillDegraded && nowMs - lastInvestigationAt > REINVESTIGATE_MS))) {
           if ((remaining.modelCalls ?? 0) < 1) setMode('degraded', 'model_budget_exhausted', nowMs);
           else { lastTrigger = trigger; attempts = 0; investigate(state, trigger); }
         }
       }
       if (deterministic) return { ...deterministic, source: 'deterministic' };
-      if (ready && !observation.stale) { const r = ready; ready = null; return fromModel(r, state); }
+      if (ready && !observation.stale) {
+        const r = ready; ready = null;
+        if (r.decision.stop && r.decision.actions.every(a => a.type === 'retain_policy')) {
+          // A decision to change nothing is retained as evidence; it is not an intervention and spends no bundle.
+          attempts = 0;
+          events.push({ type: 'model_decision', stop: true, selected: r.decision.selected, hypotheses: r.decision.hypotheses, expected: r.decision.expected, actions: r.decision.actions, responseId: r.response.responseId, durationMs: r.response.durationMs, trigger: r.trigger, atMs: nowMs });
+          return null;
+        }
+        return fromModel(r, state);
+      }
       return null;
     },
   };

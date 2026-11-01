@@ -11,7 +11,9 @@ const ids = new Set(CONTROLS.evidenceIds);
 
 test('provider config reflects the measured G0 limits', () => {
   assert.equal(PROVIDER_CONFIG.maxOutputTokens, 4000);
-  assert.ok(PROVIDER_CONFIG.callTimeoutMs >= 12_000);
+  // Live pilot development: 3.2k-token prompts took 7.9-11.9 s and 2/7 calls exceeded 12 s.
+  assert.equal(PROVIDER_CONFIG.callTimeoutMs, 18_000);
+  assert.equal(PROVIDER_CONFIG.decisionDeadlineMs, 30_000);
   assert.equal(PROVIDER_CONFIG.endpoint, 'https://api.meta.ai/v1/responses');
 });
 

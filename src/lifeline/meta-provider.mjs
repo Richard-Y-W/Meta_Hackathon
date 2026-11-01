@@ -8,8 +8,9 @@ export const PROVIDER_CONFIG = Object.freeze({
   promptVersion: 'lifeline-investigator-v1',
   // Measured in G0 (runtime run 0): 4.7-8.1 s per call; a 1,500-token cap truncated 6/10 decisions.
   maxOutputTokens: 4000,
-  callTimeoutMs: 12_000,
-  decisionDeadlineMs: 20_000,
+  // Live development (meta-run-0): ~3.2k-token prompts took 7.9-11.9 s; 2/7 calls exceeded 12 s.
+  callTimeoutMs: 18_000,
+  decisionDeadlineMs: 30_000,
   callsPerDecision: 2,
   maxResponseChars: 32_000,
 });
