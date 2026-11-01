@@ -1,0 +1,31 @@
+# LIFELINE reference Linux runtime. Run with LIMA_HOME on the SSD-backed APFS image:
+#   LIMA_HOME=/Volumes/LifelineVM/lima limactl start --name=lifeline runtime/vm/lifeline-lima.yaml
+# /Volumes/LifelineVM is .work/vm/lifeline-apfs.sparsebundle attached with hdiutil; no state lives on the internal drive.
+minimumLimaVersion: "2.0.0"
+vmType: vz
+os: Linux
+arch: aarch64
+cpus: 4
+memory: 6GiB
+disk: 24GiB
+images:
+  - location: /Volumes/PortableSSD/Meta_Hackathon/.work/downloads/ubuntu-24.04-server-cloudimg-arm64.img
+    arch: aarch64
+    digest: sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e
+mountType: virtiofs
+mounts:
+  # Source is read-only in the guest; packet work runs from a copy on the native guest filesystem.
+  - location: /Volumes/PortableSSD/Meta_Hackathon
+    mountPoint: /mnt/lifeline-src
+    writable: false
+  # The only writable host path: retained guest evidence lands on the SSD.
+  - location: /Volumes/PortableSSD/Meta_Hackathon/artifacts/lifeline/guest
+    mountPoint: /mnt/lifeline-artifacts
+    writable: true
+containerd:
+  system: false
+  user: false
+ssh:
+  loadDotSSHPubKeys: false
+  forwardAgent: false
+timezone: UTC

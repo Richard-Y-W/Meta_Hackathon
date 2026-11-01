@@ -62,7 +62,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Legacy device demo | Implemented at baseline commit | Existing code and prior review; not a LIFELINE result |
 | Domain selection | Confirmed | Owner selected emergency communications |
 | Architecture and program | Written planning baseline | This document and linked design |
-| Linux/Mininet host | Unqualified | Task 1 |
+| Linux/Mininet host | Packet runtime qualified; provider not | [Runtime run 0](../../trials/lifeline-runtime-run-0.md); G0 needs a live Meta call |
 | Real packet service metrics | Not implemented | Tasks 2–4 |
 | Conventional network controller | Not implemented | Task 7 |
 | Bounded network execution | Not implemented | Tasks 5–6 |
@@ -185,11 +185,11 @@ Existing integration points are `server.mjs`, `package.json`, `.env.example`, an
 
 **Dependencies:** None. **Files:** Create `scripts/lifeline-preflight.py`, `scripts/lifeline-provider-smoke.mjs`, `test/lifeline/preflight.test.mjs`, and `docs/trials/lifeline-runtime-run-0.md`.
 
-- [ ] First verify the mounted SSD, physical project/output/cache locations, free space, and SSD backing for VM/container storage. Test absent-mount, attempted internal-drive fallback, and a symlink escaping the admitted storage roots; return `storage_unavailable` or `storage_path_rejected` before provisioning or writing project outputs.
-- [ ] Test capability reports for missing Linux namespaces, missing Mininet/OVS, unavailable worker privilege, absent API credentials, provider timeout, and a complete capability record.
-- [ ] Run the focused test RED; implement capability detection without silently installing dependencies or modifying host networking.
-- [ ] On the isolated Linux host, create a two-host test network, send actual packets, retain measured delivery, then remove only the run-owned network objects.
-- [ ] Record Linux/kernel, Python, Node, Mininet and OVS versions, VM resources, host load, and supported control operations. Freeze the measured environment in the run note.
+- [x] First verify the mounted SSD, physical project/output/cache locations, free space, and SSD backing for VM/container storage. Test absent-mount, attempted internal-drive fallback, and a symlink escaping the admitted storage roots; return `storage_unavailable` or `storage_path_rejected` before provisioning or writing project outputs.
+- [x] Test capability reports for missing Linux namespaces, missing Mininet/OVS, unavailable worker privilege, absent API credentials, provider timeout, and a complete capability record.
+- [x] Run the focused test RED; implement capability detection without silently installing dependencies or modifying host networking.
+- [x] On the isolated Linux host, create a two-host test network, send actual packets, retain measured delivery, then remove only the run-owned network objects.
+- [x] Record Linux/kernel, Python, Node, Mininet and OVS versions, VM resources, host load, and supported control operations. Freeze the measured environment in the run note.
 - [ ] Make a bounded live Meta request through a server-side credential. Retain model ID, response ID when available, duration, token usage when available, parser outcome, and a redacted payload hash.
 - [ ] Run ten sequential development requests to estimate latency and failure frequency before selecting final decision budgets. Do not claim a stable p95 from ten observations; retain the observed distribution.
 - [ ] Mark G0 qualified only when both packet execution and a real provider call work. An unavailable credential may leave packet work progressing, but cannot qualify Meta usage.
@@ -203,6 +203,8 @@ node --env-file-if-exists=.env scripts/lifeline-provider-smoke.mjs --out artifac
 ```
 
 Expected GREEN: capability checks report actual support; packet delivery is measured; the provider smoke has a real response or a precise recorded unavailable outcome. Only the successful outcomes satisfy G0.
+
+**State (Oct 31):** `active`. Storage, capability detection and packet execution qualified in [runtime run 0](../../trials/lifeline-runtime-run-0.md). Provider call and latency sample blocked on a missing `MODEL_API_KEY`. The packet test is `runtime/mininet/packet_smoke.py`; the VM definition is `runtime/vm/lifeline-lima.yaml`.
 
 ### Task 2: Freeze typed contracts and evidence identities
 

@@ -8,19 +8,19 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Planning complete; LIFELINE implementation has not started |
+| Current state | Task 1 active: storage and packet runtime qualified; provider blocked on credential |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 1: verify SSD storage paths, then qualify Linux packet runtime and Meta provider |
+| Next task | Task 2 (contracts), then Task 3 (metrics); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
-| Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d` |
+| Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
-| LIFELINE packet runs | 0 |
+| LIFELINE packet runs | 2 two-host qualification runs (Task 1); 0 scenario runs |
 | LIFELINE live Meta runs | 0 |
 | LIFELINE comparative results | None |
-| First platform dependency | Isolated Linux environment with working Mininet/OVS and required worker capability |
-| First provider dependency | Configured model access, measured latency and usage |
-| Next evidence artifact | `docs/trials/lifeline-runtime-run-0.md` during implementation |
+| Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
+| Provider dependency | **Blocked:** no `.env`/`MODEL_API_KEY`; smoke recorded `credential_missing` |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained |
 
 ## Initial evidence record
@@ -34,6 +34,8 @@
 | E005 | 2026-10-31 | Mininet documents Linux packet emulation | Linux runtime qualification precedes a real-network demo claim |
 | E006 | 2026-10-31 | Published deadline remains Nov 4 at 9 PM Eastern | Plan an approximately four-day release and a separate research program |
 | E007 | 2026-10-31 | Documentation checks passed for six documents, 17 local links, 19 task IDs, anchors, code fences, whitespace and unresolved markers; task dependencies reviewed and `git diff --check` passed | Planning artifacts are internally checked; no application or packet capability is thereby qualified |
+| E008 | 2026-10-31 | Lima VM on SSD-backed APFS image carried 200/200 real UDP messages; link, rate and flow controls read back; teardown clean | Packet half of G0 qualified; no scenario or comparison claim |
+| E009 | 2026-10-31 | No `MODEL_API_KEY` configured; smoke sent no request | Provider half of G0 blocked on owner-supplied credential |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -41,7 +43,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
-| G0 Runtime and provider | Planned | No run | Actual packet transfer and live provider response |
+| G0 Runtime and provider | Partial | [Runtime run 0](lifeline-runtime-run-0.md): packets qualified | Live provider response and ten-request distribution |
 | G1 Measurement and baseline | Planned | No run | Receiver-based scoring and competent recovery baseline |
 | G2 Bounded control | Planned | No run | Negative controls, real effects, partial-action recovery |
 | G3 AI prototype | Planned | No run | Real Meta decision with measured consequence |
@@ -63,6 +65,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 | D06 | 2026-10-31 | Structured beliefs in V1 | Bounded implementation and testable proposals | A documented failure requires a richer model |
 | D07 | 2026-10-31 | Separate hackathon and research gates | Remaining calendar and evidence requirements | Actual progress warrants broader release scope |
 | D08 | 2026-10-31 | Keep all project-controlled files and runtime data on PortableSSD | Owner storage requirement after moving the repository | Owner changes the storage requirement |
+| D09 | 2026-10-31 | Lima `vz` VM with `LIMA_HOME` on an SSD-stored APFS sparsebundle | ExFAT cannot hold Lima's Unix sockets; image keeps VM state on the SSD | Image mount or VM performance fails |
 
 ## Run-note format
 
@@ -109,3 +112,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | --- | --- | --- |
 | 2026-10-31 | Created design, living TDD program, evaluation protocol and run register | Planning artifacts; zero LIFELINE implementation or performance claims |
 | 2026-10-31 | Made SSD storage mandatory in the living plan, root agent instructions, design and README; reserved ignored `.work/` storage | Future provisioning must verify storage before creating project data |
+| 2026-10-31 | Task 1 runtime run 0: preflight and provider-smoke contracts (22 tests), Lima VM, two-host packet qualification | Packet runtime qualified; provider unqualified (no credential) |
