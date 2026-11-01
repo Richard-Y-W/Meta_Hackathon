@@ -86,7 +86,7 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
       pending = null;
       if (res.code !== 'ok') return fail(res.code, state.nowMs);
       const parsed = parseModelDecision(res.text, { evidenceIds: ids });
-      if (!parsed.ok) { events.push({ type: 'model_rejected', code: parsed.code, detail: parsed.detail, responseId: res.responseId }); return fail(parsed.detail, state.nowMs); }
+      if (!parsed.ok) { events.push({ type: 'model_rejected', code: parsed.code, detail: parsed.detail, responseId: res.responseId, text: String(res.text).slice(0, 4000) }); return fail(parsed.detail, state.nowMs); }
       ready = { decision: parsed.decision, response: res, trigger };
     }).catch(error => { pending = null; events.push({ type: 'provider_call', code: 'provider_unavailable', reason: 'client_error', detail: String(error?.message ?? error).slice(0, 200) }); fail('provider_unavailable', state.nowMs); });
   }

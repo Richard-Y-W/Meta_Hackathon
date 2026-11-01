@@ -10,7 +10,10 @@ const reply = (body, status = 200) => async () => ({ ok: status < 300, status, j
 const ids = new Set(CONTROLS.evidenceIds);
 
 test('provider config reflects the measured G0 limits', () => {
-  assert.equal(PROVIDER_CONFIG.maxOutputTokens, 4000);
+  // Investigator development: at 4,000 tokens and default effort, 2/2 gray-failure responses were cut off
+  // mid-reasoning; medium effort answered 3/3 in 3.6-7.0 s.
+  assert.equal(PROVIDER_CONFIG.maxOutputTokens, 6000);
+  assert.equal(PROVIDER_CONFIG.reasoningEffort, 'medium');
   // Live pilot development: 3.2k-token prompts took 7.9-11.9 s and 2/7 calls exceeded 12 s.
   assert.equal(PROVIDER_CONFIG.callTimeoutMs, 18_000);
   assert.equal(PROVIDER_CONFIG.decisionDeadlineMs, 30_000);
@@ -38,7 +41,8 @@ test('call: a valid envelope returns text, response ID, usage, duration and a pr
   assert.equal(r.responseId, 'resp-1');
   assert.deepEqual(r.usage, { input_tokens: 900, output_tokens: 1200 });
   assert.match(r.promptSha256, /^[0-9a-f]{64}$/);
-  assert.equal(JSON.parse(sent.body).max_output_tokens, 4000);
+  assert.equal(JSON.parse(sent.body).max_output_tokens, 6000);
+  assert.deepEqual(JSON.parse(sent.body).reasoning, { effort: 'medium' });
   assert.equal(sent.body.includes(KEY), false);
 });
 

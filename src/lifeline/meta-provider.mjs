@@ -7,7 +7,10 @@ export const PROVIDER_CONFIG = Object.freeze({
   endpoint: 'https://api.meta.ai/v1/responses',
   promptVersion: 'lifeline-investigator-v1',
   // Measured in G0 (runtime run 0): 4.7-8.1 s per call; a 1,500-token cap truncated 6/10 decisions.
-  maxOutputTokens: 4000,
+  // Investigator development: default effort at 4,000 tokens truncated 2/2 gray-failure decisions while
+  // reasoning; medium effort answered 3/3 in 3.6-7.0 s with 983-1,858 output tokens.
+  maxOutputTokens: 6000,
+  reasoningEffort: 'medium',
   // Live development (meta-run-0): ~3.2k-token prompts took 7.9-11.9 s; 2/7 calls exceeded 12 s.
   callTimeoutMs: 18_000,
   decisionDeadlineMs: 30_000,
@@ -17,8 +20,8 @@ export const PROVIDER_CONFIG = Object.freeze({
 
 const scrub = (text, key) => (key ? String(text).split(key).join('[redacted]') : String(text)).slice(0, 300);
 
-export async function callModel({ apiKey, prompt, model = process.env.META_MODEL || 'muse-spark-1.3', timeoutMs = PROVIDER_CONFIG.callTimeoutMs, maxOutputTokens = PROVIDER_CONFIG.maxOutputTokens, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
-  const body = JSON.stringify({ model, input: [{ role: 'user', content: prompt }], max_output_tokens: maxOutputTokens });
+export async function callModel({ apiKey, prompt, model = process.env.META_MODEL || 'muse-spark-1.3', timeoutMs = PROVIDER_CONFIG.callTimeoutMs, maxOutputTokens = PROVIDER_CONFIG.maxOutputTokens, reasoningEffort = PROVIDER_CONFIG.reasoningEffort, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
+  const body = JSON.stringify({ model, input: [{ role: 'user', content: prompt }], max_output_tokens: maxOutputTokens, reasoning: { effort: reasoningEffort } });
   const base = { model, promptVersion: PROVIDER_CONFIG.promptVersion, promptSha256: createHash('sha256').update(body).digest('hex'), startedAtUnixMs: Date.now() };
   if (!apiKey) return { ...base, code: 'provider_unavailable', reason: 'credential_missing', durationMs: 0 };
   const started = now();
