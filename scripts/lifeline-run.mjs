@@ -35,7 +35,7 @@ function args(argv) {
   const get = (name, fallback) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : fallback; };
   return {
     scenario: get('--scenario'), controller: get('--controller', 'fixed'), backend: get('--backend', 'mininet'),
-    out: get('--out'), script: get('--script'), policy: get('--policy', 'fixtures/lifeline/policy-v1.json'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
+    out: get('--out'), script: get('--script'), liveControl: get('--live-control'), policy: get('--policy', 'fixtures/lifeline/policy-v1.json'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
     tag: get('--tag', `lf${randomBytes(1).toString('hex')}`),
   };
 }
@@ -62,11 +62,12 @@ async function main() {
   const full = JSON.parse(readFileSync(resolve(opt.scenario), 'utf8'));
   const { faults: hiddenFaults, ...publicScenario } = full; // the schedule stays with the orchestrator
   const durationMs = opt.durationMs ?? full.durationMs;
-  const faults = hiddenFaults.filter(f => f.atMs < durationMs);
+  const faults = hiddenFaults.filter(f => f.atMs < durationMs); // operator faults from --live-control are appended
   const runId = `run-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${opt.tag}`;
   const runDir = `/run/lifeline/${runId}`;
   const socketPath = `${runDir}/worker.sock`;
   mkdirSync(out, { recursive: true });
+  writeFileSync(join(out, 'controller-view.jsonl'), ''); // appended per admitted observation
   const events = join(out, 'events.jsonl');
   const ledger = new Ledger(events); // append-only, hash-chained; the event type lives outside the data
   const record = (type, data) => ledger.append(type, data);
@@ -201,9 +202,34 @@ async function main() {
 
     const pending = faults.map(f => ({ ...f, due: startAtMs + f.atMs }));
     let lastSeq = 0;
-    const endAt = traffic.listenUntilMs + 500;
+    let endAt = traffic.listenUntilMs + 500;
+    // Live judge control: faults and stop requests appended by the HTTP layer; validated again here.
+    const OPERATOR_KINDS = { link_down: [], link_up: [], link_rate: ['bwMbit'], link_loss: ['lossPercent'] };
+    const linkIds = new Set(full.topology.links.map(l => l.linkId));
+    let controlOffset = 0;
+    const readControl = () => {
+      if (!opt.liveControl || !existsSync(opt.liveControl)) return [];
+      const text = readFileSync(opt.liveControl, 'utf8');
+      const fresh = text.slice(controlOffset);
+      const complete = fresh.slice(0, fresh.lastIndexOf('\n') + 1);
+      controlOffset += complete.length; // offset into the decoded text; only whole lines are consumed
+      return complete.split('\n').filter(Boolean).flatMap(l => { try { return [JSON.parse(l)]; } catch { return []; } });
+    };
     let nextSample = startAtMs;
     while (nowMs() < endAt) {
+      for (const command of readControl()) {
+        if (command.kind === 'stop') { record('operator_stop', { atMs: nowMs() - startAtMs }); manifest.stoppedByOperatorAtMs = nowMs() - startAtMs; endAt = nowMs(); continue; }
+        const f = command.fault ?? {};
+        const extra = OPERATOR_KINDS[f.kind];
+        if (command.kind !== 'fault' || !extra || !linkIds.has(f.linkId) || Object.keys(f).some(k => !['kind', 'linkId', ...extra].includes(k))) { record('operator_fault_rejected', { command }); continue; }
+        const atMs = Math.max(0, Math.round(nowMs() - startAtMs));
+        const fault = { atMs, ...f };
+        try {
+          const result = await orchestrator.request('inject_fault', fault);
+          faults.push(fault); // audited like scheduled faults: none of it may reach the controller view
+          record('operator_fault', { fault, appliedAtMs: result.appliedAtMs });
+        } catch (error) { record('operator_fault_rejected', { command, code: error.code, detail: error.detail }); }
+      }
       for (const fault of pending.filter(f => !f.done && nowMs() >= f.due)) {
         fault.done = true;
         const { due, done, ...args } = fault;
@@ -215,7 +241,7 @@ async function main() {
         try {
           const raw = await supervisor.request('telemetry', { intervalMs: SAMPLE_MS }, { timeoutMs: 2000 });
           const admittedObs = admitObservation(raw, { runId, nowMs: nowMs(), lastSeq, maxAgeMs: policy.limits.maxObservationAgeMs });
-          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); history.push(admittedObs.observation); latest = admittedObs.observation; }
+          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); history.push(admittedObs.observation); latest = admittedObs.observation; appendFileSync(join(out, 'controller-view.jsonl'), `${JSON.stringify(admittedObs.observation)}\n`); }
           else record('observation_rejected', { code: admittedObs.code });
         } catch (error) { record('telemetry_failed', { code: error.code, detail: error.detail }); }
         step();
@@ -233,11 +259,11 @@ async function main() {
     const rawDir = join(out, 'raw');
     mkdirSync(rawDir, { recursive: true });
     for (const name of readdirSync(runDir).filter(n => n.endsWith('.jsonl'))) copyFileSync(join(runDir, name), join(rawDir, name));
-    writeFileSync(join(out, 'controller-view.jsonl'), observations.map(o => JSON.stringify(o)).join('\n') + '\n');
+    // controller-view.jsonl was appended as each observation was admitted, so a live display can follow it.
     const audit = auditControllerView(observations, faults);
     const summary = { runId, ...scoreRun(rawDir, full, epochNs, startAtMs, durationMs, faults), controllerViewAudit: { observations: observations.length, findings: audit } };
     writeFileSync(join(out, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
-    manifest.terminal = summary.status === 'scored' && audit.length === 0 ? 'completed' : 'run_incomplete';
+    manifest.terminal = manifest.stoppedByOperatorAtMs !== undefined ? 'stopped' : summary.status === 'scored' && audit.length === 0 ? 'completed' : 'run_incomplete';
     console.log(JSON.stringify({ runId, terminal: manifest.terminal, primary: summary.results?.primary && { offered: summary.results.primary.offered, onTime: summary.results.primary.onTime, late: summary.results.primary.late, lost: summary.results.primary.lost, deliveryRate: summary.results.primary.deliveryRate }, audit: audit.length, teardown }));
   } catch (error) {
     manifest.terminal = 'run_incomplete';

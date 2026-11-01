@@ -1,9 +1,11 @@
 import http from 'node:http';
+import { spawn } from 'node:child_process';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { resolve } from 'node:path';
 import { SimulatedDevice, BridgeDevice } from './src/device.mjs';
 import { Session } from './src/session.mjs';
+import { createLifelineHandler } from './src/lifeline/http.mjs';
 
 export async function createApp() {
   const kind = process.env.DEVICE_BRIDGE_URL ? 'hardware bridge' : 'simulation';
@@ -12,7 +14,17 @@ export async function createApp() {
     try { return await session.init(); } catch (error) { session.close(); throw error; }
   };
   let session = await makeSession();
-  const files = { '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'] };
+  const files = {
+    '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
+    '/lifeline': ['lifeline.html', 'text/html'], '/lifeline.js': ['lifeline.js', 'text/javascript'], '/lifeline.css': ['lifeline.css', 'text/css'],
+  };
+  const repo = fileURLToPath(new URL('.', import.meta.url));
+  const artifactsRoot = resolve(repo, process.env.LIFELINE_ARTIFACTS ?? 'artifacts/lifeline');
+  // Live runs need the qualified Linux host; the key stays in this process tree and never reaches the browser.
+  const lifeline = createLifelineHandler({
+    repo, artifactsRoot, liveRoot: resolve(repo, 'artifacts/lifeline/live'), credentialPresent: Boolean(process.env.MODEL_API_KEY),
+    spawnRun: args => spawn(process.execPath, ['--env-file-if-exists=.env', resolve(repo, 'scripts/lifeline-run.mjs'), ...args], { cwd: repo, stdio: 'ignore' }),
+  });
   const server = http.createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -22,6 +34,7 @@ export async function createApp() {
       const path = new URL(req.url, 'http://localhost').pathname;
       const host = req.headers.host ?? '';
       if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return send(403, { error: 'Local access only' });
+      if (await lifeline(req, res)) return;
       if (req.method === 'GET' && files[path]) {
         const [file, type] = files[path];
         res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8` });

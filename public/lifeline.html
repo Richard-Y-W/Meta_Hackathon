@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>LIFELINE · Emergency network resilience</title>
+<link rel="stylesheet" href="/lifeline.css">
+</head>
+<body>
+<header class="top">
+  <div class="brand"><span class="mark">✚</span><div><strong>LIFELINE</strong><small>Emergency communications resilience</small></div></div>
+  <div class="run-meta">
+    <span id="mode" class="badge mode-idle">NO RUN</span>
+    <span id="run-id" class="mono">—</span>
+    <span id="connection" class="badge">—</span>
+  </div>
+</header>
+<p class="disclaimer">Synthetic facilities on an emulated Mininet/Open vSwitch network. Real packets and receivers; no real dispatch, clinic or radio service is connected.</p>
+
+<section class="controls" aria-label="Run controls">
+  <div class="group">
+    <label for="runs">Recorded run</label>
+    <select id="runs"></select>
+    <button id="load" class="button">Replay</button>
+    <a id="export" class="button subtle" href="#" download>Export evidence</a>
+  </div>
+  <div class="group">
+    <label for="scenario">Live scenario</label>
+    <select id="scenario"></select>
+    <label for="controller">Controller</label>
+    <select id="controller"><option value="meta">LIFELINE (Meta-assisted)</option><option value="adaptive">Adaptive baseline</option><option value="priority">Priority failover</option></select>
+    <button id="start" class="button primary">Start live run</button>
+    <button id="stop" class="button danger" disabled>Stop</button>
+  </div>
+  <div class="group" id="fault-group">
+    <label for="fault-link">Judge fault</label>
+    <select id="fault-link"></select>
+    <select id="fault-kind"><option value="link_down">Cut link</option><option value="link_up">Restore link</option><option value="link_rate">Throttle to 3 Mbit/s</option><option value="link_loss">40% silent loss</option></select>
+    <button id="inject" class="button warn" disabled>Inject</button>
+  </div>
+</section>
+
+<div id="banner" class="banner" hidden></div>
+
+<main class="grid">
+  <section class="panel map-panel">
+    <div class="panel-head"><h2>Network</h2><span id="map-time" class="mono">t = —</span></div>
+    <svg id="map" viewBox="0 0 640 380" role="img" aria-label="Network map"></svg>
+    <div class="legend"><span><i class="sw up"></i>link up</span><span><i class="sw down"></i>down</span><span><i class="sw dark"></i>counters unreported</span><span><i class="sw route"></i>essential route</span></div>
+    <div class="scrub"><label for="cursor">Replay time</label><input id="cursor" type="range" min="0" max="120" value="120" step="0.5"><button id="play" class="button subtle">▶ Play</button></div>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Essential services</h2><span id="service-basis" class="mono">—</span></div>
+    <div id="services"></div>
+    <div id="totals" class="totals"></div>
+  </section>
+
+  <section class="panel timeline-panel">
+    <div class="panel-head"><h2>Investigation and interventions</h2><span class="mono" id="event-count">0 events</span></div>
+    <ol id="timeline" class="timeline"></ol>
+  </section>
+
+  <section class="panel">
+    <div class="panel-head"><h2>Pilot comparison</h2><span class="mono">receipt-scored · exploratory</span></div>
+    <div id="comparison" class="comparison">Not available yet.</div>
+  </section>
+</main>
+<script type="module" src="/lifeline.js"></script>
+</body>
+</html>
