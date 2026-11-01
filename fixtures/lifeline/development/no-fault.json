@@ -1,0 +1,274 @@
+{
+  "version": "ScenarioV1",
+  "topologyRevision": 1,
+  "durationMs": 120000,
+  "warmupMs": 20000,
+  "synthetic": "Facility names are labels for emulated hosts; no real service is connected.",
+  "topology": {
+    "switches": [
+      "r0",
+      "r1",
+      "r2",
+      "r3",
+      "r4",
+      "r5"
+    ],
+    "links": [
+      {
+        "linkId": "r0-r1",
+        "a": "r0",
+        "b": "r1",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r1-r2",
+        "a": "r1",
+        "b": "r2",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r2-r3",
+        "a": "r2",
+        "b": "r3",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r3-r4",
+        "a": "r3",
+        "b": "r4",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r4-r5",
+        "a": "r4",
+        "b": "r5",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r5-r0",
+        "a": "r5",
+        "b": "r0",
+        "bwMbit": 8,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r0-r3",
+        "a": "r0",
+        "b": "r3",
+        "bwMbit": 20,
+        "delayMs": 5,
+        "queuePackets": 200
+      },
+      {
+        "linkId": "r1-r4",
+        "a": "r1",
+        "b": "r4",
+        "bwMbit": 6,
+        "delayMs": 5,
+        "queuePackets": 200
+      }
+    ],
+    "hosts": [
+      {
+        "hostId": "dispatch",
+        "switch": "r0",
+        "ip": "10.0.0.1"
+      },
+      {
+        "hostId": "field",
+        "switch": "r1",
+        "ip": "10.0.0.2"
+      },
+      {
+        "hostId": "clinic",
+        "switch": "r3",
+        "ip": "10.0.0.3"
+      },
+      {
+        "hostId": "shelter",
+        "switch": "r4",
+        "ip": "10.0.0.4"
+      }
+    ]
+  },
+  "workload": {
+    "essential": [
+      {
+        "flowId": "dispatch-clinic",
+        "source": "dispatch",
+        "destination": "clinic",
+        "messagesPerS": 80,
+        "payloadBytes": 1024,
+        "deadlineMs": 500,
+        "retryAtMs": [
+          250,
+          400
+        ],
+        "port": 7001,
+        "ackPort": 8001
+      },
+      {
+        "flowId": "field-clinic",
+        "source": "field",
+        "destination": "clinic",
+        "messagesPerS": 80,
+        "payloadBytes": 1024,
+        "deadlineMs": 500,
+        "retryAtMs": [
+          250,
+          400
+        ],
+        "port": 7002,
+        "ackPort": 8002
+      },
+      {
+        "flowId": "dispatch-shelter",
+        "source": "dispatch",
+        "destination": "shelter",
+        "messagesPerS": 80,
+        "payloadBytes": 1024,
+        "deadlineMs": 500,
+        "retryAtMs": [
+          250,
+          400
+        ],
+        "port": 7003,
+        "ackPort": 8003
+      }
+    ],
+    "background": [
+      {
+        "sourceId": "bulk-shelter",
+        "source": "shelter",
+        "destination": "dispatch",
+        "bitsPerSecond": 4000000,
+        "packetBytes": 1200,
+        "port": 9001
+      },
+      {
+        "sourceId": "bulk-field",
+        "source": "field",
+        "destination": "clinic",
+        "bitsPerSecond": 6500000,
+        "packetBytes": 1200,
+        "port": 9002
+      }
+    ]
+  },
+  "referencePolicy": {
+    "routes": {
+      "dispatch-clinic": {
+        "primary": [
+          "r0",
+          "r3"
+        ],
+        "backup": [
+          "r0",
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "field-clinic": {
+        "primary": [
+          "r1",
+          "r2",
+          "r3"
+        ],
+        "backup": [
+          "r1",
+          "r4",
+          "r3"
+        ]
+      },
+      "dispatch-shelter": {
+        "primary": [
+          "r0",
+          "r5",
+          "r4"
+        ],
+        "backup": [
+          "r0",
+          "r3",
+          "r4"
+        ]
+      },
+      "bulk-shelter": {
+        "primary": [
+          "r4",
+          "r3",
+          "r0"
+        ],
+        "backup": [
+          "r4",
+          "r5",
+          "r0"
+        ]
+      },
+      "bulk-field": {
+        "primary": [
+          "r1",
+          "r2",
+          "r3"
+        ],
+        "backup": [
+          "r1",
+          "r0",
+          "r3"
+        ]
+      }
+    },
+    "ackRoutes": {
+      "dispatch-clinic": {
+        "primary": [
+          "r3",
+          "r0"
+        ],
+        "backup": [
+          "r3",
+          "r2",
+          "r1",
+          "r0"
+        ]
+      },
+      "field-clinic": {
+        "primary": [
+          "r3",
+          "r2",
+          "r1"
+        ],
+        "backup": [
+          "r3",
+          "r4",
+          "r1"
+        ]
+      },
+      "dispatch-shelter": {
+        "primary": [
+          "r4",
+          "r5",
+          "r0"
+        ],
+        "backup": [
+          "r4",
+          "r3",
+          "r0"
+        ]
+      }
+    }
+  },
+  "scenarioId": "dev-no-fault-1",
+  "faults": [],
+  "developmentNote": "bulk-field 6.5 Mbit/s chosen so failover onto r1-r2 exceeds 8 Mbit/s on the wire; confirm by packet measurement before freezing."
+}

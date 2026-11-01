@@ -19,11 +19,17 @@ export function resolvePhysical(path) {
 
 const within = (path, root) => path === root || path.startsWith(root + sep);
 
-export function admitOutputPath(repo, out, { ssdRoot = CANONICAL_SSD } = {}) {
+// Host role: the repository must resolve onto the SSD mount. Guest role (inside the SSD-backed VM, whose
+// mapping the host preflight records): the repository must resolve into the guest workspace.
+export function admitOutputPath(repo, out, { ssdRoot = CANONICAL_SSD, role = 'host', workspace = '/workspace' } = {}) {
   const repoReal = resolvePhysical(repo);
   const outReal = resolvePhysical(out);
-  if (!existsSync(ssdRoot)) return { ok: false, code: 'storage_unavailable', path: outReal };
-  if (!within(repoReal, realpathSync(ssdRoot))) return { ok: false, code: 'storage_path_rejected', path: outReal, detail: 'repository is not on the SSD' };
+  if (role === 'guest') {
+    if (!within(repoReal, resolvePhysical(workspace))) return { ok: false, code: 'storage_path_rejected', path: outReal, detail: 'repository is not in the guest workspace' };
+  } else {
+    if (!existsSync(ssdRoot)) return { ok: false, code: 'storage_unavailable', path: outReal };
+    if (!within(repoReal, realpathSync(ssdRoot))) return { ok: false, code: 'storage_path_rejected', path: outReal, detail: 'repository is not on the SSD' };
+  }
   if (!OUTPUT_ROOTS.some(root => within(outReal, join(repoReal, root)))) {
     return { ok: false, code: 'storage_path_rejected', path: outReal, detail: 'output resolves outside artifacts/ and .work/' };
   }

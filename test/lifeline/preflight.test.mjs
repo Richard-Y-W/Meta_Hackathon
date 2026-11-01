@@ -196,3 +196,7 @@ test('provider: outputs are admitted only under artifacts/ or .work/ after resol
   assert.equal(admitOutputPath(REPO, join(SCRATCH, 'escape/smoke.json')).code, 'storage_path_rejected');
   assert.equal(admitOutputPath('/Users/Shared', '/Users/Shared/artifacts/x.json').code, 'storage_path_rejected');
 });
+
+test('storage: guest-role outputs must stay in the guest workspace repository', () => {
+  assert.equal(admitOutputPath('/Users/Shared', '/Users/Shared/artifacts/x.json', { role: 'guest', workspace: '/workspace' }).code, 'storage_path_rejected');
+});
