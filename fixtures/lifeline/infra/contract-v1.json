@@ -1,0 +1,49 @@
+{
+  "schemaVersion": "infra-contract-v1",
+  "note": "Canonical units for every admitted metric. Adapters convert input units explicitly at admission; internal records use these units only.",
+  "metrics": {
+    "power.active": "W",
+    "power.reactive": "var",
+    "power.voltage": "V",
+    "power.loading": "1",
+    "energy.stored": "J",
+    "water.flow": "m3/s",
+    "water.pressure": "Pa",
+    "water.volume": "m3",
+    "water.quality_index": "1",
+    "comms.throughput": "bit/s",
+    "comms.bytes": "B",
+    "comms.drop_rate": "1/s",
+    "comms.on_time_fraction": "1",
+    "link.state": "state",
+    "time.duration": "us",
+    "comms.messages": "msg"
+  },
+  "conversions": {
+    "kW->W": 1000,
+    "MW->W": 1000000,
+    "kV->V": 1000,
+    "kJ->J": 1000,
+    "kWh->J": 3600000,
+    "L/s->m3/s": 0.001,
+    "m3/h->m3/s": 0.0002777777777777778,
+    "kPa->Pa": 1000,
+    "bar->Pa": 100000,
+    "L->m3": 0.001,
+    "kbit/s->bit/s": 1000,
+    "Mbit/s->bit/s": 1000000,
+    "kB->B": 1000,
+    "ms->us": 1000,
+    "s->us": 1000000
+  },
+  "kinds": [
+    "observation",
+    "service",
+    "capability",
+    "forecast",
+    "plan",
+    "action",
+    "receipt",
+    "measurement"
+  ]
+}
