@@ -39,3 +39,37 @@ test('the controller-view audit finds fault labels, schedules and configured cap
   assert.ok(findings.some(f => f.key === 'faults'));
   assert.ok(auditControllerView([obs({ note: 'link_rate at 65000' })], []).some(f => f.value === 'link_rate'));
 });
+
+import { deriveRates } from '../../src/lifeline/telemetry.mjs';
+
+const sample = (atMs, txR1, drops, offered, onTime, backlog = 0) => obs({
+  seq: atMs, collectedAtMs: atMs,
+  links: { 'r1-r2': { state: 'up', txBytes: { r1: txR1, r2: 0 }, queueDrops: { r1: drops, r2: 0 }, backlogBytes: { r1: backlog, r2: 0 } } },
+  services: { 'dispatch-clinic': { offered, transmissions: offered, acked: onTime, ackedWithinDeadline: onTime } },
+});
+
+test('rates: link throughput, drop rate and backlog per directed link end from consecutive samples', () => {
+  const history = [sample(1000, 0, 0, 0, 0), sample(2000, 1_000_000, 50, 80, 80, 12_000)];
+  const derived = deriveRates(history);
+  assert.equal(derived.links['r1-r2'].r1.txBps, 8_000_000);
+  assert.equal(derived.links['r1-r2'].r1.dropsPerS, 50);
+  assert.equal(derived.links['r1-r2'].r1.backlogBytes, 12_000);
+});
+
+test('rates: recent on-time fraction uses only messages whose deadline has passed', () => {
+  const at = (t, resolvedOffered, resolvedOnTime) => ({ ...sample(t, 0, 0, resolvedOffered + 40, resolvedOnTime), services: { 'dispatch-clinic': { offered: resolvedOffered + 40, transmissions: resolvedOffered + 40, acked: resolvedOnTime, ackedWithinDeadline: resolvedOnTime, resolvedOffered, resolvedOnTime } } });
+  const history = [at(1000, 0, 0), at(2000, 80, 80), at(3000, 160, 140)];
+  assert.equal(deriveRates(history, { windowMs: 1000 }).services['dispatch-clinic'].recentOnTimeFraction, 60 / 80);
+  assert.equal(deriveRates(history, { windowMs: 2000 }).services['dispatch-clinic'].recentOnTimeFraction, 140 / 160);
+  // After traffic stops nothing new resolves: the fraction is unknown, not a failure.
+  const stopped = [...history, at(4000, 160, 140)];
+  assert.equal(deriveRates(stopped, { windowMs: 1000 }).services['dispatch-clinic'].recentOnTimeFraction, null);
+});
+
+test('rates: missing or reset counters yield null rates, never zero or negative', () => {
+  const reset = [sample(1000, 5_000_000, 10, 100, 100), sample(2000, 1_000, 2, 180, 180)];
+  assert.equal(deriveRates(reset).links['r1-r2'].r1.txBps, null);
+  const missing = [sample(1000, null, null, 0, 0), sample(2000, 100, 1, 80, 80)];
+  assert.equal(deriveRates(missing).links['r1-r2'].r1.txBps, null);
+  assert.equal(deriveRates([sample(1000, 0, 0, 0, 0)]).links['r1-r2'].r1.txBps, null);
+});

@@ -62,7 +62,7 @@ def build_observation(run_id, seq, sample, spec, config_revision, now_ms, interv
                           if k in values}
     services = {}
     for flow_id, values in sample.get('services', {}).items():
-        services[flow_id] = {k: values.get(k) for k in ('offered', 'transmissions', 'acked', 'ackedWithinDeadline') if k in values}
+        services[flow_id] = {k: values.get(k) for k in ('offered', 'transmissions', 'acked', 'ackedWithinDeadline', 'resolvedOffered', 'resolvedOnTime') if k in values}
     return {
         'version': 'ObservationV1', 'runId': run_id, 'seq': seq, 'sampleIntervalMs': interval_ms,
         'collectedAtMs': sample['collectedAtMs'], 'ageMs': round(now_ms - sample['collectedAtMs'], 3),
@@ -95,6 +95,40 @@ def collect_links(spec, names, ports):
         entry['state'] = 'up' if up else 'down'
         links[link['linkId']] = entry
     return links
+
+
+class ServiceCounter:
+    """Sender-side application counters for one essential flow, fed with the sender's own records.
+
+    `resolvedOffered`/`resolvedOnTime` count only messages whose deadline has passed, so their ratio
+    over any window is exact: in-flight messages are neither successes nor failures yet.
+    """
+
+    def __init__(self, deadline_ms):
+        self.deadline_ns = int(deadline_ms * 1e6)
+        self.created, self.order, self.on_time, self.acked = {}, [], set(), set()
+        self.transmissions = 0
+        self.cursor = self.resolved_on_time = 0
+
+    def feed(self, rec):
+        if rec['t'] == 'offered':
+            self.created[rec['id']] = rec['createdAtNs']
+            self.order.append(rec['id'])
+        elif rec['t'] == 'tx':
+            self.transmissions += 1
+        elif rec['t'] == 'ack' and rec['id'] not in self.acked:
+            self.acked.add(rec['id'])
+            created = self.created.get(rec['id'])
+            if created is not None and rec['atNs'] - created <= self.deadline_ns:
+                self.on_time.add(rec['id'])
+
+    def snapshot(self, now_ns):
+        while self.cursor < len(self.order) and self.created[self.order[self.cursor]] + self.deadline_ns <= now_ns:
+            if self.order[self.cursor] in self.on_time:
+                self.resolved_on_time += 1
+            self.cursor += 1
+        return {'offered': len(self.order), 'transmissions': self.transmissions, 'acked': len(self.acked),
+                'ackedWithinDeadline': len(self.on_time), 'resolvedOffered': self.cursor, 'resolvedOnTime': self.resolved_on_time}
 
 
 def now_ms(epoch_ns):

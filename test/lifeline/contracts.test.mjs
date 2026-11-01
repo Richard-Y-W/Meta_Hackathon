@@ -159,3 +159,12 @@ test('contracts: the reviewed development policy fixture is pinned', () => {
 
 const pick = result => [result.code, result.detail];
 const PINNED_POLICY_SHA256 = 'f7baa4fa7e3c82e2d226d1e923b7b55d0f6e170c1ef70abe2f24f4a96498dd25';
+
+test('contracts: a probe may name a registered simple path between its endpoints', () => {
+  const probe = path => withAction({ type: 'probe_path', sourceId: 'dispatch', destinationId: 'clinic', packetCount: 8, payloadBytes: 200, intervalMs: 10, ...(path ? { path } : {}) });
+  assert.equal(validateProposal(probe(['r0', 'r5', 'r4', 'r3']), context()).ok, true);
+  assert.equal(validateProposal(probe(null), context()).ok, true);
+  assert.deepEqual(pick(validateProposal(probe(['r1', 'r2', 'r3']), context())), ['route_unavailable', 'bad_endpoint']);
+  assert.deepEqual(pick(validateProposal(probe(['r0', 'r2', 'r3']), context())), ['route_unavailable', 'unknown_link']);
+  assert.deepEqual(pick(validateProposal(probe(['r0', 'r1', 'r0', 'r3']), context())), ['route_unavailable', 'route_not_simple']);
+});

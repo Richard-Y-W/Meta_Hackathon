@@ -11,6 +11,8 @@ import re
 import subprocess
 
 MAX_VERSION = 63  # six DSCP bits; 0 is the untagged reference policy
+PROBE_PORT = 9900
+PROBE_COOKIE_BASE = 0xF00000
 
 
 class ControlError(RuntimeError):
@@ -252,6 +254,52 @@ class RouteTable:
         return {'configRevision': self.config_revision,
                 'routes': {'%s/%s' % k: {'active': r['active'], 'path': r['versions'].get(r['active']), 'versions': sorted(r['versions'])}
                            for k, r in self.routes.items()}}
+
+
+class ProbeRules:
+    """Temporary highest-priority rules that pin a probe and its echo to one registered path."""
+
+    def __init__(self, spec, names, ports, openflow, hosts):
+        self.spec, self.names, self.ports, self.of, self.hosts = spec, names, ports, openflow, hosts
+
+    def default_path(self, source, destination):
+        start, end = self.spec['_attach'][source], self.spec['_attach'][destination]
+        frontier, seen = [[start]], {start}
+        while frontier:  # breadth-first, neighbours in registry order: deterministic
+            nxt = []
+            for path in frontier:
+                if path[-1] == end:
+                    return path
+                for peer in sorted(self.spec['_adjacency'][path[-1]]):
+                    if peer not in seen:
+                        seen.add(peer)
+                        nxt.append(path + [peer])
+            frontier = nxt
+        raise ControlError('route_unavailable')
+
+    def install(self, probe_id, source, destination, path):
+        _validate_path(self.spec, path, self.spec['_attach'][source], self.spec['_attach'][destination])
+        cookie = PROBE_COOKIE_BASE | probe_id
+        src, dst = self.hosts[source]['ip'], self.hosts[destination]['ip']
+        legs = [(path, destination, 'udp,nw_src=%s,nw_dst=%s,tp_dst=%d' % (src, dst, PROBE_PORT)),
+                (path[::-1], source, 'udp,nw_src=%s,nw_dst=%s,tp_src=%d' % (dst, src, PROBE_PORT))]
+        for leg, end_host, match in legs:
+            for i, switch in enumerate(leg):
+                peer = leg[i + 1] if i + 1 < len(leg) else end_host
+                self.of.add_flow(self.names[switch].name, 'cookie=%#x,priority=400,%s,actions=output:%d' % (cookie, match, self.ports[(switch, peer)][0]))
+        for switch in path:
+            if self.of.count(self.names[switch].name, cookie) < 2:
+                self.remove({'cookie': cookie, 'switches': path})
+                raise ControlError('readback_mismatch')
+        return {'cookie': cookie, 'switches': list(path), 'path': list(path)}
+
+    def remove(self, installed):
+        remaining = 0
+        for switch in installed['switches']:
+            bridge = self.names[switch].name
+            self.of.del_flows(bridge, installed['cookie'])
+            remaining += self.of.count(bridge, installed['cookie'])
+        return remaining
 
 
 class Operations:

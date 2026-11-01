@@ -31,3 +31,47 @@ export function auditControllerView(observations, hiddenFaults) {
   observations.forEach((o, i) => walk(o, `$[${i}]`, null));
   return findings;
 }
+
+const delta = (cur, prev) => (typeof cur === 'number' && typeof prev === 'number' && cur >= prev ? cur - prev : null);
+
+function at(history, targetMs) {
+  let best = null;
+  for (const o of history) if (o.collectedAtMs <= targetMs && (!best || o.collectedAtMs > best.collectedAtMs)) best = o;
+  return best;
+}
+
+// Rates from admitted observations (oldest first). Link rates use the last two samples. The recent
+// on-time fraction uses the sender's resolved counters (messages past their deadline), so in-flight
+// messages are neither successes nor failures; with nothing resolved in the window it is null.
+export function deriveRates(history, { windowMs = 2000 } = {}) {
+  const cur = history.at(-1);
+  const prev = history.length > 1 ? history.at(-2) : null;
+  const dtS = prev ? (cur.collectedAtMs - prev.collectedAtMs) / 1000 : 0;
+  const links = {};
+  for (const [linkId, link] of Object.entries(cur.links ?? {})) {
+    links[linkId] = {};
+    for (const end of Object.keys(link.txBytes ?? {})) {
+      const before = prev?.links?.[linkId];
+      const tx = before && dtS > 0 ? delta(link.txBytes[end], before.txBytes?.[end]) : null;
+      const drops = before && dtS > 0 ? delta(link.queueDrops?.[end], before.queueDrops?.[end]) : null;
+      links[linkId][end] = {
+        txBps: tx === null ? null : (tx * 8) / dtS, dropsPerS: drops === null ? null : drops / dtS,
+        backlogBytes: link.backlogBytes?.[end] ?? null, state: link.state,
+      };
+    }
+  }
+  const services = {};
+  const t = cur.collectedAtMs;
+  const start = at(history, t - windowMs);
+  for (const flowId of Object.keys(cur.services ?? {})) {
+    const onTime = start ? delta(cur.services[flowId]?.resolvedOnTime, start.services?.[flowId]?.resolvedOnTime) : null;
+    const offered = start ? delta(cur.services[flowId]?.resolvedOffered, start.services?.[flowId]?.resolvedOffered) : null;
+    const sent = prev && dtS > 0 ? delta(cur.services[flowId]?.transmissions, prev.services?.[flowId]?.transmissions) : null;
+    const created = prev && dtS > 0 ? delta(cur.services[flowId]?.offered, prev.services?.[flowId]?.offered) : null;
+    services[flowId] = {
+      recentOnTimeFraction: onTime !== null && offered ? Math.min(1, onTime / offered) : null,
+      retransmissionRatio: sent !== null && created ? sent / created : null,
+    };
+  }
+  return { atMs: t, links, services };
+}

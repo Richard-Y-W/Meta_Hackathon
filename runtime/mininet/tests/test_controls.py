@@ -204,6 +204,34 @@ class RouteVersionTests(unittest.TestCase):
             table.prepare('op-y', 'bulk-field', ['r1', 'r0', 'r3'], ['r3', 'r0', 'r1'])  # background has no ack path
 
 
+class ProbeRuleTests(unittest.TestCase):
+    def test_probe_rules_pin_forward_and_echo_to_the_named_path_and_are_removed(self):
+        s, names, of, table = setup()
+        probe = controls.ProbeRules(s, names, table.ports, of, table.hosts)
+        installed = probe.install(1, 'dispatch', 'clinic', ['r0', 'r5', 'r4', 'r3'])
+        cookie = installed['cookie']
+        self.assertEqual(sorted(e for e in installed['switches']), ['r0', 'r3', 'r4', 'r5'])
+        forward = [r for r in of.tables['tr5'] if r.startswith('cookie=%#x,' % cookie)]
+        self.assertEqual(len(forward), 2)  # forward and echo on every path switch
+        self.assertTrue(any('tp_dst=%d' % controls.PROBE_PORT in r and 'priority=400' in r for r in forward))
+        self.assertTrue(any('tp_src=%d' % controls.PROBE_PORT in r for r in forward))
+        self.assertEqual(probe.remove(installed), 0)
+        self.assertEqual(sum(of.count(b, cookie) for b in of.tables), 0)
+
+    def test_probe_path_defaults_to_a_deterministic_shortest_path(self):
+        s, names, of, table = setup()
+        probe = controls.ProbeRules(s, names, table.ports, of, table.hosts)
+        self.assertEqual(probe.default_path('dispatch', 'clinic'), ['r0', 'r3'])
+        self.assertEqual(probe.default_path('field', 'shelter'), ['r1', 'r4'])
+
+    def test_probe_path_is_validated(self):
+        s, names, of, table = setup()
+        probe = controls.ProbeRules(s, names, table.ports, of, table.hosts)
+        with self.assertRaises(controls.ControlError) as caught:
+            probe.install(2, 'dispatch', 'clinic', ['r0', 'r2', 'r3'])
+        self.assertEqual(caught.exception.detail, 'unknown_link')
+
+
 class OperationRegistryTests(unittest.TestCase):
     def test_repeated_operation_returns_the_prior_outcome_without_reapplying(self):
         s, names, of, table = setup()

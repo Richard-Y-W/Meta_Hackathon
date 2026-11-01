@@ -5,6 +5,7 @@ KINDS = {
     'link_down': {'atMs', 'kind', 'linkId'},
     'link_up': {'atMs', 'kind', 'linkId'},
     'link_rate': {'atMs', 'kind', 'linkId', 'bwMbit'},
+    'telemetry_hold': {'atMs', 'kind', 'durationMs'},  # telemetry unavailable: tests stale-observation handling
 }
 
 
@@ -20,8 +21,12 @@ def validate_fault(fault, spec):
         raise FaultError('unknown_fault_kind')
     if set(fault) != KINDS[fault['kind']]:
         raise FaultError('unknown_field' if set(fault) - KINDS[fault['kind']] else 'missing_field')
-    if fault['linkId'] not in {l['linkId'] for l in spec['topology']['links']}:
+    if 'linkId' in fault and fault['linkId'] not in {l['linkId'] for l in spec['topology']['links']}:
         raise FaultError('unknown_link')
+    if fault['kind'] == 'telemetry_hold':
+        d = fault['durationMs']
+        if isinstance(d, bool) or not isinstance(d, (int, float)) or not math.isfinite(d) or d <= 0 or d > 60000:
+            raise FaultError('bad_quantity')
     at = fault['atMs']
     if isinstance(at, bool) or not isinstance(at, (int, float)) or not math.isfinite(at) or at < 0:
         raise FaultError('bad_quantity')

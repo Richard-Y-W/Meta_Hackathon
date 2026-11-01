@@ -215,7 +215,10 @@ class FaultValidationTests(unittest.TestCase):
         spec = topology.validate_scenario(public())
         faults.validate_fault({'atMs': 0, 'kind': 'link_down', 'linkId': 'r0-r3'}, spec)
         faults.validate_fault({'atMs': 0, 'kind': 'link_rate', 'linkId': 'r1-r2', 'bwMbit': 3}, spec)
+        faults.validate_fault({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 6000}, spec)
         for bad, detail in [({'atMs': 0, 'kind': 'power_off', 'linkId': 'r0-r3'}, 'unknown_fault_kind'),
+                            ({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 0}, 'bad_quantity'),
+                            ({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 5, 'linkId': 'r0-r3'}, 'unknown_field'),
                             ({'atMs': 0, 'kind': 'link_rate', 'linkId': 'r1-r2', 'bwMbit': 0}, 'bad_quantity'),
                             ({'atMs': 0, 'kind': 'link_down', 'linkId': 'r0-r3', 'cmd': 'x'}, 'unknown_field')]:
             with self.assertRaises(faults.FaultError) as caught:
@@ -263,6 +266,20 @@ qdisc netem 10: parent 5:1 limit 200 delay 5ms
     def test_queue_counters_exclude_configured_rate(self):
         queue = telemetry.parse_tc(self.TC)
         self.assertEqual(queue, {'drops': 7, 'backlogBytes': 3000, 'backlogPackets': 3})
+
+    def test_service_counter_resolves_messages_only_after_their_deadline(self):
+        c = telemetry.ServiceCounter(deadline_ms=500)
+        ms = 1000000
+        c.feed({'t': 'offered', 'id': 'a', 'createdAtNs': 0})
+        c.feed({'t': 'tx', 'id': 'a'})
+        c.feed({'t': 'offered', 'id': 'b', 'createdAtNs': 100 * ms})
+        c.feed({'t': 'ack', 'id': 'a', 'atNs': 40 * ms})
+        c.feed({'t': 'offered', 'id': 'c', 'createdAtNs': 200 * ms})
+        c.feed({'t': 'ack', 'id': 'c', 'atNs': 900 * ms})  # late
+        snap = c.snapshot(now_ns=650 * ms)  # a and b are past deadline; c is not yet
+        self.assertEqual((snap['offered'], snap['resolvedOffered'], snap['resolvedOnTime']), (3, 2, 1))
+        snap = c.snapshot(now_ns=2000 * ms)
+        self.assertEqual((snap['resolvedOffered'], snap['resolvedOnTime'], snap['acked'], snap['ackedWithinDeadline']), (3, 1, 2, 1))
 
     def test_observation_omits_fault_truth_and_configured_capacity(self):
         spec = topology.validate_scenario(public())

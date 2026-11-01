@@ -1,0 +1,60 @@
+{
+  "description": "Known-capacity controller controls on the development topology. Demands use declared workload: an essential flow is 80 msg/s x (1024 + 42) B = 682,240 bit/s; its acknowledgements 80 x (40 + 42) B = 52,480 bit/s; background wire rate = rate x (1200 + 42) / 1200. Utilization limit 0.95 of the capacity lower bound (at 0.9 the healthy no-fault r1>r2 load of 7.41 Mbit/s would already count as overloaded).",
+  "cases": {
+    "outage": {
+      "explanation": "r0-r3 down. On reference version 0 the data plane has already failed over dispatch-clinic to r0-r1-r2-r3, so priority takes no action. That leaves r1>r2 at 6.73 (bulk-field) + 0.68 (field-clinic) + 0.68 (dispatch-clinic) = 8.09 > 7.6. Moving one clinic flow off r1>r2 restores feasibility but leaves the other at 7.41/8 = 0.93. Moving both (dispatch-clinic to r0-r1-r4-r3, field-clinic to r1-r4-r3) puts both on r4>r3 at 4.14 + 0.68 + 0.68 = 5.50/8 = 0.69 peak. Because peak utilization ranks before change count, the two-change plan is the unique optimum; r0-r5-r4-r3 for dispatch-clinic ties on peak but loses on candidate order.",
+      "priority": null,
+      "priorityEffective": {
+        "dispatch-clinic": [
+          "r0",
+          "r1",
+          "r2",
+          "r3"
+        ]
+      },
+      "adaptive": {
+        "dispatch-clinic": [
+          "r0",
+          "r1",
+          "r4",
+          "r3"
+        ],
+        "field-clinic": [
+          "r1",
+          "r4",
+          "r3"
+        ]
+      }
+    },
+    "overload": {
+      "explanation": "r1-r2 measured saturated at about 2.95 Mbit/s with the link up (planning capacity ~2.95 Mbit/s); r0-r3 up. field-clinic on r1-r2-r3 is infeasible. Candidates r1-r0-r3 and r1-r4-r3 are both feasible; peak essential-path utilization is 0.68/8 = 0.09 for r1-r0-r3 versus 4.82/8 = 0.60 for r1-r4-r3, so the adaptive choice is r1-r0-r3. bulk-field stays at its scheduled rate: once field-clinic leaves r1-r2 no essential flow uses it, and the objective keeps background rate.",
+      "adaptive": {
+        "field-clinic": [
+          "r1",
+          "r0",
+          "r3"
+        ]
+      }
+    },
+    "doubleOutage": {
+      "explanation": "r0-r3 and r1-r2 down: dispatch-clinic's primary and backup both fail, and field-clinic's acknowledgement path r3-r2-r1 is blackholed because its ingress r3 watches r3-r2, which is still up. Priority takes the first up candidate r0-r1-r4-r3. The adaptive model also sees bulk-field's fast-failover backup putting 6.73 Mbit/s on r1>r0 (dropped later at r0), so the acknowledgement path of r0-r1-r4-r3 would run at 0.85 while r0-r5-r4-r3 peaks at 0.69 on r4>r3: adaptive picks r0-r5-r4-r3.",
+      "priority": {
+        "dispatch-clinic": [
+          "r0",
+          "r1",
+          "r4",
+          "r3"
+        ]
+      },
+      "adaptive": {
+        "dispatch-clinic": [
+          "r0",
+          "r5",
+          "r4",
+          "r3"
+        ]
+      }
+    }
+  },
+  "objective": "Lexicographic: (1) priority-weighted count of essential flows whose data and acknowledgement paths stay within 0.95 of planning capacity; (2) total background rate kept; (3) lowest peak utilization on essential paths; (4) fewest route changes; (5) candidate order (hop count, then lexicographic). Candidates: at most three simple paths over links observed up."
+}

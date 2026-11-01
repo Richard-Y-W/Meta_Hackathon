@@ -11,11 +11,14 @@ import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalRecord } from '../src/lifeline/identity.mjs';
 import { scoreBackground, scoreMessages } from '../src/lifeline/metrics.mjs';
-import { admitObservation, auditControllerView } from '../src/lifeline/telemetry.mjs';
+import { admitObservation, auditControllerView, deriveRates } from '../src/lifeline/telemetry.mjs';
 import { admitOutputPath } from '../src/lifeline/storage.mjs';
 import { RunBudgets, admitProposal } from '../src/lifeline/guard.mjs';
 import { Executor } from '../src/lifeline/executor.mjs';
 import { createScriptedController } from '../src/lifeline/controllers/scripted.mjs';
+import { createPriorityController } from '../src/lifeline/controllers/priority.mjs';
+import { createAdaptiveController } from '../src/lifeline/controllers/adaptive.mjs';
+import { backgroundPath, backgroundWireBps, buildInventory, candidatePaths, effectiveRoute, essentialDemandBps, linkBetween } from '../src/lifeline/controllers/common.mjs';
 import { WorkerClient } from '../src/lifeline/worker-client.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -100,7 +103,7 @@ function score(runDir, scenario, epochNs, startAtMs, durationMs, faults) {
 async function main() {
   const opt = args(process.argv.slice(2));
   if (opt.backend !== 'mininet') throw new Error('only the mininet backend exists');
-  if (!['fixed', 'scripted'].includes(opt.controller)) throw new Error(`controller ${opt.controller} is not implemented yet`);
+  if (!['fixed', 'scripted', 'priority', 'adaptive'].includes(opt.controller)) throw new Error(`controller ${opt.controller} is not implemented yet`);
   if (opt.controller === 'scripted' && !opt.script) throw new Error('--script is required for the scripted diagnostic controller');
   const out = resolve(opt.out);
   const admitted = admitOutputPath(REPO, out, { role: process.platform === 'linux' ? 'guest' : 'host' });
@@ -144,29 +147,76 @@ async function main() {
     const policy = JSON.parse(readFileSync(resolve(REPO, opt.policy), 'utf8'));
     const policyId = canonicalRecord(policy).sha256;
     manifest.policy = { path: opt.policy, sha256: policyId };
-    const topology = {
-      revision: full.topologyRevision, nodes: full.topology.switches, links: full.topology.links.map(({ linkId, a, b }) => ({ linkId, a, b })),
-      endpoints: Object.fromEntries(full.topology.hosts.map(h => [h.hostId, h.switch])),
-    };
+    const inventory = buildInventory(full, policy); // operator-known topology, nominal ratings, declared workload
+    const { topology } = inventory;
     const budgets = new RunBudgets(policy);
-    const controller = opt.controller === 'scripted' ? createScriptedController(JSON.parse(readFileSync(resolve(opt.script), 'utf8'))) : null;
+    const controller = opt.controller === 'scripted' ? createScriptedController(JSON.parse(readFileSync(resolve(opt.script), 'utf8')))
+      : opt.controller === 'priority' ? createPriorityController(inventory, policy)
+        : opt.controller === 'adaptive' ? createAdaptiveController(inventory, policy) : null;
     if (opt.script) manifest.script = { path: opt.script, sha256: sha256(resolve(opt.script)) };
     let latest = null;
-    const linkUp = (a, b) => {
-      const link = topology.links.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
-      return latest?.links?.[link.linkId]?.state === 'up';
-    };
+    const history = [];
+    const linkUp = (a, b) => latest?.links?.[linkBetween(topology, a, b).linkId]?.state === 'up';
+    const backgroundRates = Object.fromEntries(inventory.background.map(s => [s.sourceId, s.scheduledBps]));
     const executor = new Executor({
       client: supervisor, now: nowMs, sleep, drainMs: 1000, verifyTimeoutMs: 3000, verifyPollMs: 200,
-      currentRoutes: Object.fromEntries(full.workload.essential.map(f => [f.flowId, { version: 0, path: full.referencePolicy.routes[f.flowId].primary, ackPath: full.referencePolicy.ackRoutes[f.flowId].primary }])),
+      currentRoutes: Object.fromEntries(inventory.essential.map(f => [f.flowId, { version: 0, path: inventory.reference[f.flowId].primary, ackPath: inventory.reference[f.flowId].ackPrimary }])),
       isPathFeasible: path => path.slice(1).every((node, i) => linkUp(path[i], node)),
-      fallback: async () => null,
+      // Deterministic takeover when rollback is impossible: first candidate over links observed up.
+      fallback: async flowId => {
+        const flow = inventory.essential.find(f => f.flowId === flowId);
+        const up = { ...topology, links: topology.links.filter(l => latest?.links?.[l.linkId]?.state === 'up') };
+        const [path] = candidatePaths(up, flow.from, flow.to, 1);
+        return path ? { path, ackPath: [...path].reverse(), controller: 'priority-fallback' } : null;
+      },
+      onProbeBytes: (bytes, why) => budgets.charge('incidentProbeBytes', bytes, `probe ${why}`),
     });
     let outstanding = null;
+    let suppressUntil = 0; // after a rejection, wait before proposing again: every attempt is charged
+    let proposalCount = 0;
+    let downLinks = new Set();
+    let lastUnavailable = '[]';
     const startAtMs = Math.ceil(nowMs()) + 1500;
     const traffic = await orchestrator.request('start_traffic', { startAtMs, stopAtMs: startAtMs + durationMs, tailMs: 2000 }, { timeoutMs: 10_000 });
     record('traffic_started', { startAtMs, stopAtMs: startAtMs + durationMs, ...traffic });
     manifest.trafficStartAtMs = startAtMs;
+
+    // One supervisory step after each sample: age the latest observation on the supervisor clock, derive
+    // rates, let the controller propose, and admit through the shared guard before any execution.
+    const step = () => {
+      if (!controller || !latest || outstanding || nowMs() < suppressUntil) return;
+      const ageMs = nowMs() - latest.collectedAtMs;
+      const view = { ...latest, ageMs, stale: ageMs > policy.limits.maxObservationAgeMs };
+      const rates = deriveRates(history.filter(o => o.collectedAtMs >= latest.collectedAtMs - 4000));
+      const services = Object.fromEntries(Object.entries(view.services).map(([id, v]) => [id, { ...v, ...rates.services[id] }]));
+      const observation = { ...view, services };
+      const nowDown = new Set(Object.entries(latest.links).filter(([, l]) => l.state !== 'up').map(([id]) => id));
+      if ([...nowDown].some(id => !downLinks.has(id))) budgets.resetIncident(`links down: ${[...nowDown].join(',')}`);
+      downLinks = nowDown;
+      const intent = controller.decide({ observation, rates, routes: executor.currentRoutes, backgroundRates: { ...backgroundRates }, nowMs: nowMs(), trafficMs: nowMs() - startAtMs, remaining: budgets.remaining() });
+      const unavailable = JSON.stringify(controller.unavailable?.() ?? []);
+      if (unavailable !== lastUnavailable) { record('service_unavailable', { controller: controller.name, flows: JSON.parse(unavailable), atMs: nowMs() }); lastUnavailable = unavailable; }
+      if (!intent) return;
+      const proposal = {
+        version: 'ProposalV1', proposalId: intent.proposalId ?? `${controller.name}-${++proposalCount}`, runId, policyId, baseConfigRevision: latest.configRevision,
+        observationSeq: latest.seq, observationAtMs: Math.floor(latest.collectedAtMs), expiresAtMs: Math.floor(latest.collectedAtMs) + policy.limits.proposalLifetimeMs, // integer ms: exact lifetime
+        preconditions: intent.preconditions, actions: intent.actions, predicted: [], evidence: [`obs-${latest.seq}`],
+      };
+      const effective = Object.fromEntries(inventory.essential.map(f => [f.flowId, effectiveRoute(f, executor.currentRoutes[f.flowId], latest, inventory).path]));
+      const transition = intent.transition && {
+        capacityBps: intent.transition.capacityBps,
+        flowRoutes: { ...effective, ...Object.fromEntries(inventory.background.map(s => [s.sourceId, backgroundPath(s, latest, topology)])) },
+        flowRateBps: { ...Object.fromEntries(inventory.essential.map(f => [f.flowId, essentialDemandBps(f)])), ...Object.fromEntries(inventory.background.map(s => [s.sourceId, backgroundWireBps(s, backgroundRates[s.sourceId])])) },
+      };
+      const decision = admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation, budgets, transition });
+      record('decision', { controller: controller.name, rationale: intent.rationale, proposal, decision });
+      if (!decision.admitted) { suppressUntil = nowMs() + 2000; controller.applied?.(proposal, { status: 'rejected', nowMs: nowMs() }); return; }
+      outstanding = executor.execute(decision, proposal).then(result => {
+        for (const r of result.receipts) for (const e of r.confirmedEffects) if (e.step === 'set_rate') backgroundRates[e.sourceId] = e.readBackBps;
+        controller.applied?.(proposal, { ...result, nowMs: nowMs() });
+        record('execution', { controller: controller.name, ...result });
+      }).catch(error => record('execution_failed', { detail: error.message })).finally(() => { outstanding = null; });
+    };
 
     const pending = faults.map(f => ({ ...f, due: startAtMs + f.atMs }));
     let lastSeq = 0;
@@ -175,31 +225,19 @@ async function main() {
     while (nowMs() < endAt) {
       for (const fault of pending.filter(f => !f.done && nowMs() >= f.due)) {
         fault.done = true;
-        const result = await orchestrator.request('inject_fault', { atMs: fault.atMs, kind: fault.kind, linkId: fault.linkId, ...(fault.bwMbit ? { bwMbit: fault.bwMbit } : {}) });
-        record('admin_fault', { fault: { atMs: fault.atMs, kind: fault.kind, linkId: fault.linkId, bwMbit: fault.bwMbit }, scheduledAtMs: fault.due, appliedAtMs: result.appliedAtMs });
+        const { due, done, ...args } = fault;
+        const result = await orchestrator.request('inject_fault', args);
+        record('admin_fault', { fault: args, scheduledAtMs: due, appliedAtMs: result.appliedAtMs });
       }
       if (nowMs() >= nextSample) {
         nextSample += SAMPLE_MS;
         try {
           const raw = await supervisor.request('telemetry', { intervalMs: SAMPLE_MS }, { timeoutMs: 2000 });
-          const admittedObs = admitObservation(raw, { runId, nowMs: nowMs(), lastSeq, maxAgeMs: 2000 });
-          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); latest = admittedObs.observation; }
+          const admittedObs = admitObservation(raw, { runId, nowMs: nowMs(), lastSeq, maxAgeMs: policy.limits.maxObservationAgeMs });
+          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); history.push(admittedObs.observation); latest = admittedObs.observation; }
           else record('observation_rejected', { code: admittedObs.code });
-          const intent = controller && latest && !outstanding ? controller.decide({ observation: latest, trafficMs: nowMs() - startAtMs }) : null;
-          if (intent) {
-            const proposal = {
-              version: 'ProposalV1', proposalId: intent.proposalId, runId, policyId, baseConfigRevision: latest.configRevision,
-              observationSeq: latest.seq, observationAtMs: Math.floor(latest.collectedAtMs), expiresAtMs: Math.floor(latest.collectedAtMs) + policy.limits.proposalLifetimeMs, // integer ms: exact lifetime
-              preconditions: intent.preconditions, actions: intent.actions, predicted: [], evidence: [`obs-${latest.seq}`],
-            };
-            const decision = admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation: latest, budgets });
-            record('decision', { controller: controller.name, proposal, decision });
-            if (decision.admitted) {
-              outstanding = executor.execute(decision, proposal).then(result => { record('execution', { controller: controller.name, ...result }); })
-                .catch(error => record('execution_failed', { detail: error.message })).finally(() => { outstanding = null; });
-            }
-          }
         } catch (error) { record('telemetry_failed', { code: error.code, detail: error.detail }); }
+        step();
       }
       await sleep(Math.max(5, Math.min(50, nextSample - nowMs())));
     }

@@ -157,8 +157,56 @@ def bulk_receiver(cfg):
         log(out, {'t': 'complete', 'atNs': time.monotonic_ns()})
 
 
+def probe_echo(cfg):
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.bind(('0.0.0.0', cfg['port']))
+    stop_ns = time.monotonic_ns() + int(cfg['listenMs'] * 1e6)
+    echoed = 0
+    while time.monotonic_ns() < stop_ns:
+        ready, _, _ = select.select([sock], [], [], 0.05)
+        if ready:
+            data, addr = sock.recvfrom(4096)
+            sock.sendto(data, addr)
+            echoed += 1
+    print(json.dumps({'echoed': echoed}))
+
+
+def probe_sender(cfg):
+    """Send numbered probes at a fixed interval; report loss and round-trip times. Output: one JSON line."""
+    sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+    sock.setblocking(False)
+    pad = b'p' * max(0, cfg['payloadBytes'] - 24)
+    sent_at, rtts = {}, {}
+    for i in range(cfg['packetCount']):
+        now = time.monotonic_ns()
+        sent_at[i] = now
+        sock.sendto(('%08d%016d' % (i, now)).encode() + pad, (cfg['destinationIp'], cfg['port']))
+        end = now + int(cfg['intervalMs'] * 1e6)
+        while time.monotonic_ns() < end:
+            ready, _, _ = select.select([sock], [], [], max(0, end - time.monotonic_ns()) / 1e9)
+            while ready:
+                try:
+                    data = sock.recv(4096)
+                except BlockingIOError:
+                    break
+                rtts.setdefault(int(data[:8]), (time.monotonic_ns() - int(data[8:24])) / 1e6)
+    tail = time.monotonic_ns() + int(cfg['tailMs'] * 1e6)
+    while time.monotonic_ns() < tail and len(rtts) < cfg['packetCount']:
+        ready, _, _ = select.select([sock], [], [], 0.05)
+        while ready:
+            try:
+                data = sock.recv(4096)
+            except BlockingIOError:
+                break
+            rtts.setdefault(int(data[:8]), (time.monotonic_ns() - int(data[8:24])) / 1e6)
+    values = sorted(rtts.values())
+    print(json.dumps({'sent': len(sent_at), 'received': len(values), 'bytesSent': len(sent_at) * cfg['payloadBytes'],
+                      'bytesEchoed': len(values) * cfg['payloadBytes'],
+                      'rttMs': {'min': values[0], 'median': values[len(values) // 2], 'max': values[-1]} if values else None}))
+
+
 MODES = {'essential-sender': essential_sender, 'essential-receiver': essential_receiver,
-         'bulk-sender': bulk_sender, 'bulk-receiver': bulk_receiver}
+         'bulk-sender': bulk_sender, 'bulk-receiver': bulk_receiver, 'probe-echo': probe_echo, 'probe-sender': probe_sender}
 
 if __name__ == '__main__':
     MODES[sys.argv[1]](json.loads(sys.argv[2]))

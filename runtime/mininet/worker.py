@@ -33,8 +33,8 @@ COMMANDS = {
     'shutdown': ('supervisor', 'orchestrator'),
 }
 # Controller authority: the supervisor connection only, every call carrying an operation ID.
-CONTROL_COMMANDS = ('prepare_route', 'commit_route', 'retire_route', 'abort_route', 'set_rate')
-QUERY_COMMANDS = ('operation', 'verify_route', 'control_state')
+CONTROL_COMMANDS = ('prepare_route', 'commit_route', 'retire_route', 'abort_route', 'set_rate', 'probe')
+QUERY_COMMANDS = ('operation', 'verify_route', 'control_state', 'probe_result')
 for _name in CONTROL_COMMANDS + QUERY_COMMANDS:
     COMMANDS[_name] = ('supervisor',)
 OPERATION_ID = __import__('re').compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$')
@@ -142,7 +142,7 @@ class WorkerProtocol:
                 return self.backend.collect()
             if cmd == 'teardown':
                 return self.backend.teardown()
-            if cmd in CONTROL_COMMANDS or cmd == 'operation':
+            if cmd in CONTROL_COMMANDS or cmd in ('operation', 'probe_result'):
                 if not isinstance(args.get('operationId'), str) or not OPERATION_ID.match(args['operationId']):
                     raise Rejected('operation_id_required')
             return self.backend.control(cmd, args)
@@ -184,6 +184,7 @@ class MininetBackend:
         self.rates = controls.RateControl(spec, self.run_dir)
         self.rates.initialize()
         self.operations = controls.Operations()
+        self.probe_results = {}
         return {'configRevision': self.routes.config_revision, 'policy': installed,
                 'interfaces': {'%s>%s' % k: {'ofport': v[0], 'name': v[1]} for k, v in sorted(self.ports.items())}}
 
@@ -224,39 +225,31 @@ class MininetBackend:
 
     def _service_counters(self):
         """Sender-side application counters: what an endpoint can report, not the scorer's receipts."""
+        import telemetry
         services = {}
         for f in self.spec['workload']['essential']:
             path = self._log('tx', f['flowId'])
-            state = self.tails.setdefault(path, {'offset': 0, 'offered': 0, 'transmissions': 0, 'acked': set(), 'created': {}, 'onTime': 0})
+            tail = self.tails.setdefault(path, {'offset': 0, 'counter': telemetry.ServiceCounter(f['deadlineMs'])})
             try:
                 with open(path) as handle:
-                    handle.seek(state['offset'])
+                    handle.seek(tail['offset'])
                     for line in handle:
                         if not line.endswith('\n'):
                             break
-                        state['offset'] += len(line.encode())
-                        rec = json.loads(line)
-                        if rec['t'] == 'offered':
-                            state['offered'] += 1
-                            state['created'][rec['id']] = rec['createdAtNs']
-                        elif rec['t'] == 'tx':
-                            state['transmissions'] += 1
-                        elif rec['t'] == 'ack' and rec['id'] not in state['acked']:
-                            state['acked'].add(rec['id'])
-                            created = state['created'].get(rec['id'])
-                            if created is not None and rec['atNs'] - created <= f['deadlineMs'] * 1e6:
-                                state['onTime'] += 1
+                        tail['offset'] += len(line.encode())
+                        tail['counter'].feed(json.loads(line))
             except OSError:
-                services[f['flowId']] = {'offered': None, 'transmissions': None, 'acked': None, 'ackedWithinDeadline': None}
+                services[f['flowId']] = {k: None for k in ('offered', 'transmissions', 'acked', 'ackedWithinDeadline', 'resolvedOffered', 'resolvedOnTime')}
                 continue
-            services[f['flowId']] = {'offered': state['offered'], 'transmissions': state['transmissions'],
-                                     'acked': len(state['acked']), 'ackedWithinDeadline': state['onTime']}
+            services[f['flowId']] = tail['counter'].snapshot(time.monotonic_ns())
         return services
 
     def telemetry(self, interval_ms=None):
         import telemetry
         if self.net is None:
             raise Rejected('not_built')
+        if time.monotonic_ns() < getattr(self, 'hold_until_ns', 0):
+            raise Rejected('telemetry_unavailable')
         links = telemetry.collect_links(self.spec, self.names, self.ports)
         collected = telemetry.now_ms(self.epoch_ns)
         sample = {'collectedAtMs': round(collected, 3), 'links': links, 'services': self._service_counters()}
@@ -267,6 +260,9 @@ class MininetBackend:
     def inject_fault(self, fault):
         if self.net is None:
             raise Rejected('not_built')
+        if fault['kind'] == 'telemetry_hold':
+            self.hold_until_ns = time.monotonic_ns() + int(fault['durationMs'] * 1e6)
+            return {'applied': True, 'appliedAtMs': round((time.monotonic_ns() - self.epoch_ns) / 1e6, 3)}
         result = faults.apply_fault(self.net, self.names, self.spec, fault)
         result['appliedAtMs'] = round(time.monotonic_ns() / 1e6 - self.epoch_ns / 1e6, 3)
         return result
@@ -282,6 +278,8 @@ class MininetBackend:
                 return self.operations.lookup(op)
             if cmd == 'verify_route':
                 return self.routes.verify(args['flowId'], args['version'])
+            if cmd == 'probe_result':
+                return self.probe_results.get(op, {'operationId': op, 'status': 'unknown'})
             if cmd == 'control_state':
                 return dict(self.routes.state(), rates={s: self.rates.read(s) for s in self.rates.sources})
             effect = {
@@ -290,12 +288,54 @@ class MininetBackend:
                 'retire_route': lambda: self.routes.retire(op, fields['flowId'], fields['version']),
                 'abort_route': lambda: self.routes.abort(op, fields['flowId'], fields['version']),
                 'set_rate': lambda: self.rates.set(fields['sourceId'], fields['bitsPerSecond']),
+                'probe': lambda: self.start_probe(op, fields),
             }[cmd]
             return self.operations.run(op, cmd, fields, effect)
         except controls.ControlError as error:
             raise Rejected(error.detail, 'action_rejected')
         except KeyError as missing:
             raise Rejected('missing_field')
+
+    def start_probe(self, op, fields):
+        """Install pinned rules and run the probe in the host namespaces without holding the worker lock."""
+        import controls
+        import threading as _threading
+        hosts = {h['hostId']: h for h in self.spec['topology']['hosts']}
+        source, destination = fields['sourceId'], fields['destinationId']
+        if source not in hosts or destination not in hosts or source == destination:
+            raise controls.ControlError('bad_endpoint')
+        count, size, interval = fields['packetCount'], fields['payloadBytes'], fields['intervalMs']
+        for value in (count, size, interval):
+            if isinstance(value, bool) or not isinstance(value, (int, float)) or value <= 0:
+                raise controls.ControlError('bad_quantity')
+        if count > 64 or count * size > 65536 or size < 24 or interval < 5:
+            raise controls.ControlError('probe_oversized')
+        probe = controls.ProbeRules(self.spec, self.names, self.ports, self.routes.of, hosts)
+        path = fields.get('path') or probe.default_path(source, destination)
+        self.probe_count = getattr(self, 'probe_count', 0) + 1
+        installed = probe.install(self.probe_count, source, destination, path)
+        self.probe_results[op] = {'operationId': op, 'status': 'running', 'path': path}
+        here = os.path.dirname(os.path.abspath(__file__))
+        script = os.path.join(here, 'traffic.py')
+        duration_ms = count * interval + 1000
+
+        def run():
+            echo = self.names[destination].popen(['python3', script, 'probe-echo', json.dumps({'port': controls.PROBE_PORT, 'listenMs': duration_ms + 500})])
+            time.sleep(0.15)
+            sender = self.names[source].popen(['python3', script, 'probe-sender', json.dumps({
+                'destinationIp': hosts[destination]['ip'], 'port': controls.PROBE_PORT, 'packetCount': int(count),
+                'payloadBytes': int(size), 'intervalMs': interval, 'tailMs': 1000})])
+            out, _ = sender.communicate(timeout=duration_ms / 1000 + 10)
+            echo.wait(duration_ms / 1000 + 10)
+            remaining = probe.remove(installed)
+            try:
+                measured = json.loads(out.decode().strip().splitlines()[-1])
+                self.probe_results[op] = dict(measured, operationId=op, status='complete', path=path, rulesRemaining=remaining)
+            except (ValueError, IndexError):
+                self.probe_results[op] = {'operationId': op, 'status': 'failed', 'detail': 'probe_output_missing', 'path': path, 'rulesRemaining': remaining}
+
+        _threading.Thread(target=run, daemon=True).start()
+        return {'status': 'started', 'path': path}
 
     def collect(self):
         running = [p.pid for p in self.procs if p.poll() is None]

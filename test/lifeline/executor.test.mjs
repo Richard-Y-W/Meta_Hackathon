@@ -46,7 +46,7 @@ const current = { 'dispatch-clinic': { version: 0, path: ['r0', 'r1', 'r2', 'r3'
 function executor(client, o = {}) {
   let t = 0;
   return new Executor({ client, now: () => t, sleep: async ms => { t += ms; }, drainMs: 500, verifyTimeoutMs: 1000, verifyPollMs: 100,
-    currentRoutes: structuredClone(current), isPathFeasible: () => true, fallback: async () => null, ...o });
+    currentRoutes: structuredClone(current), isPathFeasible: () => true, fallback: async () => null, onProbeBytes: () => {}, ...o });
 }
 
 test('a rejected or mismatched decision produces no worker effect', async () => {
@@ -169,16 +169,42 @@ test('worker exit mid-action leaves an unknown effect for reconciliation and sta
   assert.equal(result.requiresReconciliation, true);
 });
 
-test('retain_policy is confirmed without effects; unsupported probes are refused without a worker call', async () => {
+test('retain_policy is confirmed without effects or worker calls', async () => {
   const client = fakeClient();
-  const result = await executor(client).execute(decision(), proposal([
-    { actionId: 'a1', type: 'retain_policy', reasonCode: 'insufficient_evidence' },
-    { actionId: 'a2', type: 'probe_path', sourceId: 'dispatch', destinationId: 'clinic', packetCount: 4, payloadBytes: 100, intervalMs: 10 },
-  ]));
+  const result = await executor(client).execute(decision(), proposal([{ actionId: 'a1', type: 'retain_policy', reasonCode: 'insufficient_evidence' }]));
   assert.equal(result.receipts[0].status, 'confirmed');
-  assert.equal(result.receipts[1].status, 'failed');
-  assert.equal(result.receipts[1].detail, 'unsupported_action');
   assert.equal(client.requests.length, 0);
+});
+
+const probeAction = { actionId: 'a1', type: 'probe_path', sourceId: 'dispatch', destinationId: 'clinic', packetCount: 16, payloadBytes: 1000, intervalMs: 10, path: ['r0', 'r5', 'r4', 'r3'] };
+
+function probeClient(results) {
+  const client = fakeClient();
+  const base = client.request;
+  client.request = async (cmd, args) => {
+    if (cmd === 'probe') { client.requests.push({ cmd, args }); return { status: 'started', path: args.path, operationId: args.operationId }; }
+    if (cmd === 'probe_result') { client.requests.push({ cmd, args }); return results.shift() ?? { status: 'running' }; }
+    return base(cmd, args);
+  };
+  return client;
+}
+
+test('a probe is started, polled to completion, and its actual bytes are charged', async () => {
+  const charged = [];
+  const client = probeClient([{ status: 'running' }, { status: 'complete', sent: 16, received: 12, bytesSent: 16000, bytesEchoed: 12000, rttMs: { min: 31, median: 40, max: 90 }, path: probeAction.path }]);
+  const result = await executor(client, { onProbeBytes: (bytes, why) => charged.push([bytes, why]) }).execute(decision(), proposal([probeAction]));
+  const [receipt] = result.receipts;
+  assert.equal(receipt.status, 'confirmed', JSON.stringify(receipt));
+  assert.deepEqual(receipt.measurement, { sent: 16, received: 12, lossFraction: 0.25, rttMs: { min: 31, median: 40, max: 90 }, path: probeAction.path, bytesSent: 16000, bytesEchoed: 12000 });
+  assert.deepEqual(charged, [[16000, 'p-1:a1']]);
+});
+
+test('a probe that never completes is a failed measurement, and its planned bytes are still charged', async () => {
+  const charged = [];
+  const result = await executor(probeClient([]), { onProbeBytes: bytes => charged.push(bytes) }).execute(decision(), proposal([probeAction]));
+  assert.equal(result.receipts[0].status, 'failed');
+  assert.equal(result.receipts[0].detail, 'probe_timeout');
+  assert.deepEqual(charged, [16000]);
 });
 
 test('two successive route updates each retire their predecessor', async () => {

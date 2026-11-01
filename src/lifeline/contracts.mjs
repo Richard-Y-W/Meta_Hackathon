@@ -14,7 +14,7 @@ const PROPOSAL_FIELDS = ['version', 'proposalId', 'runId', 'policyId', 'baseConf
 const ACTION_FIELDS = {
   set_route: ['actionId', 'type', 'flowId', 'path', 'ackPath'],
   set_background_rate: ['actionId', 'type', 'sourceId', 'bitsPerSecond'],
-  probe_path: ['actionId', 'type', 'sourceId', 'destinationId', 'packetCount', 'payloadBytes', 'intervalMs'],
+  probe_path: ['actionId', 'type', 'sourceId', 'destinationId', 'packetCount', 'payloadBytes', 'intervalMs', 'path'],
   retain_policy: ['actionId', 'type', 'reasonCode'],
 };
 const PRECONDITION_FIELDS = {
@@ -26,10 +26,12 @@ const MAX_ITEMS = 64;
 
 const isPlain = v => v !== null && typeof v === 'object' && !Array.isArray(v) && Object.getPrototypeOf(v) === Object.prototype;
 
+const OPTIONAL_FIELDS = new Set(['path']); // probe_path may name the path it tests
+
 function exactFields(record, allowed) {
   if (!isPlain(record)) reject('proposal_invalid', 'invalid_type');
   for (const key of Object.keys(record)) if (!allowed.includes(key)) reject('proposal_invalid', 'unknown_field');
-  for (const key of allowed) if (!Object.hasOwn(record, key)) reject('proposal_invalid', 'missing_field');
+  for (const key of allowed) if (!OPTIONAL_FIELDS.has(key) && !Object.hasOwn(record, key)) reject('proposal_invalid', 'missing_field');
 }
 
 function number(value, { integer = false, time = false } = {}) {
@@ -111,6 +113,7 @@ function checkAction(action, ctx, topo) {
         if (typeof end !== 'string' || !Object.hasOwn(topo.endpoints, end)) reject('route_unavailable', 'bad_endpoint');
       }
       if (action.sourceId === action.destinationId) reject('route_unavailable', 'bad_endpoint');
+      if (Object.hasOwn(action, 'path')) checkPath(action.path, topo.endpoints[action.sourceId], topo.endpoints[action.destinationId], topo);
       if (count < 1 || bytes < 1 || count > policy.limits.probeMaxPackets || count * bytes > policy.limits.probeMaxBytes) reject('action_rejected', 'probe_oversized');
       if (interval < policy.limits.probeMinIntervalMs) reject('action_rejected', 'probe_interval_too_short');
       return count * bytes;

@@ -1,0 +1,160 @@
+// Adaptive conventional supervisor: measured capacity beliefs, bounded probes of unmeasured candidates,
+// exhaustive route x background-rate search over a small candidate set, hysteresis, shared guard/executor.
+import { candidatePaths, directedLinks, effectiveRoute, loads, pathUp } from './common.mjs';
+
+const LIMIT = 0.95;
+const HOLD_MS = 5000;
+const PROBE = { packetCount: 16, payloadBytes: 1000, intervalMs: 10 };
+const SATURATED_BACKLOG_BYTES = 20_000;
+
+export class CapacityBeliefs {
+  constructor(inventory) {
+    this.inventory = inventory;
+    this.state = {};
+    for (const l of inventory.topology.links) {
+      for (const [a, b] of [[l.a, l.b], [l.b, l.a]]) this.state[`${a}>${b}`] = { lo: 0, hi: inventory.nominalCapacityBps[l.linkId], estimate: null, measured: false };
+    }
+  }
+
+  update(observation, rates) {
+    for (const l of this.inventory.topology.links) {
+      for (const [a, b] of [[l.a, l.b], [l.b, l.a]]) {
+        const s = this.state[`${a}>${b}`];
+        const nominal = this.inventory.nominalCapacityBps[l.linkId];
+        if (observation.links?.[l.linkId]?.state !== 'up') { Object.assign(s, { lo: 0, hi: 0, estimate: 0, down: true }); continue; }
+        if (s.down) Object.assign(s, { lo: 0, hi: nominal, estimate: null, down: false });
+        const m = rates.links?.[l.linkId]?.[a];
+        if (!m || typeof m.txBps !== 'number') continue;
+        const saturated = (m.backlogBytes ?? 0) > SATURATED_BACKLOG_BYTES || (m.dropsPerS ?? 0) > 0;
+        // Only carried load or saturation says anything about capacity; an idle link stays unmeasured.
+        if (saturated || m.txBps >= 0.1 * nominal) s.measured = true;
+        if (saturated) Object.assign(s, { estimate: m.txBps, lo: 0.9 * m.txBps, hi: Math.min(nominal, 1.1 * m.txBps) });
+        else {
+          s.lo = Math.max(Math.min(s.lo, s.hi), Math.min(m.txBps, nominal));
+          if (s.estimate !== null && m.txBps >= 0.95 * s.hi) Object.assign(s, { estimate: null, hi: nominal }); // more got through than believed
+        }
+      }
+    }
+  }
+
+  interval(key) { return [this.state[key].lo, this.state[key].hi]; }
+  measured(key) { return this.state[key].measured; }
+  // Planning capacity: the saturation estimate when one exists, otherwise the upper bound.
+  planning(key) { const s = this.state[key]; return s.estimate ?? s.hi; }
+}
+
+export function createAdaptiveController(inventory, policy) {
+  const beliefs = new CapacityBeliefs(inventory);
+  const holdUntil = {};
+  const probed = {}; // path key -> {ok, atMs}
+  let pendingProbe = null;
+  let lastBest = null;
+  let unavailable = [];
+
+  function evaluate(routes, rates, observation) {
+    const load = loads({ inventory, routes, rates, observation });
+    let weighted = 0, peak = 0;
+    for (const flow of inventory.essential) {
+      const keys = [...directedLinks(routes[flow.flowId].path, inventory.topology), ...directedLinks(routes[flow.flowId].ackPath, inventory.topology)].map(d => d.key);
+      const util = keys.map(k => (load[k] ?? 0) / Math.max(1, beliefs.planning(k)));
+      if (util.every(u => u <= LIMIT)) weighted += 10 ** (3 - flow.priority);
+      peak = Math.max(peak, ...util);
+    }
+    return { weighted, background: Object.values(rates).reduce((a, b) => a + b, 0), peak: Math.round(peak * 100) / 100 };
+  }
+
+  function plan(observation, rates, routes, backgroundRates) {
+    const up = { ...inventory.topology, links: inventory.topology.links.filter(l => observation.links?.[l.linkId]?.state === 'up') };
+    const current = Object.fromEntries(inventory.essential.map(f => [f.flowId, effectiveRoute(f, routes[f.flowId], observation, inventory)]));
+    const options = inventory.essential.map(f => {
+      const paths = candidatePaths(up, f.from, f.to);
+      const cur = current[f.flowId].path;
+      if (pathUp(cur, inventory.topology, observation) && !paths.some(p => p.join() === cur.join())) paths.push(cur);
+      return paths.length ? paths : [cur];
+    });
+    const grids = inventory.background.map(s => [...new Set([s.scheduledBps, s.scheduledBps / 2, s.scheduledBps / 4, s.minBps, backgroundRates[s.sourceId]])].map(Math.round));
+    let best = null, combos = 0;
+    const better = (x, y) => {
+      const kx = [x.score[0], x.score[1], -x.score[2], -x.score[3], -x.score[4]], ky = [y.score[0], y.score[1], -y.score[2], -y.score[3], -y.score[4]];
+      for (let i = 0; i < kx.length; i++) if (kx[i] !== ky[i]) return kx[i] > ky[i];
+      return false;
+    };
+    const walk = (i, chosen, order) => {
+      if (i < options.length) { options[i].forEach((p, j) => walk(i + 1, { ...chosen, [inventory.essential[i].flowId]: { path: p, ackPath: [...p].reverse() } }, order + j)); return; }
+      const rateWalk = (k, rates) => {
+        if (k < grids.length) { for (const r of grids[k]) rateWalk(k + 1, { ...rates, [inventory.background[k].sourceId]: r }); return; }
+        combos++;
+        const e = evaluate(chosen, rates, observation);
+        const changes = inventory.essential.filter(f => chosen[f.flowId].path.join() !== current[f.flowId].path.join()).length;
+        const candidate = { score: [e.weighted, e.background, e.peak, changes, order], routes: chosen, rates };
+        if (!best || better(candidate, best)) best = candidate;
+      };
+      rateWalk(0, {});
+    };
+    walk(0, {}, 0);
+    return { ...best, current, combos, exhaustive: true };
+  }
+
+  return {
+    name: 'adaptive',
+    beliefs,
+    plan,
+    unavailable: () => unavailable,
+    applied(intent, result) {
+      if (intent.actions[0]?.type === 'probe_path') {
+        const m = result.receipts?.[0]?.measurement;
+        probed[intent.actions[0].path.join()] = { ok: Boolean(m) && m.lossFraction <= 0.05, atMs: result.nowMs };
+        pendingProbe = null;
+        return;
+      }
+      if (result.status !== 'confirmed') return;
+      for (const a of intent.actions) holdUntil[a.flowId ?? a.sourceId] = result.nowMs + HOLD_MS;
+      lastBest = null;
+    },
+    decide({ observation, rates, routes, backgroundRates, nowMs, remaining }) {
+      if (observation.stale) return null;
+      beliefs.update(observation, rates);
+      const up = { ...inventory.topology, links: inventory.topology.links.filter(l => observation.links?.[l.linkId]?.state === 'up') };
+      unavailable = inventory.essential.filter(f => candidatePaths(up, f.from, f.to, 1).length === 0).map(f => f.flowId);
+      if (pendingProbe && nowMs - pendingProbe.atMs < 3000) return null;
+      pendingProbe = null;
+      const best = plan(observation, rates, routes, backgroundRates);
+      const changed = inventory.essential.filter(f => !unavailable.includes(f.flowId) && best.routes[f.flowId].path.join() !== best.current[f.flowId].path.join() && (holdUntil[f.flowId] ?? 0) <= nowMs);
+      const rateChanges = inventory.background.filter(s => best.rates[s.sourceId] !== backgroundRates[s.sourceId] && (holdUntil[s.sourceId] ?? 0) <= nowMs);
+      const now = evaluate(Object.fromEntries(inventory.essential.map(f => [f.flowId, best.current[f.flowId]])), backgroundRates, observation);
+      // Act for essential feasibility or to restore background; headroom only ranks plans once acting.
+      const improves = best.score[0] > now.weighted || (best.score[0] === now.weighted && best.score[1] > now.background * 1.1);
+      if ((!changed.length && !rateChanges.length) || !improves) { lastBest = null; return null; }
+      const outage = changed.some(f => !pathUp(best.current[f.flowId].path, inventory.topology, observation) || !pathUp(best.current[f.flowId].ackPath, inventory.topology, observation));
+      const signature = JSON.stringify([changed.map(f => best.routes[f.flowId].path), rateChanges.map(s => best.rates[s.sourceId])]);
+      if (!outage && lastBest !== signature) { lastBest = signature; return null; } // persistence: the same plan twice
+      // Probe an unmeasured target path before moving essential traffic onto it (not during outages).
+      if (!outage) {
+        for (const f of changed) {
+          const path = best.routes[f.flowId].path;
+          const unmeasured = directedLinks(path, inventory.topology).some(d => !beliefs.measured(d.key));
+          const known = probed[path.join()];
+          if (known && !known.ok && nowMs - known.atMs < 20_000) return null;
+          if (unmeasured && !(known?.ok && nowMs - known.atMs < 20_000) && remaining.incidentProbeBytes >= PROBE.packetCount * PROBE.payloadBytes) {
+            pendingProbe = { atMs: nowMs };
+            return { actions: [{ actionId: 'a1', type: 'probe_path', sourceId: f.source, destinationId: f.destination, ...PROBE, path }], preconditions: [], rationale: `probe ${path.join('-')} before moving ${f.flowId}` };
+          }
+        }
+      }
+      const actions = [];
+      const push = a => actions.push({ actionId: `a${actions.length + 1}`, ...a });
+      for (const s of rateChanges.filter(s => best.rates[s.sourceId] < backgroundRates[s.sourceId])) push({ type: 'set_background_rate', sourceId: s.sourceId, bitsPerSecond: best.rates[s.sourceId] });
+      for (const f of changed) push({ type: 'set_route', flowId: f.flowId, path: best.routes[f.flowId].path, ackPath: best.routes[f.flowId].ackPath });
+      for (const s of rateChanges.filter(s => best.rates[s.sourceId] > backgroundRates[s.sourceId])) push({ type: 'set_background_rate', sourceId: s.sourceId, bitsPerSecond: best.rates[s.sourceId] });
+      const down = changed.flatMap(f => [...directedLinks(best.current[f.flowId].path, inventory.topology), ...directedLinks(best.current[f.flowId].ackPath, inventory.topology)])
+        .map(d => d.linkId).filter((id, i, all) => all.indexOf(id) === i && observation.links?.[id]?.state !== 'up');
+      lastBest = null;
+      return {
+        actions: actions.slice(0, policy.limits.maxActionsPerBundle),
+        preconditions: down.map(linkId => ({ kind: 'link_state', linkId, state: 'down' })),
+        rationale: `plan score ${best.score.join('/')} vs ${now.weighted}/${now.background}/${now.peak}`,
+        transition: { capacityBps: Object.fromEntries(inventory.topology.links.map(l => [l.linkId, Math.min(beliefs.planning(`${l.a}>${l.b}`), beliefs.planning(`${l.b}>${l.a}`))])) },
+      };
+    },
+  };
+}

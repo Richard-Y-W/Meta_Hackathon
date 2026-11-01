@@ -7,8 +7,8 @@ const TERMINAL_STOP = new Set(['failed', 'compensated', 'service_unavailable', '
 class Unknown extends Error {}
 
 export class Executor {
-  constructor({ client, now, sleep, drainMs = 1000, verifyTimeoutMs = 3000, verifyPollMs = 200, currentRoutes, isPathFeasible, fallback }) {
-    Object.assign(this, { client, now, sleep, drainMs, verifyTimeoutMs, verifyPollMs, isPathFeasible, fallback });
+  constructor({ client, now, sleep, drainMs = 1000, verifyTimeoutMs = 3000, verifyPollMs = 200, currentRoutes, isPathFeasible, fallback, onProbeBytes = () => {} }) {
+    Object.assign(this, { client, now, sleep, drainMs, verifyTimeoutMs, verifyPollMs, isPathFeasible, fallback, onProbeBytes });
     this.currentRoutes = currentRoutes; // flowId -> {version, path, ackPath}, as installed
     this.cancelled = false;
   }
@@ -71,6 +71,7 @@ export class Executor {
     try {
       if (action.type === 'set_route') await this.#route(receipt, action);
       else if (action.type === 'set_background_rate') await this.#rate(receipt, action);
+      else if (action.type === 'probe_path') await this.#probe(receipt, action);
       else if (action.type === 'retain_policy') receipt.status = 'confirmed';
       else Object.assign(receipt, { status: 'failed', detail: 'unsupported_action' });
     } catch (error) {
@@ -89,6 +90,33 @@ export class Executor {
       return;
     }
     receipt.confirmedEffects.push({ step: 'set_rate', sourceId: result.sourceId, priorBps: result.priorBps, appliedBps: result.appliedBps, readBackBps: result.readBackBps });
+    receipt.status = 'confirmed';
+  }
+
+  // A probe is measurement, not configuration: completion with loss is still a confirmed result.
+  async #probe(receipt, action) {
+    const op = `${receipt.operationId}:probe`;
+    const { sourceId, destinationId, packetCount, payloadBytes, intervalMs, path } = action;
+    const started = await this.#call('probe', { operationId: op, sourceId, destinationId, packetCount, payloadBytes, intervalMs, ...(path ? { path } : {}) }, 'probe', receipt);
+    if (started.status !== 'started' && started.status !== 'complete') return Object.assign(receipt, { status: 'failed', detail: started.detail ?? 'probe_rejected' });
+    receipt.attemptedEffects.push({ step: 'probe', path: started.path, packetCount, payloadBytes });
+    const deadline = this.now() + packetCount * intervalMs + 4000;
+    let result = started;
+    while (result.status !== 'complete' && result.status !== 'failed' && this.now() < deadline) {
+      await this.sleep(250);
+      try { result = await this.client.request('probe_result', { operationId: op }); }
+      catch (error) { if (error.code === 'worker_unavailable') throw new Unknown('probe'); throw error; }
+    }
+    if (result.status !== 'complete') {
+      this.onProbeBytes(packetCount * payloadBytes, receipt.operationId); // unknown delivery: charge what was planned
+      return Object.assign(receipt, { status: 'failed', detail: result.status === 'failed' ? result.detail : 'probe_timeout' });
+    }
+    this.onProbeBytes(result.bytesSent, receipt.operationId);
+    receipt.measurement = {
+      sent: result.sent, received: result.received, lossFraction: result.sent ? 1 - result.received / result.sent : null,
+      rttMs: result.rttMs, path: result.path, bytesSent: result.bytesSent, bytesEchoed: result.bytesEchoed,
+    };
+    receipt.confirmedEffects.push({ step: 'probe', path: result.path });
     receipt.status = 'confirmed';
   }
 
