@@ -41,7 +41,7 @@ class Client:
 @unittest.skipUnless(ENABLED and hasattr(os, 'geteuid') and os.geteuid() == 0, REASON)
 class WorkerIntegration(unittest.TestCase):
     def setUp(self):
-        self.run_id = 'itest-%d' % os.getpid()
+        self.run_id = 'itest-%d-%d' % (os.getpid(), time.monotonic_ns() % 1000000)
         self.dir = '/run/lifeline/%s' % self.run_id
         self.path = self.dir + '/worker.sock'
         os.makedirs(self.dir)
@@ -83,6 +83,44 @@ class WorkerIntegration(unittest.TestCase):
         sup.close()
         self.assertEqual(self.proc.wait(10), 0)
         self.assertFalse(os.path.exists(self.path))
+
+
+    def test_versioned_route_update_carries_traffic_and_rolls_back_on_real_ovs(self):
+        orch = Client(self.path, self.run_id, 'orchestrator')
+        sup = Client(self.path, self.run_id, 'supervisor')
+        self.assertTrue(orch.call('build', self.scenario)['ok'])
+        epoch_ms = time.monotonic_ns() / 1e6 - int(orch.hello['result']['epochMonotonicNs']) / 1e6
+        start = epoch_ms + 500
+        self.assertTrue(orch.call('start_traffic', {'startAtMs': start, 'stopAtMs': start + 6000, 'tailMs': 500})['ok'])
+        time.sleep(1.5)
+        prep = sup.call('prepare_route', {'operationId': 'it-1', 'flowId': 'dispatch-clinic', 'path': ['r0', 'r5', 'r4', 'r3'], 'ackPath': ['r3', 'r4', 'r5', 'r0']})
+        self.assertEqual(prep['result']['status'], 'prepared', prep)
+        v = prep['result']['version']
+        self.assertEqual(sup.call('verify_route', {'flowId': 'dispatch-clinic', 'version': v})['result']['packets']['r3'], 0)  # not yet in use
+        commit = sup.call('commit_route', {'operationId': 'it-2', 'flowId': 'dispatch-clinic', 'version': v})
+        self.assertEqual(commit['result']['status'], 'committed', commit)
+        time.sleep(1.0)
+        moved = sup.call('verify_route', {'flowId': 'dispatch-clinic', 'version': v})['result']['packets']
+        self.assertGreater(moved['r3'], 40)  # ~80 messages/s now follow the tagged version
+        self.assertGreater(moved['r5'], 40)
+        replay = sup.call('commit_route', {'operationId': 'it-2', 'flowId': 'dispatch-clinic', 'version': v})
+        self.assertTrue(replay['result']['replayed'])
+        back = sup.call('commit_route', {'operationId': 'it-3', 'flowId': 'dispatch-clinic', 'version': 0})
+        self.assertEqual(back['result']['status'], 'committed', back)
+        before = sup.call('verify_route', {'flowId': 'dispatch-clinic', 'version': v})['result']['packets']['r3']
+        time.sleep(1.0)
+        self.assertLessEqual(sup.call('verify_route', {'flowId': 'dispatch-clinic', 'version': v})['result']['packets']['r3'] - before, 2)
+        rate = sup.call('set_rate', {'operationId': 'it-4', 'sourceId': 'bulk-field', 'bitsPerSecond': 1000000})
+        self.assertEqual(rate['result']['readBackBps'], 1000000, rate)
+        self.assertEqual(sup.call('abort_route', {'operationId': 'it-5', 'flowId': 'dispatch-clinic', 'version': v})['result']['remaining'], 0)
+        state = sup.call('control_state')['result']
+        self.assertEqual(state['routes']['dispatch-clinic/data']['active'], 0)
+        self.assertEqual(state['rates']['bulk-field'], 1000000)
+        orch.call('teardown')
+        orch.call('shutdown')
+        orch.close()
+        sup.close()
+        self.assertEqual(self.proc.wait(10), 0)
 
 
 if __name__ == '__main__':

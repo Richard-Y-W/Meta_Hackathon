@@ -51,6 +51,10 @@ class FakeBackend:
         self.calls.append(('teardown',))
         return {'removed': True}
 
+    def control(self, cmd, args):
+        self.calls.append(('control', cmd, args.get('operationId')))
+        return {'status': 'applied', 'operationId': args.get('operationId')}
+
 
 class Session:
     def __init__(self, role_allowed=('supervisor', 'orchestrator')):
@@ -146,6 +150,16 @@ class ProtocolTests(unittest.TestCase):
         self.s.hello()
         self.assertEqual(self.s.call('telemetry', {'intervalMs': 500})['result']['sampleIntervalMs'], 500)
         self.assertEqual(self.s.call('telemetry', {'intervalMs': -1})['error']['detail'], 'bad_quantity')
+
+    def test_control_commands_are_supervisor_only_and_need_an_operation_id(self):
+        self.s.hello(role='supervisor')
+        self.assertTrue(self.s.call('set_rate', {'operationId': 'op-1', 'sourceId': 'bulk-field', 'bitsPerSecond': 1})['ok'])
+        self.assertEqual(self.s.call('set_rate', {'sourceId': 'bulk-field', 'bitsPerSecond': 1})['error']['detail'], 'operation_id_required')
+        orch = Session()
+        orch.hello(role='orchestrator')
+        self.assertEqual(orch.call('prepare_route', {'operationId': 'op-2', 'flowId': 'x'})['error']['detail'], 'role_forbidden')
+        orch.close()
+        self.assertEqual([c for c in self.s.backend.calls if c[0] == 'control'], [('control', 'set_rate', 'op-1')])
 
     def test_commands_after_shutdown_are_rejected(self):
         self.s.hello()

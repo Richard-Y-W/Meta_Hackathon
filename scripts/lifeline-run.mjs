@@ -13,6 +13,9 @@ import { canonicalRecord } from '../src/lifeline/identity.mjs';
 import { scoreBackground, scoreMessages } from '../src/lifeline/metrics.mjs';
 import { admitObservation, auditControllerView } from '../src/lifeline/telemetry.mjs';
 import { admitOutputPath } from '../src/lifeline/storage.mjs';
+import { RunBudgets, admitProposal } from '../src/lifeline/guard.mjs';
+import { Executor } from '../src/lifeline/executor.mjs';
+import { createScriptedController } from '../src/lifeline/controllers/scripted.mjs';
 import { WorkerClient } from '../src/lifeline/worker-client.mjs';
 
 const REPO = resolve(dirname(fileURLToPath(import.meta.url)), '..');
@@ -23,7 +26,7 @@ function args(argv) {
   const get = (name, fallback) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : fallback; };
   return {
     scenario: get('--scenario'), controller: get('--controller', 'fixed'), backend: get('--backend', 'mininet'),
-    out: get('--out'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
+    out: get('--out'), script: get('--script'), policy: get('--policy', 'fixtures/lifeline/policy-v1.json'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
     tag: get('--tag', `lf${randomBytes(1).toString('hex')}`),
   };
 }
@@ -97,7 +100,8 @@ function score(runDir, scenario, epochNs, startAtMs, durationMs, faults) {
 async function main() {
   const opt = args(process.argv.slice(2));
   if (opt.backend !== 'mininet') throw new Error('only the mininet backend exists');
-  if (opt.controller !== 'fixed') throw new Error(`controller ${opt.controller} is not implemented yet`);
+  if (!['fixed', 'scripted'].includes(opt.controller)) throw new Error(`controller ${opt.controller} is not implemented yet`);
+  if (opt.controller === 'scripted' && !opt.script) throw new Error('--script is required for the scripted diagnostic controller');
   const out = resolve(opt.out);
   const admitted = admitOutputPath(REPO, out, { role: process.platform === 'linux' ? 'guest' : 'host' });
   if (!admitted.ok) { console.log(JSON.stringify(admitted)); process.exitCode = 2; return; }
@@ -137,6 +141,28 @@ async function main() {
     const built = await orchestrator.request('build', publicScenario, { timeoutMs: 60_000 });
     record('built', { configRevision: built.configRevision, policy: built.policy, interfaces: built.interfaces });
 
+    const policy = JSON.parse(readFileSync(resolve(REPO, opt.policy), 'utf8'));
+    const policyId = canonicalRecord(policy).sha256;
+    manifest.policy = { path: opt.policy, sha256: policyId };
+    const topology = {
+      revision: full.topologyRevision, nodes: full.topology.switches, links: full.topology.links.map(({ linkId, a, b }) => ({ linkId, a, b })),
+      endpoints: Object.fromEntries(full.topology.hosts.map(h => [h.hostId, h.switch])),
+    };
+    const budgets = new RunBudgets(policy);
+    const controller = opt.controller === 'scripted' ? createScriptedController(JSON.parse(readFileSync(resolve(opt.script), 'utf8'))) : null;
+    if (opt.script) manifest.script = { path: opt.script, sha256: sha256(resolve(opt.script)) };
+    let latest = null;
+    const linkUp = (a, b) => {
+      const link = topology.links.find(l => (l.a === a && l.b === b) || (l.a === b && l.b === a));
+      return latest?.links?.[link.linkId]?.state === 'up';
+    };
+    const executor = new Executor({
+      client: supervisor, now: nowMs, sleep, drainMs: 1000, verifyTimeoutMs: 3000, verifyPollMs: 200,
+      currentRoutes: Object.fromEntries(full.workload.essential.map(f => [f.flowId, { version: 0, path: full.referencePolicy.routes[f.flowId].primary, ackPath: full.referencePolicy.ackRoutes[f.flowId].primary }])),
+      isPathFeasible: path => path.slice(1).every((node, i) => linkUp(path[i], node)),
+      fallback: async () => null,
+    });
+    let outstanding = null;
     const startAtMs = Math.ceil(nowMs()) + 1500;
     const traffic = await orchestrator.request('start_traffic', { startAtMs, stopAtMs: startAtMs + durationMs, tailMs: 2000 }, { timeoutMs: 10_000 });
     record('traffic_started', { startAtMs, stopAtMs: startAtMs + durationMs, ...traffic });
@@ -157,12 +183,27 @@ async function main() {
         try {
           const raw = await supervisor.request('telemetry', { intervalMs: SAMPLE_MS }, { timeoutMs: 2000 });
           const admittedObs = admitObservation(raw, { runId, nowMs: nowMs(), lastSeq, maxAgeMs: 2000 });
-          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); }
+          if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); latest = admittedObs.observation; }
           else record('observation_rejected', { code: admittedObs.code });
+          const intent = controller && latest && !outstanding ? controller.decide({ observation: latest, trafficMs: nowMs() - startAtMs }) : null;
+          if (intent) {
+            const proposal = {
+              version: 'ProposalV1', proposalId: intent.proposalId, runId, policyId, baseConfigRevision: latest.configRevision,
+              observationSeq: latest.seq, observationAtMs: Math.floor(latest.collectedAtMs), expiresAtMs: Math.floor(latest.collectedAtMs) + policy.limits.proposalLifetimeMs, // integer ms: exact lifetime
+              preconditions: intent.preconditions, actions: intent.actions, predicted: [], evidence: [`obs-${latest.seq}`],
+            };
+            const decision = admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation: latest, budgets });
+            record('decision', { controller: controller.name, proposal, decision });
+            if (decision.admitted) {
+              outstanding = executor.execute(decision, proposal).then(result => { record('execution', { controller: controller.name, ...result }); })
+                .catch(error => record('execution_failed', { detail: error.message })).finally(() => { outstanding = null; });
+            }
+          }
         } catch (error) { record('telemetry_failed', { code: error.code, detail: error.detail }); }
       }
       await sleep(Math.max(5, Math.min(50, nextSample - nowMs())));
     }
+    if (outstanding) await outstanding;
     const collected = await orchestrator.request('collect', {});
     record('collected', collected);
     const teardown = await orchestrator.request('teardown', {}, { timeoutMs: 60_000 });

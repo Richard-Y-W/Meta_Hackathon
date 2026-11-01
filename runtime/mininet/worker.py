@@ -32,6 +32,12 @@ COMMANDS = {
     'teardown': ('orchestrator',),
     'shutdown': ('supervisor', 'orchestrator'),
 }
+# Controller authority: the supervisor connection only, every call carrying an operation ID.
+CONTROL_COMMANDS = ('prepare_route', 'commit_route', 'retire_route', 'abort_route', 'set_rate')
+QUERY_COMMANDS = ('operation', 'verify_route', 'control_state')
+for _name in CONTROL_COMMANDS + QUERY_COMMANDS:
+    COMMANDS[_name] = ('supervisor',)
+OPERATION_ID = __import__('re').compile(r'^[A-Za-z0-9][A-Za-z0-9._:-]{0,95}$')
 
 
 class Rejected(Exception):
@@ -136,6 +142,10 @@ class WorkerProtocol:
                 return self.backend.collect()
             if cmd == 'teardown':
                 return self.backend.teardown()
+            if cmd in CONTROL_COMMANDS or cmd == 'operation':
+                if not isinstance(args.get('operationId'), str) or not OPERATION_ID.match(args['operationId']):
+                    raise Rejected('operation_id_required')
+            return self.backend.control(cmd, args)
 
     def hello(self, args, state):
         if args.get('protocol') != PROTOCOL:
@@ -158,7 +168,6 @@ class MininetBackend:
         self.run_dir, self.epoch_ns, self.tag = run_dir, epoch_ns, tag
         self.net = self.names = self.ports = self.spec = None
         self.procs = []
-        self.config_revision = 0
         self.telemetry_seq = 0
         self.tails = {}
 
@@ -170,9 +179,12 @@ class MininetBackend:
         self.net, self.names = topology.build_network(spec, self.tag)
         self.ports = topology.port_map(spec, self.names)
         controls.set_static_arp(spec, self.names)
-        installed = controls.install_reference_policy(spec, self.names, self.ports)
-        self.config_revision = 1
-        return {'configRevision': 1, 'policy': installed,
+        self.routes = controls.RouteTable(spec, self.names, self.ports, controls.OvsOpenFlow())
+        installed = self.routes.install_reference()
+        self.rates = controls.RateControl(spec, self.run_dir)
+        self.rates.initialize()
+        self.operations = controls.Operations()
+        return {'configRevision': self.routes.config_revision, 'policy': installed,
                 'interfaces': {'%s>%s' % k: {'ofport': v[0], 'name': v[1]} for k, v in sorted(self.ports.items())}}
 
     def start_traffic(self, args):
@@ -200,9 +212,7 @@ class MininetBackend:
                 'retryAtMs': f['retryAtMs'], 'port': f['port'], 'ackPort': f['ackPort'],
                 'destinationIp': hosts[f['destination']]['ip'], 'log': self._log('tx', f['flowId'])})
         for f in self.spec['workload']['background']:
-            rate_file = os.path.join(self.run_dir, 'rate-%s' % f['sourceId'])
-            with open(rate_file, 'w') as handle:
-                handle.write(str(int(f['bitsPerSecond'])))
+            rate_file = self.rates.path(f['sourceId'])
             launch(f['source'], 'bulk-sender', {
                 'epochNs': self.epoch_ns, 'startAtMs': start, 'stopAtMs': stop, 'bitsPerSecond': f['bitsPerSecond'],
                 'packetBytes': f['packetBytes'], 'port': f['port'], 'destinationIp': hosts[f['destination']]['ip'],
@@ -251,7 +261,7 @@ class MininetBackend:
         collected = telemetry.now_ms(self.epoch_ns)
         sample = {'collectedAtMs': round(collected, 3), 'links': links, 'services': self._service_counters()}
         self.telemetry_seq += 1
-        return telemetry.build_observation(self.spec_run_id, self.telemetry_seq, sample, self.spec, self.config_revision,
+        return telemetry.build_observation(self.spec_run_id, self.telemetry_seq, sample, self.spec, self.routes.config_revision,
                                            telemetry.now_ms(self.epoch_ns), interval_ms=interval_ms)
 
     def inject_fault(self, fault):
@@ -260,6 +270,32 @@ class MininetBackend:
         result = faults.apply_fault(self.net, self.names, self.spec, fault)
         result['appliedAtMs'] = round(time.monotonic_ns() / 1e6 - self.epoch_ns / 1e6, 3)
         return result
+
+    def control(self, cmd, args):
+        import controls
+        if self.net is None:
+            raise Rejected('not_built')
+        op = args.get('operationId')
+        fields = {k: v for k, v in args.items() if k != 'operationId'}
+        try:
+            if cmd == 'operation':
+                return self.operations.lookup(op)
+            if cmd == 'verify_route':
+                return self.routes.verify(args['flowId'], args['version'])
+            if cmd == 'control_state':
+                return dict(self.routes.state(), rates={s: self.rates.read(s) for s in self.rates.sources})
+            effect = {
+                'prepare_route': lambda: self.routes.prepare(op, fields['flowId'], fields['path'], fields.get('ackPath')),
+                'commit_route': lambda: self.routes.commit(op, fields['flowId'], fields['version']),
+                'retire_route': lambda: self.routes.retire(op, fields['flowId'], fields['version']),
+                'abort_route': lambda: self.routes.abort(op, fields['flowId'], fields['version']),
+                'set_rate': lambda: self.rates.set(fields['sourceId'], fields['bitsPerSecond']),
+            }[cmd]
+            return self.operations.run(op, cmd, fields, effect)
+        except controls.ControlError as error:
+            raise Rejected(error.detail, 'action_rejected')
+        except KeyError as missing:
+            raise Rejected('missing_field')
 
     def collect(self):
         running = [p.pid for p in self.procs if p.poll() is None]

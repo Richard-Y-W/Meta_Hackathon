@@ -1,0 +1,8 @@
+{
+  "description": "Diagnostic: two successive route updates for dispatch-clinic and one background throttle under live traffic, no faults. Measures transient loss of versioned updates.",
+  "steps": [
+    { "atMs": 15000, "actions": [{ "actionId": "a1", "type": "set_route", "flowId": "dispatch-clinic", "path": ["r0", "r5", "r4", "r3"], "ackPath": ["r3", "r4", "r5", "r0"] }] },
+    { "atMs": 30000, "actions": [{ "actionId": "a1", "type": "set_route", "flowId": "dispatch-clinic", "path": ["r0", "r1", "r2", "r3"], "ackPath": ["r3", "r2", "r1", "r0"] }] },
+    { "atMs": 40000, "actions": [{ "actionId": "a1", "type": "set_background_rate", "sourceId": "bulk-field", "bitsPerSecond": 2000000 }] }
+  ]
+}
