@@ -407,14 +407,14 @@ Evidence: `docs/trials/lifeline-meta-run-0.md`. Credentials and authorization he
 
 **Dependencies:** Task 9. **Files:** Create `src/lifeline/{session,ledger}.mjs`, `test/lifeline/{session,ledger}.test.mjs`, and `scripts/lifeline-replay.mjs`.
 
-- [ ] Drive RED/GREEN for the full lifecycle: observation, investigation, proposal, forecast, admission, execution, verification, and renewed observation.
-- [ ] Keep traffic and fault clocks running during API calls. Include model wait time, probes, rejected attempts, and compensation in the service outcome.
-- [ ] Abort stale proposals after a configuration change. Handle a second failure during investigation or execution without replaying the old plan blindly.
-- [ ] Require progress bounds: repeated equivalent probes or ineffective route changes reach a recorded limit and hand control back to the conventional supervisor.
-- [ ] Persist every attempt and terminal outcome, including provider failure, guard rejection, partial action, user stop, worker crash, and process restart.
-- [ ] Test ledger append ordering, crash-truncated final records, duplicate sequence numbers, altered records, missing receipts, and incomplete manifests. A hash chain detects changes relative to a retained manifest; it is not independent proof of an honest experiment.
-- [ ] Replay contract decisions and recompute scores from retained inputs without calling the provider or rerunning network traffic. Do not claim bit-identical packet replay.
-- [ ] Qualify G3 with a live Meta trace, second failure, and visible degraded-mode control.
+- [x] Drive RED/GREEN for the full lifecycle: observation, investigation, proposal, forecast, admission, execution, verification, and renewed observation.
+- [x] Keep traffic and fault clocks running during API calls. Include model wait time, probes, rejected attempts, and compensation in the service outcome.
+- [x] Abort stale proposals after a configuration change. Handle a second failure during investigation or execution without replaying the old plan blindly.
+- [x] Require progress bounds: repeated equivalent probes or ineffective route changes reach a recorded limit and hand control back to the conventional supervisor.
+- [x] Persist every attempt and terminal outcome, including provider failure, guard rejection, partial action, user stop, worker crash, and process restart.
+- [x] Test ledger append ordering, crash-truncated final records, duplicate sequence numbers, altered records, missing receipts, and incomplete manifests. A hash chain detects changes relative to a retained manifest; it is not independent proof of an honest experiment.
+- [x] Replay contract decisions and recompute scores from retained inputs without calling the provider or rerunning network traffic. Do not claim bit-identical packet replay.
+- [x] Qualify G3 with a live Meta trace, second failure, and visible degraded-mode control.
 
 ```sh
 node --test test/lifeline/session.test.mjs test/lifeline/ledger.test.mjs
@@ -423,6 +423,8 @@ node scripts/lifeline-replay.mjs --run artifacts/lifeline/recovery-run-0 --verif
 ```
 
 Evidence: `docs/trials/lifeline-recovery-run-0.md` and a self-contained run bundle.
+
+**State (Nov 1):** `qualified`; G3 qualified in [recovery run 0](../../trials/lifeline-recovery-run-0.md). Supervisor-process restart with resumed control is not implemented; such a crash ends the run as incomplete.
 
 ## 7. Third execution batch: determine what works and make it visible
 
