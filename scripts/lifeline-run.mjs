@@ -16,6 +16,8 @@ import { admitOutputPath } from '../src/lifeline/storage.mjs';
 import { RunBudgets, admitProposal } from '../src/lifeline/guard.mjs';
 import { Executor } from '../src/lifeline/executor.mjs';
 import { createScriptedController } from '../src/lifeline/controllers/scripted.mjs';
+import { CapacityBeliefs } from '../src/lifeline/beliefs.mjs';
+import { forecast } from '../src/lifeline/forecast.mjs';
 import { createPriorityController } from '../src/lifeline/controllers/priority.mjs';
 import { createAdaptiveController } from '../src/lifeline/controllers/adaptive.mjs';
 import { backgroundPath, backgroundWireBps, buildInventory, candidatePaths, effectiveRoute, essentialDemandBps, linkBetween } from '../src/lifeline/controllers/common.mjs';
@@ -171,6 +173,7 @@ async function main() {
       },
       onProbeBytes: (bytes, why) => budgets.charge('incidentProbeBytes', bytes, `probe ${why}`),
     });
+    const beliefs = new CapacityBeliefs(inventory); // supervisor's shared belief record, for forecasts
     let outstanding = null;
     let suppressUntil = 0; // after a rejection, wait before proposing again: every attempt is charged
     let proposalCount = 0;
@@ -188,6 +191,7 @@ async function main() {
       const ageMs = nowMs() - latest.collectedAtMs;
       const view = { ...latest, ageMs, stale: ageMs > policy.limits.maxObservationAgeMs };
       const rates = deriveRates(history.filter(o => o.collectedAtMs >= latest.collectedAtMs - 4000));
+      if (beliefs.updatedAtMs !== latest.collectedAtMs) beliefs.update(latest, rates);
       const services = Object.fromEntries(Object.entries(view.services).map(([id, v]) => [id, { ...v, ...rates.services[id] }]));
       const observation = { ...view, services };
       const nowDown = new Set(Object.entries(latest.links).filter(([, l]) => l.state !== 'up').map(([id]) => id));
@@ -208,8 +212,17 @@ async function main() {
         flowRoutes: { ...effective, ...Object.fromEntries(inventory.background.map(s => [s.sourceId, backgroundPath(s, latest, topology)])) },
         flowRateBps: { ...Object.fromEntries(inventory.essential.map(f => [f.flowId, essentialDemandBps(f)])), ...Object.fromEntries(inventory.background.map(s => [s.sourceId, backgroundWireBps(s, backgroundRates[s.sourceId])])) },
       };
-      const decision = admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation, budgets, transition });
-      record('decision', { controller: controller.name, rationale: intent.rationale, proposal, decision });
+      // Forecast of the configuration the proposal would produce: advisory for conventional controllers.
+      const nextRoutes = Object.fromEntries(inventory.essential.map(f => [f.flowId, effectiveRoute(f, executor.currentRoutes[f.flowId], latest, inventory)]));
+      const nextRates = { ...backgroundRates };
+      for (const a of proposal.actions) {
+        if (a.type === 'set_route') nextRoutes[a.flowId] = { version: 1, path: a.path, ackPath: a.ackPath };
+        if (a.type === 'set_background_rate') nextRates[a.sourceId] = a.bitsPerSecond;
+      }
+      const predicted = forecast({ inventory, beliefs, routes: nextRoutes, rates: nextRates, observation: latest });
+      const decision = { ...admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation, budgets, transition }), forecastId: predicted.forecastId };
+      record('decision', { controller: controller.name, rationale: intent.rationale, proposal, decision,
+        forecast: { status: predicted.status, beliefRevision: beliefs.revision, flows: predicted.flows?.map(f => ({ flowId: f.flowId, predictedOnTime: f.predictedOnTime, peakUtilization: f.peakUtilization })), nominalAssumed: predicted.nominalAssumed } });
       if (!decision.admitted) { suppressUntil = nowMs() + 2000; controller.applied?.(proposal, { status: 'rejected', nowMs: nowMs() }); return; }
       outstanding = executor.execute(decision, proposal).then(result => {
         for (const r of result.receipts) for (const e of r.confirmedEffects) if (e.step === 'set_rate') backgroundRates[e.sourceId] = e.readBackBps;

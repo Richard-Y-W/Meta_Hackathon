@@ -1,47 +1,13 @@
 // Adaptive conventional supervisor: measured capacity beliefs, bounded probes of unmeasured candidates,
 // exhaustive route x background-rate search over a small candidate set, hysteresis, shared guard/executor.
 import { candidatePaths, directedLinks, effectiveRoute, loads, pathUp } from './common.mjs';
+import { CapacityBeliefs } from '../beliefs.mjs';
+
+export { CapacityBeliefs };
 
 const LIMIT = 0.95;
 const HOLD_MS = 5000;
 const PROBE = { packetCount: 16, payloadBytes: 1000, intervalMs: 10 };
-const SATURATED_BACKLOG_BYTES = 20_000;
-
-export class CapacityBeliefs {
-  constructor(inventory) {
-    this.inventory = inventory;
-    this.state = {};
-    for (const l of inventory.topology.links) {
-      for (const [a, b] of [[l.a, l.b], [l.b, l.a]]) this.state[`${a}>${b}`] = { lo: 0, hi: inventory.nominalCapacityBps[l.linkId], estimate: null, measured: false };
-    }
-  }
-
-  update(observation, rates) {
-    for (const l of this.inventory.topology.links) {
-      for (const [a, b] of [[l.a, l.b], [l.b, l.a]]) {
-        const s = this.state[`${a}>${b}`];
-        const nominal = this.inventory.nominalCapacityBps[l.linkId];
-        if (observation.links?.[l.linkId]?.state !== 'up') { Object.assign(s, { lo: 0, hi: 0, estimate: 0, down: true }); continue; }
-        if (s.down) Object.assign(s, { lo: 0, hi: nominal, estimate: null, down: false });
-        const m = rates.links?.[l.linkId]?.[a];
-        if (!m || typeof m.txBps !== 'number') continue;
-        const saturated = (m.backlogBytes ?? 0) > SATURATED_BACKLOG_BYTES || (m.dropsPerS ?? 0) > 0;
-        // Only carried load or saturation says anything about capacity; an idle link stays unmeasured.
-        if (saturated || m.txBps >= 0.1 * nominal) s.measured = true;
-        if (saturated) Object.assign(s, { estimate: m.txBps, lo: 0.9 * m.txBps, hi: Math.min(nominal, 1.1 * m.txBps) });
-        else {
-          s.lo = Math.max(Math.min(s.lo, s.hi), Math.min(m.txBps, nominal));
-          if (s.estimate !== null && m.txBps >= 0.95 * s.hi) Object.assign(s, { estimate: null, hi: nominal }); // more got through than believed
-        }
-      }
-    }
-  }
-
-  interval(key) { return [this.state[key].lo, this.state[key].hi]; }
-  measured(key) { return this.state[key].measured; }
-  // Planning capacity: the saturation estimate when one exists, otherwise the upper bound.
-  planning(key) { const s = this.state[key]; return s.estimate ?? s.hi; }
-}
 
 export function createAdaptiveController(inventory, policy) {
   const beliefs = new CapacityBeliefs(inventory);
