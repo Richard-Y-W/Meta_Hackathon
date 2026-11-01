@@ -11,7 +11,7 @@
 | Current state | Task 1 active: storage and packet runtime qualified; provider blocked on credential |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 3 (metrics); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
+| Next task | Task 4 (six-switch scenario, real messages, cascade); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
@@ -20,7 +20,7 @@
 | LIFELINE comparative results | None |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
 | Provider dependency | **Blocked:** no `.env`/`MODEL_API_KEY`; smoke recorded `credential_missing` |
-| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md) |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained |
 
 ## Initial evidence record
@@ -114,3 +114,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-10-31 | Made SSD storage mandatory in the living plan, root agent instructions, design and README; reserved ignored `.work/` storage | Future provisioning must verify storage before creating project data |
 | 2026-10-31 | Task 1 runtime run 0: preflight and provider-smoke contracts (22 tests), Lima VM, two-host packet qualification | Packet runtime qualified; provider unqualified (no credential) |
 | 2026-10-31 | Task 2 contracts run 0: canonical identity and ProposalV1 admission (39 tests), policy `f7baa4fa…` pinned | Contract-level qualification |
+| 2026-10-31 | Task 3 metrics run 0: receipt scorer (14 tests), hand fixture, 200-trial reference cross-check, real capture rescored | Contract-level qualification |

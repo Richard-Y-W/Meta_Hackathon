@@ -1,0 +1,44 @@
+{
+  "description": "Hand-calculated scoring control. Window [1000, 2000); deadlines relative to createdAtMs; a receipt exactly at the deadline is on time.",
+  "fromMs": 1000,
+  "toMs": 2000,
+  "captureThroughMs": 3000,
+  "offered": [
+    { "id": "e-01", "flowId": "dispatch-clinic", "createdAtMs": 900, "deadlineMs": 500 },
+    { "id": "e-02", "flowId": "dispatch-clinic", "createdAtMs": 1000, "deadlineMs": 500 },
+    { "id": "e-03", "flowId": "dispatch-clinic", "createdAtMs": 1100, "deadlineMs": 500 },
+    { "id": "e-04", "flowId": "field-clinic", "createdAtMs": 1200, "deadlineMs": 500 },
+    { "id": "e-05", "flowId": "field-clinic", "createdAtMs": 1300, "deadlineMs": 500 },
+    { "id": "e-06", "flowId": "field-clinic", "createdAtMs": 1999, "deadlineMs": 500 },
+    { "id": "e-07", "flowId": "dispatch-shelter", "createdAtMs": 2000, "deadlineMs": 500 }
+  ],
+  "receipts": [
+    { "id": "e-03", "receivedAtMs": 1700 },
+    { "id": "e-02", "receivedAtMs": 1500 },
+    { "id": "e-03", "receivedAtMs": 1450 },
+    { "id": "e-04", "receivedAtMs": 1150 },
+    { "id": "e-04", "receivedAtMs": 1800 },
+    { "id": "e-05", "receivedAtMs": 2600 },
+    { "id": "e-01", "receivedAtMs": 1000 },
+    { "id": "e-07", "receivedAtMs": 2100 },
+    { "id": "x-99", "receivedAtMs": 1500 }
+  ],
+  "handCalculated": {
+    "notes": [
+      "e-01 created before the window: excluded, its receipt is neither duplicate nor unknown",
+      "e-02 received exactly at its 1500 deadline: on time",
+      "e-03 receipts arrive out of order; earliest 1450 is on time; the 1700 copy is a duplicate",
+      "e-04 receipt at 1150 precedes creation at 1200: invalid; the 1800 receipt is late (deadline 1700)",
+      "e-05 received 2600 after deadline 1800: late",
+      "e-06 created 1999 inside the window with no receipt through 3000 > 2499: lost",
+      "e-07 created at toMs: excluded",
+      "x-99 matches no offered ID: unknown"
+    ],
+    "offered": 5, "onTime": 2, "late": 2, "lost": 1, "duplicateReceipts": 1, "invalidReceipts": 1, "unknownReceipts": 1,
+    "deliveryRate": 0.4,
+    "byFlow": {
+      "dispatch-clinic": { "offered": 2, "onTime": 2, "late": 0, "lost": 0, "deliveryRate": 1 },
+      "field-clinic": { "offered": 3, "onTime": 0, "late": 2, "lost": 1, "deliveryRate": 0 }
+    }
+  }
+}

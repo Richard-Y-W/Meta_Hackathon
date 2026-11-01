@@ -63,7 +63,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Domain selection | Confirmed | Owner selected emergency communications |
 | Architecture and program | Written planning baseline | This document and linked design |
 | Linux/Mininet host | Packet runtime qualified; provider not | [Runtime run 0](../../trials/lifeline-runtime-run-0.md); G0 needs a live Meta call |
-| Real packet service metrics | Not implemented | Tasks 2–4 |
+| Real packet service metrics | Scorer qualified; scenario traffic not built | [Metrics run 0](../../trials/lifeline-metrics-run-0.md); Task 4 |
 | Conventional network controller | Not implemented | Task 7 |
 | Bounded network execution | Not implemented | Tasks 5–6 |
 | Meta investigator | Not implemented | Tasks 8–10 |
@@ -263,17 +263,19 @@ test('lost and late messages remain in the offered denominator', () => {
 });
 ```
 
-- [ ] Observe RED, then implement scoring from offered IDs and earliest valid receipt per ID.
-- [ ] Add out-of-order receipts, retries, unknown IDs, duplicate offered IDs, zero offered messages, boundary times, and an incomplete observation horizon. Zero offered messages yields an undefined/null rate, never 100%.
-- [ ] Require a separate error for an incomplete capture rather than classifying missing evidence as network loss.
-- [ ] Cross-check small fixtures with a separately written reference calculation. Preserve background demand before throttling so its throughput denominator cannot shrink.
-- [ ] Run GREEN and retain the hand-calculated fixture and scorer output.
+- [x] Observe RED, then implement scoring from offered IDs and earliest valid receipt per ID.
+- [x] Add out-of-order receipts, retries, unknown IDs, duplicate offered IDs, zero offered messages, boundary times, and an incomplete observation horizon. Zero offered messages yields an undefined/null rate, never 100%.
+- [x] Require a separate error for an incomplete capture rather than classifying missing evidence as network loss.
+- [x] Cross-check small fixtures with a separately written reference calculation. Preserve background demand before throttling so its throughput denominator cannot shrink.
+- [x] Run GREEN and retain the hand-calculated fixture and scorer output.
 
 ```sh
 node --test test/lifeline/metrics.test.mjs
 ```
 
 Evidence: `docs/trials/lifeline-metrics-run-0.md`. No networking or model is needed to qualify this task.
+
+**State (Oct 31):** `qualified` at contract level in [metrics run 0](../../trials/lifeline-metrics-run-0.md).
 
 ### Task 4: Run real messages, collect telemetry, and reproduce the cascade
 
