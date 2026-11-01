@@ -1,0 +1,327 @@
+{
+ "schemaVersion": "lifeline.water-development.v1",
+ "suite": "water-development-v1",
+ "note": "Development cases for P09; adjustable, not held-out evidence. Advisories are scenario-supplied (exact when they come true; w-false-alarm announces an outage that does not happen). Forecast qualification is P10.",
+ "network": {
+  "schemaVersion": "lifeline.water-network.v1",
+  "networkId": "town-water-v1",
+  "inp": "town.inp",
+  "provenance": "hand-built LIFELINE development fixture (P09)",
+  "hydraulicStepS": 60,
+  "durationS": 86400,
+  "staleAfterUs": 600000000,
+  "demandModel": {
+   "type": "PDA",
+   "requiredPressureM": 15.0,
+   "minimumPressureM": 0.0,
+   "exponent": 0.5
+  },
+  "essentialNodes": [
+   "JH",
+   "JF"
+  ],
+  "consumers": [
+   "JH",
+   "JF",
+   "JR"
+  ],
+  "actuators": {
+   "pumps": [
+    "PU1",
+    "PU2"
+   ],
+   "links": [
+    "PZ",
+    "PF"
+   ]
+  },
+  "sensors": [
+   {
+    "id": "lv-T1",
+    "assetId": "T1",
+    "metric": "water.level"
+   },
+   {
+    "id": "pr-JH",
+    "assetId": "JH",
+    "metric": "water.pressure"
+   },
+   {
+    "id": "pr-JF",
+    "assetId": "JF",
+    "metric": "water.pressure"
+   },
+   {
+    "id": "pr-JR",
+    "assetId": "JR",
+    "metric": "water.pressure"
+   },
+   {
+    "id": "fl-PU1",
+    "assetId": "PU1",
+    "metric": "water.flow"
+   },
+   {
+    "id": "fl-PU2",
+    "assetId": "PU2",
+    "metric": "water.flow"
+   },
+   {
+    "id": "st-PU1",
+    "assetId": "PU1",
+    "metric": "link.state"
+   },
+   {
+    "id": "st-PU2",
+    "assetId": "PU2",
+    "metric": "link.state"
+   },
+   {
+    "id": "st-PZ",
+    "assetId": "PZ",
+    "metric": "link.state"
+   },
+   {
+    "id": "st-PF",
+    "assetId": "PF",
+    "metric": "link.state"
+   }
+  ],
+  "limits": {
+   "servicePressureM": 15.0
+  },
+  "envelope": {
+   "demandScale": [
+    0,
+    4
+   ],
+   "emitterM3sPerSqrtM": [
+    0,
+    0.01
+   ]
+  },
+  "tolerances": {
+   "volumeM3": 0.001,
+   "flowM3s": 1e-07,
+   "timeS": 60,
+   "levelM": 0.0001
+  }
+ },
+ "policy": "control-policy.json",
+ "cases": [
+  {
+   "caseId": "w-no-fault",
+   "control": "no_fault",
+   "durationUs": 21600000000,
+   "faults": [],
+   "advisories": []
+  },
+  {
+   "caseId": "w-pump-loss",
+   "control": "recoverable",
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "pu1",
+     "atUs": 1800000000,
+     "type": "pump_outage",
+     "assetId": "PU1"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-gradual-leak",
+   "control": "recoverable",
+   "unobservedFailure": true,
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "leak-1",
+     "atUs": 1800000000,
+     "type": "leak",
+     "assetId": "JM",
+     "emitterM3sPerSqrtM": 0.0005
+    },
+    {
+     "faultId": "leak-2",
+     "atUs": 3600000000,
+     "type": "leak",
+     "assetId": "JM",
+     "emitterM3sPerSqrtM": 0.001
+    },
+    {
+     "faultId": "leak-3",
+     "atUs": 5400000000,
+     "type": "leak",
+     "assetId": "JM",
+     "emitterM3sPerSqrtM": 0.0015
+    },
+    {
+     "faultId": "leak-4",
+     "atUs": 7200000000,
+     "type": "leak",
+     "assetId": "JM",
+     "emitterM3sPerSqrtM": 0.002
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-unavailable-backup",
+   "control": "recoverable",
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "pu2-comms",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "faultId": "pu1",
+     "atUs": 1800000000,
+     "type": "pump_outage",
+     "assetId": "PU1"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-low-storage",
+   "control": "recoverable",
+   "durationUs": 21600000000,
+   "network": {
+    "tankInitialLevels": {
+     "T1": 0.8
+    }
+   },
+   "faults": [],
+   "advisories": []
+  },
+  {
+   "caseId": "w-demand-surge",
+   "control": "recoverable",
+   "unknownDemand": true,
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "surge",
+     "atUs": 3600000000,
+     "type": "demand_change",
+     "assetId": "JR",
+     "scale": 2.5
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-stale-level",
+   "control": "stale_observation",
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "freeze",
+     "atUs": 1800000000,
+     "type": "sensor_freeze",
+     "assetId": "lv-T1"
+    },
+    {
+     "faultId": "pu1",
+     "atUs": 2400000000,
+     "type": "pump_outage",
+     "assetId": "PU1"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-source-isolation",
+   "control": "physically_unrecoverable",
+   "durationUs": 21600000000,
+   "network": {
+    "tankInitialLevels": {
+     "T1": 1.5
+    }
+   },
+   "faults": [
+    {
+     "faultId": "break",
+     "atUs": 600000000,
+     "type": "pipe_break",
+     "assetId": "P1"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "w-announced-outage",
+   "control": "recoverable",
+   "prevention": true,
+   "durationUs": 21600000000,
+   "faults": [
+    {
+     "faultId": "power-pu1",
+     "atUs": 3600000000,
+     "type": "pump_outage",
+     "assetId": "PU1"
+    },
+    {
+     "faultId": "power-pu2",
+     "atUs": 3600000000,
+     "type": "pump_outage",
+     "assetId": "PU2"
+    }
+   ],
+   "advisories": [
+    {
+     "advisoryId": "grid-outage",
+     "announceAtUs": 0,
+     "kind": "asset_at_risk",
+     "events": [
+      {
+       "faultId": "power-pu1",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU1"
+      },
+      {
+       "faultId": "power-pu2",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU2"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "caseId": "w-false-alarm",
+   "control": "no_fault",
+   "falseAlarm": true,
+   "durationUs": 21600000000,
+   "faults": [],
+   "advisories": [
+    {
+     "advisoryId": "grid-outage",
+     "announceAtUs": 0,
+     "kind": "asset_at_risk",
+     "events": [
+      {
+       "faultId": "power-pu1",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU1"
+      },
+      {
+       "faultId": "power-pu2",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU2"
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}

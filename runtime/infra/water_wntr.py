@@ -77,6 +77,8 @@ class Network:
         o.time.duration = spec['durationS']
         o.time.hydraulic_timestep = o.time.report_timestep = o.time.rule_timestep = spec['hydraulicStepS']
         o.quality.parameter = 'NONE'
+        for tank, level in spec.get('tankInitialLevels', {}).items():  # case override of starting storage
+            wn.get_node(tank).init_level = level
         self.pumps, self.links = list(spec['actuators']['pumps']), list(spec['actuators']['links'])
         for asset in self.pumps + self.links:
             if asset not in wn.link_name_list:
@@ -295,7 +297,7 @@ class WaterPlant:
                 sensor = next(s for s in self.spec['sensors'] if s['id'] == asset)
                 st['sensorFaults'][asset] = {'type': kind, 'atUs': t * S, 'value': self._sensor_value(sensor), 'scale': fault.get('scale')}
         if changes:
-            st['history'].append({'atUs': t * S, 'changes': changes})
+            st['history'].append({'atUs': t * S, 'source': 'fault', 'changes': changes})
             for change in changes:
                 self.session.apply(change, self.net)
             self.session.run()
@@ -327,9 +329,12 @@ class WaterPlant:
             reported = en.ENgetnodevalue(s.node[node], EN.DEMAND) / LPS
             delivered = 0.0 if isolated else max(0.0, reported - leak)
             nodes[node] = {'deliveredM3s': delivered, 'requiredM3s': required, 'pressureM': pressure, 'leakM3s': leak, 'isolated': isolated}
+        # Emitter (leak) flow at every leaking junction, consumer or not: loss, never service.
+        leaks = {node: (0.0 if node not in reachable else coeff * max(en.ENgetnodevalue(s.node[node], EN.PRESSURE), 0.0) ** exponent)
+                 for node, coeff in sorted(self.state['emitter'].items())}
         links = {name: {'flowM3s': en.ENgetlinkvalue(s.link[name], EN.FLOW) / LPS, 'open': self._status(name)} for name in net.wn.link_name_list}
         pumps = {name: {'powerW': en.ENgetlinkvalue(s.link[name], EN.ENERGY) * 1000.0 if self._status(name) else 0.0} for name in net.wn.pump_name_list}
-        sample = {'atUs': t * S, 'status': 'solved', 'nodes': nodes, 'tanks': tanks, 'links': links, 'pumps': pumps}
+        sample = {'atUs': t * S, 'status': 'solved', 'nodes': nodes, 'tanks': tanks, 'links': links, 'pumps': pumps, 'leaks': leaks}
         ledger = self.state['ledger']
         if ledger and ledger[-1]['atUs'] == sample['atUs']:
             ledger[-1] = sample  # a change at this instant replaces the pre-change solution
@@ -362,7 +367,7 @@ class WaterPlant:
         if self.session.t is None:
             self._visit(self.session.run())
         change = {'op': 'link_status', 'link': asset, 'open': value}
-        st['history'].append({'atUs': st['nowUs'], 'changes': [change]})
+        st['history'].append({'atUs': st['nowUs'], 'source': 'action', 'changes': [change]})
         self.session.apply(change, self.net)
         self.session.run()
         self._record(self.session.t)
@@ -412,13 +417,29 @@ class WaterPlant:
         fork.state['faults'] = sorted(assumed, key=lambda f: (f['atUs'], f['faultId']))
         for action in plan.get('actions', []):
             fork.change(action, fork.revision)
+        skipped = []
+        for step in sorted(plan.get('later', []), key=lambda x: x['atUs']):  # timed continuation of the plan
+            if not start < step['atUs'] < start + plan['horizonUs']:
+                raise Rejected('invalid_plan', 'continuation outside the horizon')
+            fork.advance(step['atUs'])
+            for action in step['actions']:
+                try:
+                    fork.change(action, fork.revision)
+                except Rejected as error:  # e.g. the actuator is assumed to have failed by then
+                    skipped.append({'atUs': step['atUs'], 'action': action, 'reason': error.code})
         fork.advance(start + plan['horizonUs'])
         summary = fork.service_summary(from_us=start)
         fork.session.close()
+        tail = fork.ledger_tail()
+        others = [n for n in fork.net.consumers if n not in fork.essential]
         return {'kind': 'preview', 'modelHash': model_record['hash'], 'modelVersion': MODEL_VERSION, 'horizonUs': plan['horizonUs'],
                 'essential_unmet_m3': summary['essentialUnmetM3'], 'essential_required_m3': summary['essentialRequiredM3'],
+                'nonessential_unmet_m3': sum(summary['byNode'][n]['deficitM3'] or 0.0 for n in others),
+                'node_service': {n: summary['byNode'][n]['score'] for n in fork.net.consumers},
+                'end_tank_levels_m': {t: v['levelM'] for t, v in tail['tanks'].items()},
+                'min_tank_levels_m': {t: min(x['tanks'][t]['levelM'] for x in fork.state['ledger']) for t in tail['tanks']},
                 'low_pressure_seconds': summary['lowPressureSeconds'], 'pump_energy_j': summary['pumpEnergyJ'], 'status': summary['status'],
-                'replaySeconds': round(fork.replay_seconds, 6), 'assumptions': [e['faultId'] for e in assumed]}
+                'replaySeconds': round(fork.replay_seconds, 6), 'assumptions': [e['faultId'] for e in assumed], 'skippedContinuation': skipped}
 
     # ---- private evaluator views --------------------------------------------------------------------
     def service_record(self):
@@ -452,7 +473,7 @@ class WaterPlant:
                 'essentialRequiredM3': sum(r['requiredM3'] for r in essential), 'essentialUnmetM3': sum(r['deficitM3'] for r in essential) if complete else None,
                 'lowPressureSeconds': sum(r['lowPressureSeconds'] for r in essential),
                 'pumpEnergyJ': sum(p['powerW'] * seconds(s, e) for s, e in segments for p in s['pumps'].values()),
-                'leakM3': sum(n['leakM3s'] * seconds(s, e) for s, e in segments for n in s['nodes'].values()),
+                'leakM3': sum(q * seconds(s, e) for s, e in segments for q in s.get('leaks', {}).values()),
                 'qualityModelQualified': False}
 
     def depletion_result(self, tank):

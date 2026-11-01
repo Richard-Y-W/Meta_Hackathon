@@ -16,5 +16,10 @@
   "Junctions 109, 101 and 119 (largest base demands) are designated essential consumers.",
   "Required pressure 14 m (about 20 psi) and minimum pressure 0 m for pressure-driven demand.",
   "Pump efficiency is EPANET's default (75%) unless the file declares one; electricity use is the EPANET pump energy."
- ]
+ ],
+ "town.inp": {
+  "sha256": "92019ca024bf9e5a1728e9eac9cf6828084aa015f074fb745dc966fd2395711f",
+  "source": "hand-built with wntr.network.WaterNetworkModel and written by wntr.network.write_inpfile(units='LPS') (P09 development network)",
+  "license": "project fixture"
+ }
 }

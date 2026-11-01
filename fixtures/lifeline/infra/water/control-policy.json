@@ -1,0 +1,77 @@
+{
+ "schemaVersion": "lifeline.water-control-policy.v1",
+ "policyId": "water-control-v1",
+ "note": "Admissible water actions for the town development network. Dwell times, start limits, delays, costs, setpoints, reserve and protected minimum service are scenario engineering assumptions, not utility practice or public-health standards. Pumps are on/off only: no speed parameter is supported.",
+ "decisionPeriodUs": 300000000,
+ "pumps": {
+  "PU1": {
+   "minRunUs": 600000000,
+   "minOffUs": 600000000,
+   "maxStartsPerHour": 2,
+   "delayUs": 60000000,
+   "cost": 1.0
+  },
+  "PU2": {
+   "minRunUs": 600000000,
+   "minOffUs": 600000000,
+   "maxStartsPerHour": 2,
+   "delayUs": 60000000,
+   "cost": 1.0
+  }
+ },
+ "links": {
+  "PZ": {
+   "minDwellUs": 600000000,
+   "delayUs": 60000000,
+   "cost": 0.5,
+   "serves": [
+    "JR"
+   ]
+  },
+  "PF": {
+   "minDwellUs": 600000000,
+   "delayUs": 60000000,
+   "cost": 0.5,
+   "serves": [
+    "JF"
+   ]
+  }
+ },
+ "protectedNodes": {
+  "JH": {
+   "minServiceFraction": 0.95
+  },
+  "JF": {
+   "minServiceFraction": 0.95
+  }
+ },
+ "reserve": {
+  "tank": "T1",
+  "reserveLevelM": 1.5
+ },
+ "local": {
+  "tank": "T1",
+  "levelSensor": "lv-T1",
+  "pumpOnBelowM": 2.0,
+  "pumpOffAboveM": 4.5,
+  "backup": {
+   "PU1": "PU2"
+  },
+  "conserveBelowM": 1.5,
+  "conserveLink": "PZ",
+  "reopenAboveM": 3.0
+ },
+ "predictive": {
+  "horizonUs": 7200000000,
+  "minImprovement": 1.0,
+  "weights": {
+   "essentialM3": 1000.0,
+   "nonessentialM3": 100.0,
+   "energyMJ": 1.0,
+   "actionCost": 10.0,
+   "reserveDeficitM": 200.0
+  }
+ },
+ "commitmentHorizonUs": 1200000000,
+ "commitmentNote": "Admissibility (protected service, reserve) is judged over the commitment window: the longest pump dwell (600 s) plus a decision period (300 s) plus actuator delay (60 s), with margin. Controllers re-decide every period, so a plan is not assumed to be held for the full forecast horizon."
+}
