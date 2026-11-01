@@ -8,19 +8,19 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Task 1 active: storage and packet runtime qualified; provider blocked on credential |
+| Current state | Tasks 2–4 qualified; Task 1 provider half blocked on credential |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 4 (six-switch scenario, real messages, cascade); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
+| Next task | Task 5 (guard); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
-| LIFELINE packet runs | 2 two-host qualification runs (Task 1); 0 scenario runs |
+| LIFELINE packet runs | Task 1: 2 two-host; Task 4: 2 cascade (120 s), 1 partition, 4 short controls; all fixed policy |
 | LIFELINE live Meta runs | 0 |
 | LIFELINE comparative results | None |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
 | Provider dependency | **Blocked:** no `.env`/`MODEL_API_KEY`; smoke recorded `credential_missing` |
-| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md) |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained |
 
 ## Initial evidence record
@@ -36,6 +36,7 @@
 | E007 | 2026-10-31 | Documentation checks passed for six documents, 17 local links, 19 task IDs, anchors, code fences, whitespace and unresolved markers; task dependencies reviewed and `git diff --check` passed | Planning artifacts are internally checked; no application or packet capability is thereby qualified |
 | E008 | 2026-10-31 | Lima VM on SSD-backed APFS image carried 200/200 real UDP messages; link, rate and flow controls read back; teardown clean | Packet half of G0 qualified; no scenario or comparison claim |
 | E009 | 2026-10-31 | No `MODEL_API_KEY` configured; smoke sent no request | Provider half of G0 blocked on owner-supplied credential |
+| E010 | 2026-10-31 | Fixed-policy cascade on clean `21764ca`: primary on-time 0.630; incident 2 collapses clinic flows to 0.4% with 2.1× retries; partition delivers only shelter | Cascade is causal and measured; baseline comparison still needed |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -44,7 +45,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
 | G0 Runtime and provider | Partial | [Runtime run 0](lifeline-runtime-run-0.md): packets qualified | Live provider response and ten-request distribution |
-| G1 Measurement and baseline | Planned | No run | Receiver-based scoring and competent recovery baseline |
+| G1 Measurement and baseline | Partial | Receipt scoring and real cascade ([packet run 0](lifeline-packet-run-0.md)) | Competent conventional baseline (Task 7) |
 | G2 Bounded control | Planned | No run | Negative controls, real effects, partial-action recovery |
 | G3 AI prototype | Planned | No run | Real Meta decision with measured consequence |
 | G4a Pilot comparison | Planned | No run | All 48 scheduled development episodes accounted for |
@@ -115,3 +116,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-10-31 | Task 1 runtime run 0: preflight and provider-smoke contracts (22 tests), Lima VM, two-host packet qualification | Packet runtime qualified; provider unqualified (no credential) |
 | 2026-10-31 | Task 2 contracts run 0: canonical identity and ProposalV1 admission (39 tests), policy `f7baa4fa…` pinned | Contract-level qualification |
 | 2026-10-31 | Task 3 metrics run 0: receipt scorer (14 tests), hand fixture, 200-trial reference cross-check, real capture rescored | Contract-level qualification |
+| 2026-10-31 | Task 4 packet run 0: worker, traffic, telemetry, run script; cascade, partition, restart and boundary controls | Fixed-policy packet experiment qualified |

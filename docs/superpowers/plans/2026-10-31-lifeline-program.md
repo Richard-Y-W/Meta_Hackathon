@@ -63,7 +63,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Domain selection | Confirmed | Owner selected emergency communications |
 | Architecture and program | Written planning baseline | This document and linked design |
 | Linux/Mininet host | Packet runtime qualified; provider not | [Runtime run 0](../../trials/lifeline-runtime-run-0.md); G0 needs a live Meta call |
-| Real packet service metrics | Scorer qualified; scenario traffic not built | [Metrics run 0](../../trials/lifeline-metrics-run-0.md); Task 4 |
+| Real packet service metrics | Qualified for fixed policy | [Packet run 0](../../trials/lifeline-packet-run-0.md) |
 | Conventional network controller | Not implemented | Task 7 |
 | Bounded network execution | Not implemented | Tasks 5–6 |
 | Meta investigator | Not implemented | Tasks 8–10 |
@@ -281,14 +281,14 @@ Evidence: `docs/trials/lifeline-metrics-run-0.md`. No networking or model is nee
 
 **Dependencies:** Tasks 1–3. **Files:** Create `runtime/mininet/{worker,topology,traffic,telemetry,faults}.py`, the two Python test modules in the file map, `src/lifeline/{worker-client,telemetry}.mjs`, `test/lifeline/worker-client.test.mjs`, `scripts/lifeline-run.mjs`, and `fixtures/lifeline/development/{cascade,no-fault,partition}.json`.
 
-- [ ] Drive RED/GREEN for protocol handshake, units, message correlation, monotonic sequence, truncated frames, duplicate replies, timeout, worker exit, and command rejection after exit.
-- [ ] Build the registered six-switch topology and four service endpoints from the development fixture. Record actual ports and interface identities.
-- [ ] Schedule essential messages independently of the controller. Record offered IDs before transmission and sender completion manifests after the horizon.
-- [ ] Use a common monotonic clock in the same Linux kernel for sender/receiver timing; verify the clock basis and supervisor-to-worker run epoch. Run the supervisor on Linux in the reference deployment, with the Mac browser as a client. A future multi-host experiment needs an explicit synchronization/error model.
-- [ ] Collect rates, queue/drop counters where supported, link observations, age, and receipts. Missing counters remain missing; never substitute zero.
-- [ ] Install a fixed reference policy with preconfigured backup paths, disable the direct link, observe rerouting pressure, and retain queueing, retry, and deadline-loss evidence. Add a still-up capacity reduction and a complete partition control.
-- [ ] Confirm hidden fault labels and future schedule entries never appear in controller-visible observations.
-- [ ] Run a clean teardown and repeated start/stop test. Detect orphan workers and run-owned network objects without deleting unrelated host resources.
+- [x] Drive RED/GREEN for protocol handshake, units, message correlation, monotonic sequence, truncated frames, duplicate replies, timeout, worker exit, and command rejection after exit.
+- [x] Build the registered six-switch topology and four service endpoints from the development fixture. Record actual ports and interface identities.
+- [x] Schedule essential messages independently of the controller. Record offered IDs before transmission and sender completion manifests after the horizon.
+- [x] Use a common monotonic clock in the same Linux kernel for sender/receiver timing; verify the clock basis and supervisor-to-worker run epoch. Run the supervisor on Linux in the reference deployment, with the Mac browser as a client. A future multi-host experiment needs an explicit synchronization/error model.
+- [x] Collect rates, queue/drop counters where supported, link observations, age, and receipts. Missing counters remain missing; never substitute zero.
+- [x] Install a fixed reference policy with preconfigured backup paths, disable the direct link, observe rerouting pressure, and retain queueing, retry, and deadline-loss evidence. Add a still-up capacity reduction and a complete partition control.
+- [x] Confirm hidden fault labels and future schedule entries never appear in controller-visible observations.
+- [x] Run a clean teardown and repeated start/stop test. Detect orphan workers and run-owned network objects without deleting unrelated host resources.
 
 ```sh
 node --test test/lifeline/worker-client.test.mjs
@@ -297,6 +297,8 @@ node scripts/lifeline-run.mjs --scenario fixtures/lifeline/development/cascade.j
 ```
 
 The packet command requires the qualified environment from Task 1 and the worker introduced in this task. Expected GREEN: the independent scorer sees actual messages and a fault effect; no particular AI improvement is expected. Evidence: `docs/trials/lifeline-packet-run-0.md`.
+
+**State (Oct 31):** `qualified` for the fixed policy in [packet run 0](../../trials/lifeline-packet-run-0.md): cascade primary on-time 0.630 (24,000 offered), partition and restart controls pass, controller-view audit clean. Run inside the VM: `limactl shell lifeline`, sync to `/workspace/Meta_Hackathon`, copy evidence to `/mnt/lifeline-artifacts`.
 
 ### Task 5: Enforce authority, freshness, and budgets
 
