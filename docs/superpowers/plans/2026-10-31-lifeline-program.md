@@ -304,17 +304,19 @@ The packet command requires the qualified environment from Task 1 and the worker
 
 **Dependencies:** Tasks 2 and 4. **Files:** Create `src/lifeline/guard.mjs` and `test/lifeline/guard.test.mjs`.
 
-- [ ] Observe RED for wrong policy, old configuration revision, expired proposal, stale telemetry, unknown flow, unavailable path, route loop, changing essential demand, and exhausted action/probe budgets.
-- [ ] Implement precondition rechecks against the newest observation. A fresh sample with unchanged preconditions can admit a proposal; changed authority or failed preconditions cannot.
-- [ ] Charge rejected and timed-out attempts against their attempt budgets, and charge actual probe bytes separately. Retries cannot reset a budget.
-- [ ] Validate transitional capacity/rule limits and action order, not only the predicted final state.
-- [ ] Prove model confidence and explanatory text never override a rejected guard result.
+- [x] Observe RED for wrong policy, old configuration revision, expired proposal, stale telemetry, unknown flow, unavailable path, route loop, changing essential demand, and exhausted action/probe budgets.
+- [x] Implement precondition rechecks against the newest observation. A fresh sample with unchanged preconditions can admit a proposal; changed authority or failed preconditions cannot.
+- [x] Charge rejected and timed-out attempts against their attempt budgets, and charge actual probe bytes separately. Retries cannot reset a budget.
+- [x] Validate transitional capacity/rule limits and action order, not only the predicted final state.
+- [x] Prove model confidence and explanatory text never override a rejected guard result.
 
 ```sh
 node --test test/lifeline/guard.test.mjs
 ```
 
 Evidence: `docs/trials/lifeline-guard-run-0.md` with stable rejection codes and no worker effects for rejected actions.
+
+**State (Oct 31):** `qualified` at contract level in [guard run 0](../../trials/lifeline-guard-run-0.md); five branch mutations caught. End-to-end "no worker effect" is confirmed with the executor in Task 6.
 
 ### Task 6: Execute and reconcile real network effects
 
