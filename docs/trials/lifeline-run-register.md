@@ -8,10 +8,10 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Tasks 2–6 qualified; Task 1 provider half blocked on credential |
+| Current state | Tasks 2–7 qualified; G1 qualified; Task 1 provider half blocked on credential |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 7 (priority and adaptive controllers, probes); finish Task 1 provider smoke when `MODEL_API_KEY` exists |
+| Next task | Task 8 (beliefs, forecast); Task 9 needs `MODEL_API_KEY`; owner decision on harder development cases |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
@@ -20,7 +20,7 @@
 | LIFELINE comparative results | None |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
 | Provider dependency | **Blocked:** no `.env`/`MODEL_API_KEY`; smoke recorded `credential_missing` |
-| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md) |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained |
 
 ## Initial evidence record
@@ -38,6 +38,7 @@
 | E009 | 2026-10-31 | No `MODEL_API_KEY` configured; smoke sent no request | Provider half of G0 blocked on owner-supplied credential |
 | E010 | 2026-10-31 | Fixed-policy cascade on clean `21764ca`: primary on-time 0.630; incident 2 collapses clinic flows to 0.4% with 2.1× retries; partition delivers only shelter | Cascade is causal and measured; baseline comparison still needed |
 | E011 | 2026-10-31 | Two versioned route updates and a throttle confirmed on live traffic with 0/4,800 messages lost; cascade regression 0.631 | Execution path qualified without congestion; no controller decisions yet |
+| E012 | 2026-10-31 | On `dev-cascade-1`: fixed 0.631, priority 0.9985, adaptive 1.000; controls pass for both conventional controllers | G1 qualified; this cascade leaves no headroom for an AI gain |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -46,7 +47,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
 | G0 Runtime and provider | Partial | [Runtime run 0](lifeline-runtime-run-0.md): packets qualified | Live provider response and ten-request distribution |
-| G1 Measurement and baseline | Partial | Receipt scoring and real cascade ([packet run 0](lifeline-packet-run-0.md)) | Competent conventional baseline (Task 7) |
+| G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) | Repeat runs for variance before G4a |
 | G2 Bounded control | Partial | Guard, executor and live versioned updates ([execution run 0](lifeline-execution-run-0.md)) | Forecast qualification with guard and executor (Task 8) |
 | G3 AI prototype | Planned | No run | Real Meta decision with measured consequence |
 | G4a Pilot comparison | Planned | No run | All 48 scheduled development episodes accounted for |
@@ -68,6 +69,8 @@ The earlier repository review exercised the legacy device prototype. This planni
 | D07 | 2026-10-31 | Separate hackathon and research gates | Remaining calendar and evidence requirements | Actual progress warrants broader release scope |
 | D08 | 2026-10-31 | Keep all project-controlled files and runtime data on PortableSSD | Owner storage requirement after moving the repository | Owner changes the storage requirement |
 | D09 | 2026-10-31 | Lima `vz` VM with `LIMA_HOME` on an SSD-stored APFS sparsebundle | ExFAT cannot hold Lima's Unix sockets; image keeps VM state on the SSD | Image mount or VM performance fails |
+| D10 | 2026-10-31 | All controllers receive the same inventory: topology, nominal link ratings, declared workload, reference routes | Operators know their equipment; only impaired capacity is hidden | Owner rejects nominal ratings as controller input |
+| D11 | 2026-10-31 | `probe_path` may name the path it tests (optional field), for every controller | A discriminating probe must test a candidate before traffic moves | Contract review |
 
 ## Run-note format
 
@@ -120,3 +123,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-10-31 | Task 4 packet run 0: worker, traffic, telemetry, run script; cascade, partition, restart and boundary controls | Fixed-policy packet experiment qualified |
 | 2026-10-31 | Task 5 guard run 0: admission guard and budget ledger (21 tests, 5 mutations caught) | Contract-level qualification |
 | 2026-10-31 | Task 6 execution run 0: versioned routes, rollback, rate control, executor reconciliation; live transition run | Bounded execution qualified |
+| 2026-10-31 | Task 7 baseline run 0: priority and adaptive controllers, probes, resolved counters; 9 runs of record | G1 qualified |

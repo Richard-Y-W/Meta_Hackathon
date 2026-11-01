@@ -129,11 +129,11 @@ The first action union is:
 ```text
 set_route(flow_id, path_node_ids)
 set_background_rate(source_id, bits_per_second)
-probe_path(source_id, destination_id, packet_count, payload_bytes, interval_ms)
+probe_path(source_id, destination_id, packet_count, payload_bytes, interval_ms[, path_node_ids])
 retain_policy(reason_code)
 ```
 
-A route must be a simple path in the observed topology, have the correct endpoints, and use registered nodes. A flow route includes a separate acknowledgement path. Only background senders may be throttled. A probe has fixed packet and byte ceilings. No action alters essential source demand, message deadlines, service classification, fault schedules, or scoring.
+A route must be a simple path in the observed topology, have the correct endpoints, and use registered nodes. A probe may name the registered path it tests (D11, October 31); probe and echo are pinned to that path, and without one the worker uses a deterministic shortest path. A flow route includes a separate acknowledgement path. Only background senders may be throttled. A probe has fixed packet and byte ceilings. No action alters essential source demand, message deadlines, service classification, fault schedules, or scoring.
 
 Bind a proposal to the configuration revision, policy identity, and observed evidence. A normal telemetry sample does not itself invalidate every in-flight proposal. Before execution, recheck the configuration revision, proposal expiry, and its explicitly declared telemetry preconditions against a fresh observation. A changed route, failed precondition, or stale observation rejects the proposal.
 

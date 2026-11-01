@@ -64,7 +64,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Architecture and program | Written planning baseline | This document and linked design |
 | Linux/Mininet host | Packet runtime qualified; provider not | [Runtime run 0](../../trials/lifeline-runtime-run-0.md); G0 needs a live Meta call |
 | Real packet service metrics | Qualified for fixed policy | [Packet run 0](../../trials/lifeline-packet-run-0.md) |
-| Conventional network controller | Not implemented | Task 7 |
+| Conventional network controller | Qualified (priority, adaptive) | [Baseline run 0](../../trials/lifeline-baseline-run-0.md) |
 | Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
 | Meta investigator | Not implemented | Tasks 8–10 |
 | Comparative results | No LIFELINE runs | Tasks 11–12 |
@@ -343,13 +343,13 @@ The Python integration suite runs only in the explicitly enabled qualified Linux
 
 **Dependencies:** Task 6. **Files:** Create `src/lifeline/controllers/{priority,adaptive}.mjs`, `test/lifeline/controllers.test.mjs`, and `fixtures/lifeline/development/controller-oracles.json`.
 
-- [ ] Test shortest feasible priority-aware routing, background shedding within policy, alternate paths, acknowledgement paths, ties, no-path outcomes, stale measurements, and oscillation hysteresis.
-- [ ] Implement a priority-aware failover controller. It uses the same service priorities and action guard as LIFELINE.
-- [ ] Implement the stronger adaptive controller: update capacity estimates from telemetry, probe uncertain overloaded paths within budget, and evaluate feasible route/rate combinations on the small topology.
-- [ ] Enumerate at most three simple candidate paths per essential flow and rates from the declared background-rate grid; retain the same candidate/action limits for all supervisors. Record search exhaustion as a limit, not optimality.
-- [ ] Test small known-capacity instances against exhaustive hand-checkable optima. An oracle with hidden capacity is a diagnostic ceiling only; keep it out of the fair primary comparison.
-- [ ] Run outage, overload, no-fault, partition, and stale-telemetry controls. Confirm the baseline actually reacts, preserves priority traffic when feasible, and can win on easy cases.
-- [ ] Qualify G1. If a baseline fails an elementary case, fix it before comparing the AI.
+- [x] Test shortest feasible priority-aware routing, background shedding within policy, alternate paths, acknowledgement paths, ties, no-path outcomes, stale measurements, and oscillation hysteresis.
+- [x] Implement a priority-aware failover controller. It uses the same service priorities and action guard as LIFELINE.
+- [x] Implement the stronger adaptive controller: update capacity estimates from telemetry, probe uncertain overloaded paths within budget, and evaluate feasible route/rate combinations on the small topology.
+- [x] Enumerate at most three simple candidate paths per essential flow and rates from the declared background-rate grid; retain the same candidate/action limits for all supervisors. Record search exhaustion as a limit, not optimality.
+- [x] Test small known-capacity instances against exhaustive hand-checkable optima. An oracle with hidden capacity is a diagnostic ceiling only; keep it out of the fair primary comparison.
+- [x] Run outage, overload, no-fault, partition, and stale-telemetry controls. Confirm the baseline actually reacts, preserves priority traffic when feasible, and can win on easy cases.
+- [x] Qualify G1. If a baseline fails an elementary case, fix it before comparing the AI.
 
 ```sh
 node --test test/lifeline/controllers.test.mjs
@@ -357,6 +357,8 @@ node scripts/lifeline-run.mjs --scenario fixtures/lifeline/development/cascade.j
 ```
 
 Evidence: `docs/trials/lifeline-baseline-run-0.md`, including controller configuration and tuning history.
+
+**State (Oct 31):** `qualified`; G1 qualified in [baseline run 0](../../trials/lifeline-baseline-run-0.md). Cascade on-time: fixed 0.631, priority 0.9985, adaptive 1.000. The adaptive baseline saturates `dev-cascade-1`, so Task 11 needs predeclared harder development cases (owner decision).
 
 ## 6. Second execution batch: bounded adaptation and real Meta decisions
 
