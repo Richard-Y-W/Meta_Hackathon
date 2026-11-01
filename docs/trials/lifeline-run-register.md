@@ -11,7 +11,7 @@
 | Current state | Tasks 1–10 qualified; G0–G3 qualified; pilot protocol frozen |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 11 pilot (48 episodes), Task 13 interface in parallel |
+| Next task | Pilot running (`artifacts/lifeline/pilot-v1/`, code `69bf7c1`); then live interface check (Task 13), pilot run note, Task 14 |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |

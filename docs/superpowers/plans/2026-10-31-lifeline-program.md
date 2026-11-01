@@ -432,8 +432,8 @@ Evidence: `docs/trials/lifeline-recovery-run-0.md` and a self-contained run bund
 
 **Dependencies:** Task 10. **Files:** Create `scripts/lifeline-evaluate.mjs`, `test/lifeline/evaluation.test.mjs`, and `fixtures/lifeline/protocol-v1.json`; update the evaluation protocol with frozen pilot settings.
 
-- [ ] Test paired schedules, randomized controller order, all-run denominators, interrupted runs, budget accounting, and scorer disagreement before collecting results.
-- [ ] Record a current scan of closely related network diagnosis, traffic engineering, and LLM control systems before freezing comparator choices. The fuller reproduction study remains Task 16; a known closer baseline cannot be omitted merely because it was found late.
+- [x] Test paired schedules, randomized controller order, all-run denominators, interrupted runs, budget accounting, and scorer disagreement before collecting results.
+- [x] Record a current scan of closely related network diagnosis, traffic engineering, and LLM control systems before freezing comparator choices. The fuller reproduction study remains Task 16; a known closer baseline cannot be omitted merely because it was found late.
 - [ ] Freeze eight development cases, three controllers (`priority`, `adaptive`, `meta`), and two repetitions: 48 episodes. Use the same offered traffic and fault schedule for each paired case.
 - [ ] Run sequentially on the qualified host unless parallel isolation is independently demonstrated. Retain host load and reject infrastructure-invalid pairs under the predeclared rule.
 - [ ] Report every case, including no-fault and impossible-recovery controls, with deadline delivery, background throughput, recovery status, action counts, provider latency, and resource use.
@@ -446,6 +446,8 @@ node --env-file-if-exists=.env scripts/lifeline-evaluate.mjs --protocol fixtures
 ```
 
 Evidence: `docs/trials/lifeline-pilot-run-0.md`, full run index, and machine-readable comparison.
+
+**State (Nov 1, 07:20 UTC):** `active`. Protocol revision 1 frozen (`90bc5b6`); evaluation tests 8/8; [prior-work scan](../../research/lifeline-prior-work-scan.md) recorded; 48-episode pilot running on `69bf7c1` in the VM (`artifacts/lifeline/pilot-v1/`). Do not sync code into the VM workspace until it finishes.
 
 ### Task 12: Freeze and evaluate generalization and contribution
 
@@ -484,6 +486,8 @@ npm start
 ```
 
 Evidence: `docs/trials/lifeline-interface-run-0.md`, screenshots, and run IDs used in inspection.
+
+**State (Nov 1):** `active`. Endpoints and interface built (`16061da`), HTTP tests 8/8, replay mode inspected at desktop and narrow widths on `meta-run-0/gray-dev-2`. Live integration in the VM waits for the pilot.
 
 ### Task 14: Rehearse and package the hackathon result
 
