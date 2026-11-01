@@ -61,7 +61,9 @@ export function createLifelineHandler({ repo, artifactsRoot, liveRoot, spawnRun,
     if (!live) return { active: false, state: 'idle' };
     const exited = live.child.exitCode !== null && live.child.exitCode !== undefined;
     const state = !exited ? 'running' : live.child.exitCode === 0 ? 'finished' : 'disconnected';
-    return { active: !exited, state, liveId: live.liveId, controller: live.controller, scenario: live.scenario, mode: modeOf(live.controller, true), out: live.out, startedAtUnixMs: live.startedAtUnixMs, exitCode: live.child.exitCode ?? null };
+    const manifestPath = join(live.out, 'manifest.json');
+    const terminal = exited && existsSync(manifestPath) ? readJson(manifestPath).terminal : null;
+    return { active: !exited, state, terminal, liveId: live.liveId, controller: live.controller, scenario: live.scenario, mode: modeOf(live.controller, true), out: live.out, startedAtUnixMs: live.startedAtUnixMs, exitCode: live.child.exitCode ?? null };
   };
 
   return async function handle(req, res) {
@@ -72,7 +74,8 @@ export function createLifelineHandler({ repo, artifactsRoot, liveRoot, spawnRun,
     try {
       if (req.method === 'GET') {
         if (route === 'runs') {
-          const runs = findRuns(root).filter(r => !r.dir.startsWith(resolve(liveRoot))).map(({ id, dir }) => {
+          const activeDir = live && liveState().active ? resolve(live.out) : null; // an active run is shown live, not as a recording
+          const runs = findRuns(root).filter(r => resolve(r.dir) !== activeDir).map(({ id, dir }) => {
             const m = readJson(join(dir, 'manifest.json'));
             const s = existsSync(join(dir, 'summary.json')) ? readJson(join(dir, 'summary.json')) : null;
             return { id, runId: m.runId, controller: m.controller, scenarioId: m.scenario?.scenarioId, terminal: m.terminal, mode: 'recorded-replay', deliveryRate: s?.results?.primary?.deliveryRate ?? null, startedAtUnixMs: m.startedAtUnixMs ?? null };

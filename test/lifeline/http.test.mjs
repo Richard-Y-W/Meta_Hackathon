@@ -130,6 +130,18 @@ test('live status resumes events after a sequence number and shows a dead run as
   assert.equal(dead.body.active, false);
 });
 
+test('a finished live run becomes a recorded run and reports how it ended', async t => {
+  const s = await server();
+  t.after(s.close);
+  const { body: live } = await s.call('POST', '/api/lifeline/live/start', { scenario: 'operator', controller: 'adaptive' });
+  writeFileSync(join(live.out, 'manifest.json'), JSON.stringify({ runId: 'run-live', controller: 'adaptive', terminal: 'stopped', scenario: { path: 'fixtures/lifeline/development/no-fault.json', scenarioId: 'dev-no-fault-1' } }));
+  assert.equal((await s.call('GET', '/api/lifeline/runs')).body.runs.some(r => r.id.startsWith('live/')), false); // still active
+  s.spawn.runs[0].exitCode = 0; s.spawn.runs[0].emit('exit', 0);
+  const status = await s.call('GET', `/api/lifeline/live?liveId=${live.liveId}`);
+  assert.deepEqual([status.body.state, status.body.terminal], ['finished', 'stopped']);
+  assert.ok((await s.call('GET', '/api/lifeline/runs')).body.runs.some(r => r.id === `live/${live.liveId}` && r.terminal === 'stopped'));
+});
+
 test('mutating requests need JSON and a same-origin request', async t => {
   const s = await server();
   t.after(s.close);

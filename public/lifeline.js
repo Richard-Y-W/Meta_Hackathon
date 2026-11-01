@@ -181,8 +181,9 @@ async function loadComparison() {
   try {
     const c = await api('/api/lifeline/comparison');
     const rows = Object.entries(c.cases).map(([id, k]) => {
-      const d = k.diff.metaMinusAdaptive;
-      return `<tr><td>${esc(id)}</td><td>${pct(k.mean.priority)}</td><td>${pct(k.mean.adaptive)}</td><td>${pct(k.mean.meta)}</td><td class="${d > 0 ? 'pos' : d < 0 ? 'neg' : ''}">${d === null ? '—' : `${d >= 0 ? '+' : ''}${(100 * d).toFixed(2)} pp`}</td></tr>`;
+      const raw = k.diff.metaMinusAdaptive;
+      const d = raw === null ? null : Math.abs(raw) < 5e-5 ? 0 : raw; // differences below 0.005 pp are rounding, not results
+      return `<tr><td>${esc(id)}</td><td>${pct(k.mean.priority)}</td><td>${pct(k.mean.adaptive)}</td><td>${pct(k.mean.meta)}</td><td class="${d > 0 ? 'pos' : d < 0 ? 'neg' : ''}">${d === null ? '—' : `${d > 0 ? '+' : ''}${(100 * d).toFixed(2)} pp`}</td></tr>`;
     }).join('');
     $('comparison').innerHTML = `<table><thead><tr><th>Case</th><th>Priority</th><th>Adaptive</th><th>LIFELINE</th><th>vs adaptive</th></tr></thead><tbody>${rows}</tbody></table><p class="mono">${c.episodes.total} episodes attempted, ${c.episodes.valid} valid. Two repetitions per case: exploratory, no significance claimed.</p>`;
   } catch { $('comparison').textContent = 'No retained pilot comparison yet.'; }
@@ -229,7 +230,11 @@ async function pollLive() {
     $('connection').textContent = s.state.toUpperCase();
     $('connection').className = `badge ${s.state === 'running' ? 'conn-ok' : 'conn-bad'}`;
     if (s.state !== 'running') {
-      banner(s.state === 'finished' ? 'Live run finished. Load it from the recorded runs for receipt-based scoring.' : 'Live run disconnected: the display below is stale and no longer reflects the network.', s.state === 'finished' ? 'info' : 'error');
+      const ended = s.terminal === 'completed' ? 'Live run finished and scored from receipts: select it under Recorded run.'
+        : s.terminal === 'stopped' ? 'Run stopped by the operator: the partial capture is retained but not scored.'
+          : s.state === 'finished' ? `Live run ended (${s.terminal ?? 'unknown'}); see its recorded bundle.`
+            : 'Live run disconnected: the display below is stale and no longer reflects the network.';
+      banner(ended, s.state === 'finished' ? 'info' : 'error');
       stopPolling(); render(); await loadRuns(); return;
     }
     banner(healthy ? null : 'Waiting for the first observation…', 'info');
