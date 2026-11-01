@@ -65,7 +65,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Linux/Mininet host | Packet runtime qualified; provider not | [Runtime run 0](../../trials/lifeline-runtime-run-0.md); G0 needs a live Meta call |
 | Real packet service metrics | Qualified for fixed policy | [Packet run 0](../../trials/lifeline-packet-run-0.md) |
 | Conventional network controller | Not implemented | Task 7 |
-| Bounded network execution | Not implemented | Tasks 5–6 |
+| Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
 | Meta investigator | Not implemented | Tasks 8–10 |
 | Comparative results | No LIFELINE runs | Tasks 11–12 |
 | Live demo | Not implemented | Tasks 13–14 |
@@ -322,13 +322,13 @@ Evidence: `docs/trials/lifeline-guard-run-0.md` with stable rejection codes and 
 
 **Dependencies:** Task 5. **Files:** Create `src/lifeline/executor.mjs`, `runtime/mininet/controls.py`, and `test/lifeline/executor.test.mjs`; extend Python integration tests.
 
-- [ ] Add RED cases for prepare failure, ingress-switch failure, successful effect with lost reply, repeated operation ID, cancellation, worker exit, and verification timeout.
-- [ ] Implement versioned route preparation, explicit switch acknowledgements, ingress change, traffic verification, and old-rule retirement. Qualify forward and acknowledgement paths.
-- [ ] Implement bounded background-rate application and read-back. Keep the original offered workload immutable.
-- [ ] Record effect receipts only after observed acknowledgements. A sent command is not proof of application.
-- [ ] On partial failure, retain actual effects and reconcile before retrying. Reuse an operation ID only to retrieve its prior outcome; never duplicate a completed effect.
-- [ ] Test feasible rollback and impossible rollback after an additional link failure. In the latter case, establish a new feasible deterministic policy or report unavailable service.
-- [ ] Qualify the transition with actual packets, including in-flight messages, path-version drain, and two successive updates. Retain transient loss rather than excluding it from the score.
+- [x] Add RED cases for prepare failure, ingress-switch failure, successful effect with lost reply, repeated operation ID, cancellation, worker exit, and verification timeout.
+- [x] Implement versioned route preparation, explicit switch acknowledgements, ingress change, traffic verification, and old-rule retirement. Qualify forward and acknowledgement paths.
+- [x] Implement bounded background-rate application and read-back. Keep the original offered workload immutable.
+- [x] Record effect receipts only after observed acknowledgements. A sent command is not proof of application.
+- [x] On partial failure, retain actual effects and reconcile before retrying. Reuse an operation ID only to retrieve its prior outcome; never duplicate a completed effect.
+- [x] Test feasible rollback and impossible rollback after an additional link failure. In the latter case, establish a new feasible deterministic policy or report unavailable service.
+- [x] Qualify the transition with actual packets, including in-flight messages, path-version drain, and two successive updates. Retain transient loss rather than excluding it from the score.
 
 ```sh
 node --test test/lifeline/executor.test.mjs
@@ -336,6 +336,8 @@ python3 -m unittest discover -s runtime/mininet/tests -p test_integration.py
 ```
 
 The Python integration suite runs only in the explicitly enabled qualified Linux environment. An unavailable environment is reported as an infrastructure block, not a passing packet test. Evidence: `docs/trials/lifeline-execution-run-0.md`.
+
+**State (Oct 31):** `qualified` in [execution run 0](../../trials/lifeline-execution-run-0.md): two successive versioned updates and a throttle confirmed on live traffic with 0/4,800 messages lost. Impossible rollback is contract-tested only; transient loss under congestion is unmeasured.
 
 ### Task 7: Build the conventional controllers before the AI
 
