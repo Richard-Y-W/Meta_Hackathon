@@ -81,14 +81,16 @@ now = 67000; assert.equal(b.remainingMs(), 0);
 
 **Files:** Create `fixtures/lifeline/protocol-v2.json`, `fixtures/lifeline/scenarios-v2.json`, `docs/trials/lifeline-communications-v2-run-0.md`. Modify `src/lifeline/evaluation.mjs`, `scripts/lifeline-evaluate.mjs`, `test/lifeline/evaluation.test.mjs` only for versioned protocol support.
 
-- [ ] RED: reject mixed protocol/controller identities, hidden-fault data in controller input, missing first attempts, and a score whose offered denominator changed.
-- [ ] Treat all V1 cases as seen regression/development data. Create new cases before viewing v2 AI results; retain no-fault, unrecoverable, timeout and stale-data controls.
-- [ ] Freeze paired workloads, randomized controller order, budget, loss margin and failure rules. Include adaptive, priority, repaired Meta, and model-disabled repaired Meta.
-- [ ] GREEN: run the same receipt scorer against both protocol revisions without rewriting V1 results. Report both per-service and overall outcomes, action/probe costs and scheduling delays.
-- [ ] Qualify at least a small declared comparison with confidence limits appropriate to independent scenario groups. If the suite is too small for the desired precision, call it exploratory.
-- [ ] Record whether repair removes regressions, whether AI adds value, and how much headroom remains. Move to power/water after integration qualification even if added AI benefit is absent.
+- [x] RED: reject mixed protocol/controller identities, hidden-fault data in controller input, missing first attempts, and a score whose offered denominator changed.
+- [x] Treat all V1 cases as seen regression/development data. Create new cases before viewing v2 AI results; retain no-fault, unrecoverable, timeout and stale-data controls.
+- [x] Freeze paired workloads, randomized controller order, budget, loss margin and failure rules. Include adaptive, priority, repaired Meta, and model-disabled repaired Meta.
+- [x] GREEN: run the same receipt scorer against both protocol revisions without rewriting V1 results. Report both per-service and overall outcomes, action/probe costs and scheduling delays.
+- [x] Qualify at least a small declared comparison with confidence limits appropriate to independent scenario groups. If the suite is too small for the desired precision, call it exploratory.
+- [x] Record whether repair removes regressions, whether AI adds value, and how much headroom remains. Move to power/water after integration qualification even if added AI benefit is absent.
 
 **Run:** `node --test test/lifeline/evaluation.test.mjs test/lifeline/replay.test.mjs`; then the existing evaluator with `--protocol fixtures/lifeline/protocol-v2.json --suite pilot --backend mininet --out artifacts/lifeline/communications-v2`.
+
+**State (Nov 1):** `qualified` in [communications v2 run 0](../../trials/lifeline-communications-v2-run-0.md): repair removes the regression (meta − adaptive −0.003 pp, worst −0.03 pp); AI value not shown (meta − meta-disabled 95% interval −0.003 to +0.015 pp).
 
 **Gate:** Trustworthy v2 comparison and explicit outcome. Do not replace the objective with diagnosis accuracy if service preservation fails; diagnosis can be a separately declared secondary result.
 
@@ -125,14 +127,16 @@ assert.deepEqual(validateEnvelope(candidate), { ok: false, code: 'unit_mismatch'
 
 **Files:** Create `src/lifeline/kernel/arbiter.mjs`, `plans.mjs`, `coordinator.mjs`, `test/lifeline/infra/arbiter.test.mjs`, `plans.test.mjs`, `coordinator.test.mjs`.
 
-- [ ] RED: an 18-second investigation cannot hold a lock needed by immediate recovery. A plan for revision 4 cannot execute after revision 5 without revalidation.
-- [ ] Implement capability-scoped authority, bounded execution slots, action dependencies, expiry, conflict detection, current-state checks and cancellable investigations.
-- [ ] RED/GREEN: inject partial completion between two actions. Read back actual state, mark the receipt partial, and select only a declared compensation or stop path. Do not assume multi-domain atomicity.
-- [ ] Test observe/recommend/approve_each/bounded_auto separately; approve a precise plan identity and reject changed content under the same approval.
-- [ ] Test plan supersession, missing acknowledgements, reconnection, idempotent retries, manual override and a provider burst that would otherwise starve local control.
-- [ ] Retain event traces showing which proposal won and why; record maximum local-control scheduling delay under model/solver load.
+- [x] RED: an 18-second investigation cannot hold a lock needed by immediate recovery. A plan for revision 4 cannot execute after revision 5 without revalidation.
+- [x] Implement capability-scoped authority, bounded execution slots, action dependencies, expiry, conflict detection, current-state checks and cancellable investigations.
+- [x] RED/GREEN: inject partial completion between two actions. Read back actual state, mark the receipt partial, and select only a declared compensation or stop path. Do not assume multi-domain atomicity.
+- [x] Test observe/recommend/approve_each/bounded_auto separately; approve a precise plan identity and reject changed content under the same approval.
+- [x] Test plan supersession, missing acknowledgements, reconnection, idempotent retries, manual override and a provider burst that would otherwise starve local control.
+- [x] Retain event traces showing which proposal won and why; record maximum local-control scheduling delay under model/solver load.
 
 **Run:** `node --test test/lifeline/infra/arbiter.test.mjs test/lifeline/infra/plans.test.mjs test/lifeline/infra/coordinator.test.mjs`.
+
+**State (Nov 1):** `qualified` in [P04 run 0](../../trials/lifeline-infra-p04-run-0.md); frozen local-control budget p95 ≤ 10 ms, max ≤ 100 ms.
 
 **Gate:** Every mutation has a valid grant and lifecycle; baseline control meets its frozen scheduling budget. The budget is established from P01 measurements, then frozen before qualification.
 

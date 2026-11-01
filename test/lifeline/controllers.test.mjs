@@ -251,3 +251,11 @@ test('adaptive: a plan the guard refused is not re-proposed unchanged for a hold
   const again = c.decide(s(45_500));
   assert.deepEqual(again?.actions, first.actions, 'retried once the hold has passed');
 });
+
+// v2 run 0 (v2-f-unrecoverable.r1.meta): a confirmed model probe without an explicit path crashed the
+// adaptive hook, so the execution was never recorded and replay linkage failed.
+test('adaptive applied() accepts a confirmed probe that uses the default route (no path)', () => {
+  const adaptive = createAdaptiveController(INV, POLICY);
+  const intent = { actions: [{ actionId: 'm1', type: 'probe_path', sourceId: 'dispatch', destinationId: 'clinic', packetCount: 20, payloadBytes: 1000, intervalMs: 10 }] };
+  assert.doesNotThrow(() => adaptive.applied(intent, { status: 'confirmed', receipts: [{ measurement: { lossFraction: 0 } }], nowMs: 1000 }));
+});

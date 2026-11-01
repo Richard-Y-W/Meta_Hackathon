@@ -103,8 +103,11 @@ export function createAdaptiveController(inventory, policy, { unexplainedRule = 
     applied(intent, result) {
       if (result.status === 'rejected') { rejected.set(signature(intent.actions), result.nowMs); return; }
       if (intent.actions[0]?.type === 'probe_path') {
+        // Only probes of an explicit candidate path inform path choice; a default-route probe (as a
+        // model may propose) has no path to record.
         const m = result.receipts?.[0]?.measurement;
-        probed[intent.actions[0].path.join()] = { ok: Boolean(m) && m.lossFraction <= 0.05, atMs: result.nowMs };
+        const path = intent.actions[0].path ?? m?.path;
+        if (path) probed[path.join()] = { ok: Boolean(m) && m.lossFraction <= 0.05, atMs: result.nowMs };
         pendingProbe = null;
         return;
       }
