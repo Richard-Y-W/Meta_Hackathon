@@ -1,27 +1,43 @@
 # LIFELINE Living Status and Run Register
 
-**Updated:** November 1, 2026. **Project:** Emergency communications first; broader infrastructure resilience after domain-specific qualification.
+**Updated:** November 1, 2026. **Project:** Infrastructure-wide threat detection, cascade prediction and coordinated service preservation. Communications is the implemented first domain; power, water and their dependencies are required next phases.
 
-**Program:** [Living plan](../superpowers/plans/2026-10-31-lifeline-program.md). **Behavior:** [Design](../superpowers/specs/2026-10-31-lifeline-design.md). **Claims and measurement:** [Evaluation protocol](../research/lifeline-evaluation-protocol.md).
+**Program:** [Living plan](../superpowers/plans/2026-10-31-lifeline-program.md). **Behavior:** [Infrastructure design](../superpowers/specs/2026-11-01-lifeline-infrastructure-design.md). **Claims and measurement:** [Infrastructure evaluation](../research/lifeline-infrastructure-evaluation.md). Historical network behavior and metrics remain in the [V1 design](../superpowers/specs/2026-10-31-lifeline-design.md) and [V1 protocol](../research/lifeline-evaluation-protocol.md).
 
 ## Current handoff
 
 | Field | Current value |
 | --- | --- |
-| Current state | Tasks 1–11, 13 qualified; Task 14 package prepared and rehearsed; G5 waits on owner submission items |
+| Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Owner: portal requirements, eligibility, narrated video, publish decision. Engineering: protocol revision 2 (model in parallel with the conventional rule) |
-| Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
-| Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
-| Qualified LIFELINE gates | None |
-| LIFELINE packet runs | Task 1: 2 two-host; Task 4: 2 cascade (120 s), 1 partition, 4 short controls; all fixed policy |
-| LIFELINE live Meta runs | 3 complete development runs (cascade, gray failure ×2) and 1 interrupted |
-| LIFELINE comparative results | Pilot (48 episodes): meta − adaptive −1.35 pp over recoverable cases |
+| Next task | P00: preserve V1 and rebuild setup; then P01–P05 integration/common foundation, followed by both power and water P06–P10. Owner submission items remain separate. |
+| Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
+| Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
+| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
+| LIFELINE packet runs | Runtime, packet, baseline, investigator, pilot and live-rehearsal evidence retained; see linked run notes. |
+| LIFELINE live Meta runs | Development/integration traces, 16 Meta pilot episodes, and live-rehearsal evidence; see meta/pilot/release notes. |
+| LIFELINE comparative results | V1: 48 first attempts; meta − adaptive −1.35 pp over six recoverable cases. No broad-domain or repaired-controller results. |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
-| Provider | `muse-spark-1.3` live: 4.7–8.1 s per call; 1,500-token cap truncates reasoning; 4,000 parsed 3/3 |
+| Provider | Pilot investigator: roughly 14–18 s per call; 8/39 timed out. Earlier 4.7–8.1 s smoke calls used a different prompt/workload. |
 | Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md), [interface run 0](lifeline-interface-run-0.md), [release run 0](lifeline-release-run-0.md) |
-| Owner decisions | Emergency communications selected; ambitious long-term scope retained; harder development cases approved (Nov 1) |
+| Owner decisions | Retain full power/water/communications resilience ambition; emergency communications remains the first implementation, not the product boundary. |
+
+## Full-program revision — November 1, 2026
+
+The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) replaces the old program's scope/order. The [V1 archive](../superpowers/plans/2026-10-31-lifeline-communications-v1-archive.md) retains its original checklist. Legacy Task/G IDs below remain historical; new work uses P00–P31 and Q1–Q9.
+
+| New phase | State | Next evidence |
+| --- | --- | --- |
+| P00–P05 foundation / Q1 | Planned | Clean setup, integration regression tests, common contracts/accounting |
+| P06–P10 power and water / Q2 | Planned | Domain solver/control/forecast qualification |
+| P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
+| P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
+| P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |
+| P26–P30 operational progression / Q6–Q8 | Planned | Operator, lab and site-specific evidence |
+| P31 reproducible release / Q9 | Planned | Independent rebuild and claim audit |
+
+All B1–B6 breakthrough targets remain unproven. This revision writes the program; it does not implement or experimentally qualify the new capabilities. The next session should inspect the current tree and start P00. Do not tune the frozen V1 cases and reuse them as held-out evidence.
 
 ## Initial evidence record
 
@@ -50,6 +66,8 @@ The earlier repository review exercised the legacy device prototype. This planni
 
 ## Gate register
 
+These are the legacy V1 G gates. The new full-program Q gates are listed above and remain unqualified.
+
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
 | G0 Runtime and provider | Qualified | [Runtime run 0](lifeline-runtime-run-0.md) | Re-measure under the frozen Task 9 prompt |
@@ -58,7 +76,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 | G3 AI prototype | Qualified | [Meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md), [interface run 0](lifeline-interface-run-0.md), [release run 0](lifeline-release-run-0.md) | Pilot comparison |
 | G4a Pilot comparison | Qualified (negative) | [Pilot run 0](lifeline-pilot-run-0.md) | New protocol revision for a parallel-investigator design |
 | G4b Held-out qualification | Planned | No run | Frozen split, matched controllers, uncertainty and ablations |
-| G5 Hackathon release | Prepared | [Release run 0](lifeline-release-run-0.md), [release note](../releases/lifeline-hackathon-release.md) | Owner portal and eligibility items |
+| G5 Hackathon release | Prepared; clean setup and owner items remain | [Release run 0](lifeline-release-run-0.md), [release note](../releases/lifeline-hackathon-release.md) | Fresh-machine setup, portal, eligibility, narrated video and publish decision |
 | G6 Research qualification | Planned | No run | Appropriate prior-work comparison and supported mechanism |
 | G7 Operator/domain extension | Planned | No run | Pilot-specific or second-domain acceptance evidence |
 

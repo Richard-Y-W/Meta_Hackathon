@@ -1,6 +1,6 @@
 # LIFELINE Emergency Communications Design
 
-**Status:** Planning baseline. Emergency communications was selected by the project owner on October 31, 2026. Implementation and performance qualification have not started.
+**Status and scope:** Historical communications V1 design. The prototype and exploratory pilot are implemented; the pilot did not establish AI improvement. See the [run register](../../trials/lifeline-run-register.md) for evidence. The [infrastructure-wide design](2026-11-01-lifeline-infrastructure-design.md) now owns the shared architecture, power, water and coupled-system roadmap. Task/G references here remain part of the [archived V1 program](../plans/2026-10-31-lifeline-communications-v1-archive.md).
 
 **Goal:** Preserve timely delivery of essential messages when network failures interact with congestion, incomplete telemetry, and application retries.
 

@@ -1,6 +1,8 @@
 # LIFELINE
 
-**Emergency communications resilience with a Meta-assisted investigator.** LIFELINE runs a real packet network, watches essential messages (dispatch, clinic, shelter) as failures cascade, investigates what is going wrong, and acts within strict limits to keep messages on time. Every action passes the same guard and executor, whichever controller proposed it. Every result is scored from receiver receipts, never from a controller's own account.
+**LIFELINE detects emerging threats, predicts how failures could spread, and coordinates interventions that preserve essential services across power, water, communications, and other infrastructure.**
+
+**Current implementation:** an emergency-communications prototype with a Meta-assisted investigator. It runs a real packet network, watches essential messages as failures develop, and executes guarded route/rate/probe decisions. Receiver receipts independently determine the result. Power, water, coupled planning and the broader breakthrough studies are specified in the [full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) and remain unimplemented.
 
 Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator, with no connection to any real dispatch, clinic or radio service.
 
@@ -12,11 +14,11 @@ Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator,
 | Strong conventional baseline | Supported | [Baseline run 0](docs/trials/lifeline-baseline-run-0.md): adaptive 100% on the development cascade; no-fault, partition and stale-telemetry controls pass |
 | Meta model takes part in real decisions with measured consequences | Supported (prototype) | [Meta run 0](docs/trials/lifeline-meta-run-0.md): typed hypotheses citing observations, discriminating probes (60% vs 0% loss on a silent lossy link), guarded interventions |
 | Failure handling (invalid, stale, partial, provider failure) | Supported | [Guard](docs/trials/lifeline-guard-run-0.md), [execution](docs/trials/lifeline-execution-run-0.md), [recovery](docs/trials/lifeline-recovery-run-0.md) runs; provider interruption rehearsal |
-| **AI improves essential delivery over the strong baseline** | **Not supported** | [Pilot run 0](docs/trials/lifeline-pilot-run-0.md): 48 paired episodes, meta − adaptive **−1.35 pp** (6 ties, p5 −7.24, p6 −0.88) |
+| **AI improves essential delivery over the strong baseline** | **Not supported** | [Pilot run 0](docs/trials/lifeline-pilot-run-0.md): 48 runs (8 cases × 3 controllers × 2 repetitions), meta − adaptive **−1.35 pp** (6 ties at reported precision, p5 −7.24, p6 −0.88) |
 
 **Why the AI did not win.** Live Muse Spark calls took 14–18 s, and 21% of pilot calls timed out. The deterministic layer handles failover in about a second. In this version the model replaced a fast conventional rule for unexplained degradation, so it recovered later. The model's diagnoses were often right ("r4→r3 reduced to ~3 Mbps"), but they came too late to beat the rule. The next protocol revision keeps the rule active and runs the model in parallel. That is a design hypothesis, not a result.
 
-## Architecture
+## Architecture of the communications prototype
 
 ```
 judge / benchmark faults ──► isolated Mininet network ◄── bounded executor ◄── guard + forecast ◄── typed proposals
@@ -67,7 +69,9 @@ node --env-file-if-exists=.env scripts/lifeline-evaluate.mjs --protocol fixtures
 
 ## Project documents
 
-- [Living plan](docs/superpowers/plans/2026-10-31-lifeline-program.md) · [Design](docs/superpowers/specs/2026-10-31-lifeline-design.md) · [Evaluation protocol](docs/research/lifeline-evaluation-protocol.md) · [Run register](docs/trials/lifeline-run-register.md) · [Prior-work scan](docs/research/lifeline-prior-work-scan.md) · [Release note](docs/releases/lifeline-hackathon-release.md)
+- [Full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) · [Infrastructure design](docs/superpowers/specs/2026-11-01-lifeline-infrastructure-design.md) · [Breakthroughs and evaluation](docs/research/lifeline-infrastructure-evaluation.md) · [Run register](docs/trials/lifeline-run-register.md)
+- Implementation plans: [foundation](docs/superpowers/plans/2026-11-01-lifeline-foundation.md), [power and water](docs/superpowers/plans/2026-11-01-lifeline-power-water.md), [coordination](docs/superpowers/plans/2026-11-01-lifeline-coordination.md), [research and deployment](docs/superpowers/plans/2026-11-01-lifeline-research-deployment.md).
+- Communications V1: [archived program](docs/superpowers/plans/2026-10-31-lifeline-communications-v1-archive.md) · [design](docs/superpowers/specs/2026-10-31-lifeline-design.md) · [protocol](docs/research/lifeline-evaluation-protocol.md) · [prior work](docs/research/lifeline-prior-work-scan.md) · [release](docs/releases/lifeline-hackathon-release.md).
 
 ## Limits
 

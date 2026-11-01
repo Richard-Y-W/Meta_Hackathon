@@ -1,6 +1,8 @@
 # LIFELINE Evaluation Protocol and Claim Gates
 
-**Version:** Planning baseline, October 31, 2026. **Status:** Proposed protocol; no LIFELINE performance results exist. Numeric thresholds below are development targets until frozen in `fixtures/lifeline/protocol-v1.json` before evaluation.
+**Version and scope:** Communications V1 planning protocol, with status corrected November 1, 2026. The frozen pilot is defined by `fixtures/lifeline/protocol-v1.json` and its retained run identities. It produced 48 first-attempt episodes and a negative Meta-versus-adaptive result (−1.35 percentage points over six recoverable failure cases). The original proposed targets below do not override that frozen manifest or become achieved results.
+
+The [full infrastructure evaluation and breakthrough ledger](lifeline-infrastructure-evaluation.md) governs new power, water, coupled-system and transfer studies. Task/G references in this V1 document refer to the [archived communications program](../superpowers/plans/2026-10-31-lifeline-communications-v1-archive.md).
 
 **Purpose:** Determine whether LIFELINE preserves essential message delivery during compound failures beyond what a competent conventional controller achieves with the same information and control authority.
 
