@@ -8,6 +8,7 @@ import { CapacityBeliefs } from '../src/lifeline/beliefs.mjs';
 import { forecast } from '../src/lifeline/forecast.mjs';
 import { deriveRates } from '../src/lifeline/telemetry.mjs';
 import { buildInventory, effectiveRoute } from '../src/lifeline/controllers/common.mjs';
+import { readEvents } from '../src/lifeline/ledger.mjs';
 
 const lines = p => readFileSync(p, 'utf8').split('\n').filter(Boolean).map(l => JSON.parse(l));
 const HORIZON_S = 2;
@@ -15,7 +16,7 @@ const HORIZON_S = 2;
 export function checkRun(dir, inventory) {
   const manifest = JSON.parse(readFileSync(join(dir, 'manifest.json'), 'utf8'));
   const summary = JSON.parse(readFileSync(join(dir, 'summary.json'), 'utf8'));
-  const events = lines(join(dir, 'events.jsonl'));
+  const events = readEvents(join(dir, 'events.jsonl'));
   const observations = lines(join(dir, 'controller-view.jsonl'));
   const start = manifest.trafficStartAtMs;
   // Route and rate changes in effect, from confirmed executions (commit approximated at receipt start + 0.5 s).

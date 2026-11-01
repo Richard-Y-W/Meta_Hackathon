@@ -10,7 +10,9 @@ import { connect } from 'node:net';
 import { dirname, join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { canonicalRecord } from '../src/lifeline/identity.mjs';
-import { scoreBackground, scoreMessages } from '../src/lifeline/metrics.mjs';
+import { scoreRun } from '../src/lifeline/run-score.mjs';
+import { Ledger } from '../src/lifeline/ledger.mjs';
+import { SessionState } from '../src/lifeline/session.mjs';
 import { admitObservation, auditControllerView, deriveRates } from '../src/lifeline/telemetry.mjs';
 import { admitOutputPath } from '../src/lifeline/storage.mjs';
 import { RunBudgets, admitProposal } from '../src/lifeline/guard.mjs';
@@ -49,61 +51,6 @@ async function openClient(socketPath, runId, role) {
   return client;
 }
 
-function score(runDir, scenario, epochNs, startAtMs, durationMs, faults) {
-  const rel = ns => (Number(BigInt(ns) - epochNs) / 1e6) - startAtMs; // ms since traffic start
-  const offered = [], receipts = [], transmissions = {}, manifests = [];
-  let captureThroughMs = Infinity;
-  for (const flow of scenario.workload.essential) {
-    const tx = lines(join(runDir, `tx-${flow.flowId}.jsonl`));
-    const rx = lines(join(runDir, `rx-${flow.flowId}.jsonl`));
-    if (!tx || !rx) return { status: 'run_incomplete', detail: `missing capture for ${flow.flowId}` };
-    const complete = tx.find(r => r.t === 'complete');
-    const flowOffered = tx.filter(r => r.t === 'offered');
-    manifests.push({ flowId: flow.flowId, complete: Boolean(complete), declared: complete?.offered ?? null, recorded: flowOffered.length });
-    for (const r of flowOffered) offered.push({ id: r.id, flowId: flow.flowId, createdAtMs: rel(r.createdAtNs), deadlineMs: r.deadlineMs });
-    transmissions[flow.flowId] = tx.filter(r => r.t === 'tx').length;
-    for (const r of rx) if (r.t === 'rx') receipts.push({ id: r.id, receivedAtMs: rel(r.receivedAtNs) });
-    const rxComplete = rx.find(r => r.t === 'complete');
-    captureThroughMs = Math.min(captureThroughMs, rxComplete ? rel(rxComplete.atNs) : -1);
-  }
-  const senderManifest = { complete: manifests.every(m => m.complete && m.declared === m.recorded), count: manifests.reduce((s, m) => s + (m.declared ?? -1), 0) };
-  const firstIncident = Math.min(durationMs, faults.length ? Math.min(...faults.map(f => f.atMs)) : scenario.warmupMs);
-  const windows = { warmup: [0, firstIncident], primary: [firstIncident, durationMs] };
-  const sorted = [...new Set(faults.map(f => f.atMs))].sort((a, b) => a - b);
-  sorted.forEach((at, i) => { windows[`afterIncident${i + 1}`] = [at, sorted[i + 1] ?? durationMs]; });
-  const results = {};
-  for (const [name, [fromMs, toMs]] of Object.entries(windows)) {
-    try { results[name] = scoreMessages({ offered, receipts, fromMs, toMs, captureThroughMs, senderManifest }); delete results[name].byFlow.undefined; }
-    catch (error) { results[name] = { error: error.code ?? 'error', detail: error.detail ?? error.message }; }
-  }
-  // Per-second on-time series (by creation second) for evidence and display.
-  const first = new Map();
-  for (const r of receipts) if (!first.has(r.id) || r.receivedAtMs < first.get(r.id)) first.set(r.id, r.receivedAtMs);
-  const series = {};
-  for (const m of offered) {
-    const s = Math.floor(m.createdAtMs / 1000);
-    const row = (series[m.flowId] ??= {})[s] ??= { offered: 0, onTime: 0 };
-    row.offered++;
-    const at = first.get(m.id);
-    if (at !== undefined && at >= m.createdAtMs && at <= m.createdAtMs + m.deadlineMs) row.onTime++;
-  }
-  const background = {};
-  for (const flow of scenario.workload.background) {
-    const tx = lines(join(runDir, `bulk-tx-${flow.sourceId}.jsonl`)) ?? [];
-    const rx = lines(join(runDir, `bulk-rx-${flow.sourceId}.jsonl`)) ?? [];
-    const scheduled = tx.filter(r => r.t === 'bin').map(r => ({ sourceId: flow.sourceId, atMs: Math.max(0, rel(r.endNs) - 1), bytes: r.scheduledBytes }));
-    const delivered = rx.filter(r => r.t === 'bin').map(r => ({ sourceId: flow.sourceId, atMs: r.endMs - 1 - startAtMs, bytes: r.deliveredBytes }));
-    const sent = tx.filter(r => r.t === 'bin').reduce((s, r) => s + r.sentBytes, 0);
-    background[flow.sourceId] = { ...scoreBackground({ offered: scheduled, delivered, fromMs: firstIncident, toMs: durationMs }), sentBytesWholeRun: sent };
-  }
-  const offeredCount = offered.length;
-  return {
-    status: Object.values(results).some(r => r.error) ? 'run_incomplete' : 'scored', windows, results, background,
-    retryAmplification: Object.fromEntries(scenario.workload.essential.map(f => [f.flowId, transmissions[f.flowId] / offered.filter(m => m.flowId === f.flowId).length])),
-    senderManifests: manifests, captureThroughMs, offeredCount, series,
-  };
-}
-
 async function main() {
   const opt = args(process.argv.slice(2));
   if (opt.backend !== 'mininet') throw new Error('only the mininet backend exists');
@@ -121,7 +68,10 @@ async function main() {
   const socketPath = `${runDir}/worker.sock`;
   mkdirSync(out, { recursive: true });
   const events = join(out, 'events.jsonl');
-  const record = (type, data) => appendFileSync(events, `${JSON.stringify({ ...data, type, atUnixMs: Date.now() })}\n`); // the event type is never overwritten by data
+  const ledger = new Ledger(events); // append-only, hash-chained; the event type lives outside the data
+  const record = (type, data) => ledger.append(type, data);
+  const session = new SessionState(() => Date.now());
+  const move = (to, reason) => { try { session.transition(to, reason); record('session_state', { state: to, reason }); } catch { record('session_violation', { from: session.state, to, reason }); } };
 
   execFileSync('sudo', ['-n', 'mkdir', '-p', runDir]);
   const worker = spawn('sudo', ['-n', 'python3', join(REPO, 'runtime/mininet/worker.py'), '--run-id', runId, '--socket', socketPath, '--dir', runDir, '--tag', opt.tag],
@@ -208,7 +158,13 @@ async function main() {
       for (const e of controller.drainEvents?.() ?? []) record(`controller_${e.type}`, { controller: controller.name, ...e, atMs: e.atMs ?? nowMs() });
       const unavailable = JSON.stringify(controller.unavailable?.() ?? []);
       if (unavailable !== lastUnavailable) { record('service_unavailable', { controller: controller.name, flows: JSON.parse(unavailable), atMs: nowMs() }); lastUnavailable = unavailable; }
-      if (!intent) return;
+      if (controller.investigating?.() && session.state === 'observing') move('investigating', 'model call outstanding');
+      if (controller.mode?.() === 'degraded' && session.state === 'observing') move('degraded', 'provider failure: deterministic control');
+      if (controller.mode?.() === 'normal' && session.state === 'degraded') move('observing', 'investigator restored');
+      if (JSON.parse(unavailable).length && session.state === 'observing') move('unavailable', `no path: ${JSON.parse(unavailable).join(',')}`);
+      if (!JSON.parse(unavailable).length && session.state === 'unavailable') move('observing', 'path restored');
+      if (!intent) { if (session.state === 'investigating' && !controller.investigating?.()) move('observing', 'investigation finished'); return; }
+      move('proposed', intent.source ?? controller.name);
       const proposal = {
         version: 'ProposalV1', proposalId: intent.proposalId ?? `${controller.name}-${++proposalCount}`, runId, policyId, baseConfigRevision: latest.configRevision,
         observationSeq: latest.seq, observationAtMs: Math.floor(latest.collectedAtMs), expiresAtMs: Math.floor(latest.collectedAtMs) + policy.limits.proposalLifetimeMs, // integer ms: exact lifetime
@@ -231,8 +187,12 @@ async function main() {
       const decision = { ...admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation, budgets, transition }), forecastId: predicted.forecastId };
       record('decision', { controller: controller.name, source: intent.source ?? controller.name, rationale: intent.rationale, modelTrace: intent.modelTrace, proposal, decision,
         forecast: { status: predicted.status, beliefRevision: beliefs.revision, flows: predicted.flows?.map(f => ({ flowId: f.flowId, predictedOnTime: f.predictedOnTime, peakUtilization: f.peakUtilization })), nominalAssumed: predicted.nominalAssumed } });
-      if (!decision.admitted) { suppressUntil = nowMs() + 2000; controller.applied?.(proposal, { status: 'rejected', nowMs: nowMs() }); return; }
+      move('evaluating', 'guard and forecast');
+      if (!decision.admitted) { move('observing', `rejected ${decision.code}`); suppressUntil = nowMs() + 2000; controller.applied?.(proposal, { status: 'rejected', nowMs: nowMs() }); return; }
+      move('executing', proposal.proposalId);
       outstanding = executor.execute(decision, proposal).then(result => {
+        move('verifying', result.status);
+        move(result.status === 'service_unavailable' ? 'unavailable' : 'observing', result.status);
         for (const r of result.receipts) for (const e of r.confirmedEffects) if (e.step === 'set_rate') backgroundRates[e.sourceId] = e.readBackBps;
         controller.applied?.(proposal, { ...result, nowMs: nowMs() });
         record('execution', { controller: controller.name, ...result });
@@ -275,7 +235,7 @@ async function main() {
     for (const name of readdirSync(runDir).filter(n => n.endsWith('.jsonl'))) copyFileSync(join(runDir, name), join(rawDir, name));
     writeFileSync(join(out, 'controller-view.jsonl'), observations.map(o => JSON.stringify(o)).join('\n') + '\n');
     const audit = auditControllerView(observations, faults);
-    const summary = { runId, ...score(rawDir, full, epochNs, startAtMs, durationMs, faults), controllerViewAudit: { observations: observations.length, findings: audit } };
+    const summary = { runId, ...scoreRun(rawDir, full, epochNs, startAtMs, durationMs, faults), controllerViewAudit: { observations: observations.length, findings: audit } };
     writeFileSync(join(out, 'summary.json'), JSON.stringify(summary, null, 2) + '\n');
     manifest.terminal = summary.status === 'scored' && audit.length === 0 ? 'completed' : 'run_incomplete';
     console.log(JSON.stringify({ runId, terminal: manifest.terminal, primary: summary.results?.primary && { offered: summary.results.primary.offered, onTime: summary.results.primary.onTime, late: summary.results.primary.late, lost: summary.results.primary.lost, deliveryRate: summary.results.primary.deliveryRate }, audit: audit.length, teardown }));
@@ -292,6 +252,8 @@ async function main() {
     manifest.workerExitCode = worker.exitCode;
     manifest.endedAtUnixMs = Date.now();
     writeFileSync(join(out, 'worker.log'), workerLog);
+    manifest.ledger = ledger.finalize();
+    manifest.session = { finalState: session.state, transitions: session.history.length, violations: session.violations.length };
     writeFileSync(join(out, 'manifest.json'), JSON.stringify(manifest, null, 2) + '\n');
     const files = readdirSync(out, { recursive: true }).filter(n => !n.endsWith('checksums.txt')).map(n => join(out, n)).filter(p => !p.endsWith('/raw') && existsSync(p));
     writeFileSync(join(out, 'checksums.txt'), files.filter(p => { try { return readFileSync(p) && true; } catch { return false; } }).map(p => `${sha256(p)}  ${p.slice(out.length + 1)}`).join('\n') + '\n');

@@ -135,3 +135,15 @@ test('a persisting outage with no degraded flow is investigated once, not every 
   for (let i = 0; i < 80; i++) { c.decide(state({ obs: { down: ['r0-r3'], seq: 10 + i }, nowMs: 30_000 + i * 500 })); await flush(); }
   assert.equal(calls.length, 1);
 });
+
+test('progress bound: repeating an equivalent probe is refused and hands control to the deterministic layer', async () => {
+  const again = prompt => ok(decision(evidenceFrom(prompt), probe));
+  const { c } = controller([again, again, again]);
+  let intent = await persist(c);
+  for (let i = 0; i < 4 && !intent; i++) { await flush(); intent = c.decide(degradedState(33_500 + i * 500)); }
+  assert.equal(intent.source, 'meta');
+  c.applied(intent, { status: 'confirmed', nowMs: 35_000, receipts: [{ type: 'probe_path', status: 'confirmed', measurement: { lossFraction: 0, path: probe.path } }] });
+  for (let i = 0; i < 40; i++) { const r = c.decide(degradedState(36_000 + i * 500)); await flush(); if (r?.source === 'meta') assert.fail('equivalent probe repeated'); }
+  const events = c.drainEvents();
+  assert.ok(events.some(e => e.type === 'model_rejected' && e.detail === 'progress_limit'));
+});

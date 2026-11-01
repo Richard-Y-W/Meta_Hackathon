@@ -11,6 +11,8 @@ import { PROVIDER_CONFIG, parseModelDecision } from '../meta-provider.mjs';
 const DEGRADED_HOLD_MS = 20_000;
 const REINVESTIGATE_MS = 15_000;
 const EVIDENCE_KEPT = 12;
+const EQUIVALENT_PROBE_MS = 20_000; // a probe of a path measured this recently adds no information
+const ROUTE_CHANGES_PER_INCIDENT = 2;
 
 const round = (v, digits = 0) => (typeof v === 'number' ? Math.round(v * 10 ** digits) / 10 ** digits : v ?? null);
 
@@ -23,6 +25,8 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
   const outcomes = [];        // rcpt-<n> -> recent action outcomes
   let pending = null, ready = null, attempts = 0;
   let lastTrigger = '', lastInvestigationAt = -Infinity, lastState = null, receiptCount = 0;
+  const probedAt = {};       // path -> time of last completed probe (any layer)
+  let routeChanges = {};     // flowId -> model route changes in the current incident
 
   const setMode = (next, reason, nowMs) => {
     if (next === 'degraded') degradedUntil = nowMs + DEGRADED_HOLD_MS;
@@ -93,6 +97,15 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
 
   function fromModel({ decision, response, trigger }, state) {
     const { observation, routes, backgroundRates, nowMs } = state;
+    // Progress bounds: an equivalent probe or a third reroute of the same flow hands control back.
+    const repeated = decision.actions.find(a => (a.type === 'probe_path' && a.path && nowMs - (probedAt[a.path.join()] ?? -Infinity) < EQUIVALENT_PROBE_MS)
+      || (a.type === 'set_route' && (routeChanges[a.flowId] ?? 0) >= ROUTE_CHANGES_PER_INCIDENT));
+    if (repeated) {
+      events.push({ type: 'model_rejected', code: 'proposal_invalid', detail: 'progress_limit', action: repeated.type, responseId: response.responseId });
+      attempts = PROVIDER_CONFIG.callsPerDecision; // no retry: the limit is about progress, not parsing
+      fail('progress_limit', nowMs);
+      return null;
+    }
     const store = Object.fromEntries(evidence);
     for (const update of decision.beliefUpdates) {
       const result = adaptive.beliefs.applyProposedUpdate(update, store);
@@ -123,11 +136,14 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
     name: 'meta',
     beliefs: adaptive.beliefs,
     mode: () => mode,
+    investigating: () => pending !== null,
     unavailable: () => adaptive.unavailable(),
     drainEvents: () => events.splice(0),
     applied(intent, result) {
       adaptive.applied(intent, result);
+      for (const a of intent.actions ?? []) if (intent.source === 'meta' && a.type === 'set_route' && result.status === 'confirmed') routeChanges[a.flowId] = (routeChanges[a.flowId] ?? 0) + 1;
       for (const r of result.receipts ?? []) {
+        if (r.measurement?.path) probedAt[r.measurement.path.join()] = result.nowMs;
         outcomes.push({ id: `rcpt-${++receiptCount}`, type: r.type, status: r.status, ...(r.measurement ? { measurement: { path: r.measurement.path, lossFraction: round(r.measurement.lossFraction, 3), rttMs: r.measurement.rttMs && { median: round(r.measurement.rttMs.median, 1), max: round(r.measurement.rttMs.max, 1) } } } : {}) });
         if (outcomes.length > 8) outcomes.shift();
       }
@@ -149,7 +165,10 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
         const stillDegraded = adaptive.degradedFlows().length > 0;
         if (trigger && !pending && !ready && mode === 'normal' && (trigger !== lastTrigger || (stillDegraded && nowMs - lastInvestigationAt > REINVESTIGATE_MS))) {
           if ((remaining.modelCalls ?? 0) < 1) setMode('degraded', 'model_budget_exhausted', nowMs);
-          else { lastTrigger = trigger; attempts = 0; investigate(state, trigger); }
+          else {
+            if (trigger !== lastTrigger) routeChanges = {}; // a new incident resets the per-incident bound
+            lastTrigger = trigger; attempts = 0; investigate(state, trigger);
+          }
         }
       }
       if (deterministic) return { ...deterministic, source: 'deterministic' };
