@@ -100,6 +100,26 @@ class Service(unittest.TestCase):
         self.assertAlmostEqual(p.service_summary()['byLoad']['clinic-load']['deficitJ'], 150000 * 10, delta=1.0)
         self.assertEqual(p.solution['storageW']['bess-clinic'], 0)
 
+    def test_losing_every_source_de_energizes_the_network_without_a_solver_failure(self):
+        p = plant(faults=[{'faultId': 'a', 'atUs': 5 * S, 'type': 'source_loss', 'assetId': 'grid-a'},
+                          {'faultId': 'b', 'atUs': 5 * S, 'type': 'source_loss', 'assetId': 'grid-b'},
+                          {'faultId': 'd', 'atUs': 5 * S, 'type': 'generator_unavailable', 'assetId': 'diesel-clinic'}])
+        p.advance(15 * S)
+        self.assertEqual(p.solve_status['status'], 'converged')
+        self.assertTrue(p.solve_status['diagnostics']['noReferenceSource'])
+        self.assertEqual(set(p.solution['loadsW'].values()), {0.0})
+        self.assertAlmostEqual(p.service_summary()['essentialUnservedJ'], (400000 + 150000) * 10, delta=1.0)
+
+    def test_frozen_sensor_reports_its_old_value_and_time(self):
+        p = plant(faults=[{'faultId': 'f', 'atUs': 5 * S, 'type': 'sensor_freeze', 'assetId': 'p-hospital'},
+                          {'faultId': 't', 'atUs': 10 * S, 'type': 'line_trip', 'assetId': 'L2'}])
+        p.advance(20 * S)
+        frozen = reading(p.observe(), 'p-hospital')
+        self.assertEqual((frozen['value'], frozen['observedAtUs']), (400000.0, 5 * S))
+        self.assertEqual(reading(p.observe(), 'v-hosp')['value'], 0)
+        self.assertEqual(p.service_summary()['byLoad']['hospital']['deficitJ'], 400000 * 10)
+        self.assertEqual(checkpoints.unseal(p.admitted_model())['sensorFaults'], {})
+
     def test_shed_load_keeps_its_demand(self):
         p = plant()
         p.change({'type': 'set_load_connected', 'params': {'loadId': 'housing', 'connected': False}}, p.revision)

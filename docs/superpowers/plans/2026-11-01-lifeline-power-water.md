@@ -49,15 +49,17 @@ Here `plant` is the adapter fixture implementing the design's lifecycle; `previe
 
 **Files:** Create `runtime/infra/power_control.py`, `runtime/infra/power_grid2op.py`, `runtime/infra/tests/test_power_control.py`, `runtime/infra/tests/test_grid2op_profile.py`, `fixtures/lifeline/infra/power/control-policy.json`, `fixtures/lifeline/infra/power/development.json`.
 
-- [ ] Define admissible electrical actions: explicit switch choices, redispatch/demand shifts and storage only where the selected model supports them. Include dwell/ramp/switching costs and actuator delay.
-- [ ] RED: reject overload-producing intermediate transitions, simultaneous incompatible switching, storage below reserve, an unavailable actuator and unauthorized shedding of a protected load.
-- [ ] GREEN: implement a local protection/recovery policy plus a competent predictive baseline using the same forecasts, actions and solver. On tiny finite cases compare its choice to exhaustive feasible enumeration.
-- [ ] Build gradual overload, generator/feeder loss, constrained backup, second-contingency and impossible-supply controls. A prevention case includes observable lead time; a completely unannounced instantaneous cut cannot establish advance prediction.
-- [ ] Add the separate Grid2Op adapter, pin its environment/action classes/backend and capture episode termination. Test mapping of legality/cooldowns, terminal failure and observation restrictions.
-- [ ] Do not continue a Grid2Op terminal episode as if restoration were simulated. Use the qualified coupled electrical backend for restoration studies and label which profile produced each result.
-- [ ] Measure essential unserved energy, outage duration, constraint events, nonessential shedding, action cost and recovery. Verify the baseline before comparing AI.
+- [x] Define admissible electrical actions: explicit switch choices, redispatch/demand shifts and storage only where the selected model supports them. Include dwell/ramp/switching costs and actuator delay.
+- [x] RED: reject overload-producing intermediate transitions, simultaneous incompatible switching, storage below reserve, an unavailable actuator and unauthorized shedding of a protected load.
+- [x] GREEN: implement a local protection/recovery policy plus a competent predictive baseline using the same forecasts, actions and solver. On tiny finite cases compare its choice to exhaustive feasible enumeration.
+- [x] Build gradual overload, generator/feeder loss, constrained backup, second-contingency and impossible-supply controls. A prevention case includes observable lead time; a completely unannounced instantaneous cut cannot establish advance prediction.
+- [x] Add the separate Grid2Op adapter, pin its environment/action classes/backend and capture episode termination. Test mapping of legality/cooldowns, terminal failure and observation restrictions.
+- [x] Do not continue a Grid2Op terminal episode as if restoration were simulated. Use the qualified coupled electrical backend for restoration studies and label which profile produced each result.
+- [x] Measure essential unserved energy, outage duration, constraint events, nonessential shedding, action cost and recovery. Verify the baseline before comparing AI.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p 'test_power_control.py'` and `python3 -m unittest discover -s runtime/infra/tests -p test_grid2op_profile.py`.
+
+**State (Nov 1):** `qualified` in [P07 runs 0–1](../../trials/lifeline-infra-p07-run-0.md): development cases only; Grid2Op profile has its own acceptance record.
 
 **Gate:** Power is a working controlled domain with a credible local/predictive comparator. The Grid2Op profile has its own acceptance record; a working pandapower adapter does not qualify Grid2Op results.
 

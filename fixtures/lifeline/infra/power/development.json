@@ -1,0 +1,2109 @@
+{
+ "schemaVersion": "lifeline.power-development.v1",
+ "suite": "power-development-v1",
+ "note": "Development cases for P07. Parameters may be adjusted during development and are not held-out evidence. Demand forecasts and risk advisories are scenario-supplied and exact; forecast qualification is P10.",
+ "network": {
+  "base": "reference.json",
+  "overrides": {
+   "sensors": [
+    {
+     "id": "v-bus-2",
+     "assetId": "bus-2",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-3",
+     "assetId": "bus-3",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-4",
+     "assetId": "bus-4",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-5",
+     "assetId": "bus-5",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-6",
+     "assetId": "bus-6",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-7",
+     "assetId": "bus-7",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-8",
+     "assetId": "bus-8",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-9",
+     "assetId": "bus-9",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-10",
+     "assetId": "bus-10",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-11",
+     "assetId": "bus-11",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-13",
+     "assetId": "bus-13",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "v-bus-14",
+     "assetId": "bus-14",
+     "metric": "power.voltage"
+    },
+    {
+     "id": "ld-line-1-2",
+     "assetId": "line-1-2",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-2-3",
+     "assetId": "line-2-3",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-3-8",
+     "assetId": "line-3-8",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-12-13",
+     "assetId": "line-12-13",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-13-14",
+     "assetId": "line-13-14",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-14-8",
+     "assetId": "line-14-8",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-line-7-8",
+     "assetId": "line-7-8",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-trafo-0",
+     "assetId": "trafo:0",
+     "metric": "power.loading"
+    },
+    {
+     "id": "ld-trafo-1",
+     "assetId": "trafo:1",
+     "metric": "power.loading"
+    },
+    {
+     "id": "p-ci3",
+     "assetId": "load-ci3",
+     "metric": "power.active"
+    },
+    {
+     "id": "p-ci7",
+     "assetId": "load-ci7",
+     "metric": "power.active"
+    },
+    {
+     "id": "p-ci9",
+     "assetId": "load-ci9",
+     "metric": "power.active"
+    },
+    {
+     "id": "st-s1",
+     "assetId": "sw-S1",
+     "metric": "power.switch_state"
+    },
+    {
+     "id": "st-s2",
+     "assetId": "sw-S2",
+     "metric": "power.switch_state"
+    },
+    {
+     "id": "st-s3",
+     "assetId": "sw-S3",
+     "metric": "power.switch_state"
+    },
+    {
+     "id": "e-bess-1",
+     "assetId": "bess-1",
+     "metric": "energy.stored"
+    },
+    {
+     "id": "e-bess-2",
+     "assetId": "bess-2",
+     "metric": "energy.stored"
+    }
+   ],
+   "staleAfterUs": 10000000,
+   "protection": {
+    "overcurrent": {
+     "line-1-2": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-2-3": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-3-4": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-4-5": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-5-6": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-7-8": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-8-9": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-9-10": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-10-11": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-3-8": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-12-13": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-13-14": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-6-7": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-11-4": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     },
+     "line-14-8": {
+      "tripLoading": 1.2,
+      "delayUs": 30000000
+     }
+    }
+   },
+   "envelope": {
+    "vmPu": [
+     0.5,
+     1.5
+    ],
+    "loadScale": [
+     0,
+     3
+    ],
+    "maxIterations": 30,
+    "stepUs": [
+     100000,
+     60000000
+    ]
+   }
+  }
+ },
+ "policy": "control-policy.json",
+ "cases": [
+  {
+   "caseId": "p-no-fault",
+   "control": "no_fault",
+   "durationUs": 900000000,
+   "faults": [],
+   "advisories": []
+  },
+  {
+   "caseId": "p-gradual-overload",
+   "control": "recoverable",
+   "prevention": true,
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "ramp-1-load-r3",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r4",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r5",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r6",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r8",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r10",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-r11",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-ci3",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-ci7",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-ci9",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-1-load-ci10",
+     "atUs": 180000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.08
+    },
+    {
+     "faultId": "ramp-2-load-r3",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r4",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r5",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r6",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r8",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r10",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-r11",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-ci3",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-ci7",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-ci9",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-2-load-ci10",
+     "atUs": 240000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.16
+    },
+    {
+     "faultId": "ramp-3-load-r3",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r4",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r5",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r6",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r8",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r10",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-r11",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-ci3",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-ci7",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-ci9",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-3-load-ci10",
+     "atUs": 300000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.24
+    },
+    {
+     "faultId": "ramp-4-load-r3",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r4",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r5",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r6",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r8",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r10",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-r11",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-ci3",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-ci7",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-ci9",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-4-load-ci10",
+     "atUs": 360000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.32
+    },
+    {
+     "faultId": "ramp-5-load-r3",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r4",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r5",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r6",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r8",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r10",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-r11",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-ci3",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-ci7",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-ci9",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-5-load-ci10",
+     "atUs": 420000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.4
+    },
+    {
+     "faultId": "ramp-6-load-r3",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r4",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r5",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r6",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r8",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r10",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-r11",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-ci3",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-ci7",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-ci9",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-6-load-ci10",
+     "atUs": 480000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.48
+    },
+    {
+     "faultId": "ramp-7-load-r3",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r4",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r5",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r6",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r8",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r10",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-r11",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-ci3",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-ci7",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-ci9",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-7-load-ci10",
+     "atUs": 540000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.56
+    },
+    {
+     "faultId": "ramp-8-load-r3",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r4",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r5",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r6",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r8",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r10",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-r11",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-ci3",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-ci7",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-ci9",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-8-load-ci10",
+     "atUs": 600000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.64
+    },
+    {
+     "faultId": "ramp-9-load-r3",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r4",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r5",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r6",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r8",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r10",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-r11",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-ci3",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-ci7",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-ci9",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-9-load-ci10",
+     "atUs": 660000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.72
+    },
+    {
+     "faultId": "ramp-10-load-r3",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r4",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r5",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r6",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r8",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r10",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-r11",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-ci3",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-ci7",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-ci9",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.8
+    },
+    {
+     "faultId": "ramp-10-load-ci10",
+     "atUs": 720000000,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.8
+    }
+   ],
+   "advisories": [
+    {
+     "advisoryId": "heat-demand",
+     "announceAtUs": 0,
+     "kind": "demand_forecast",
+     "events": [
+      {
+       "faultId": "ramp-1-load-r3",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r4",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r5",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r6",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r8",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r10",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-r11",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-ci3",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-ci7",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-ci9",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-1-load-ci10",
+       "atUs": 180000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.08
+      },
+      {
+       "faultId": "ramp-2-load-r3",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r4",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r5",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r6",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r8",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r10",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-r11",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-ci3",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-ci7",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-ci9",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-2-load-ci10",
+       "atUs": 240000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.16
+      },
+      {
+       "faultId": "ramp-3-load-r3",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r4",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r5",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r6",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r8",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r10",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-r11",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-ci3",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-ci7",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-ci9",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-3-load-ci10",
+       "atUs": 300000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.24
+      },
+      {
+       "faultId": "ramp-4-load-r3",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r4",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r5",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r6",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r8",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r10",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-r11",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-ci3",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-ci7",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-ci9",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-4-load-ci10",
+       "atUs": 360000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.32
+      },
+      {
+       "faultId": "ramp-5-load-r3",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r4",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r5",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r6",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r8",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r10",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-r11",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-ci3",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-ci7",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-ci9",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-5-load-ci10",
+       "atUs": 420000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.4
+      },
+      {
+       "faultId": "ramp-6-load-r3",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r4",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r5",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r6",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r8",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r10",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-r11",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-ci3",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-ci7",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-ci9",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-6-load-ci10",
+       "atUs": 480000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.48
+      },
+      {
+       "faultId": "ramp-7-load-r3",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r4",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r5",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r6",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r8",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r10",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-r11",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-ci3",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-ci7",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-ci9",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-7-load-ci10",
+       "atUs": 540000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.56
+      },
+      {
+       "faultId": "ramp-8-load-r3",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r4",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r5",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r6",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r8",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r10",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-r11",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-ci3",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-ci7",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-ci9",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-8-load-ci10",
+       "atUs": 600000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.64
+      },
+      {
+       "faultId": "ramp-9-load-r3",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r4",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r5",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r6",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r8",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r10",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-r11",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-ci3",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-ci7",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-ci9",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-9-load-ci10",
+       "atUs": 660000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.72
+      },
+      {
+       "faultId": "ramp-10-load-r3",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r4",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r5",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r6",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r8",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r10",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-r11",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-ci3",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-ci7",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-ci9",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.8
+      },
+      {
+       "faultId": "ramp-10-load-ci10",
+       "atUs": 720000000,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.8
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "caseId": "p-feeder-loss",
+   "control": "recoverable",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "trip-2-3",
+     "atUs": 60000000,
+     "type": "line_trip",
+     "assetId": "line-2-3"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "p-announced-loss",
+   "control": "recoverable",
+   "prevention": true,
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "trip-3-8",
+     "atUs": 240000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    }
+   ],
+   "advisories": [
+    {
+     "advisoryId": "storm-3-8",
+     "announceAtUs": 0,
+     "kind": "asset_at_risk",
+     "events": [
+      {
+       "faultId": "risk-3-8",
+       "atUs": 240000000,
+       "type": "line_trip",
+       "assetId": "line-3-8"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "caseId": "p-constrained-backup",
+   "control": "recoverable",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "peak-load-r3",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r3",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r4",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r4",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r5",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r5",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r6",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r6",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r8",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r8",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r10",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r10",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-r11",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-r11",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-ci3",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-ci3",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-ci7",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-ci7",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-ci9",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-ci9",
+     "scale": 1.5
+    },
+    {
+     "faultId": "peak-load-ci10",
+     "atUs": 0,
+     "type": "load_change",
+     "assetId": "load-ci10",
+     "scale": 1.5
+    },
+    {
+     "faultId": "trip-1-2",
+     "atUs": 60000000,
+     "type": "line_trip",
+     "assetId": "line-1-2"
+    }
+   ],
+   "advisories": [
+    {
+     "advisoryId": "peak-demand",
+     "announceAtUs": 0,
+     "kind": "demand_forecast",
+     "events": [
+      {
+       "faultId": "peak-load-r3",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r3",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r4",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r4",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r5",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r5",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r6",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r6",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r8",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r8",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r10",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r10",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-r11",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-r11",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-ci3",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-ci3",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-ci7",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-ci7",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-ci9",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-ci9",
+       "scale": 1.5
+      },
+      {
+       "faultId": "peak-load-ci10",
+       "atUs": 0,
+       "type": "load_change",
+       "assetId": "load-ci10",
+       "scale": 1.5
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "caseId": "p-second-contingency",
+   "control": "recoverable",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "trip-3-8",
+     "atUs": 60000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    },
+    {
+     "faultId": "trip-14-8",
+     "atUs": 420000000,
+     "type": "line_trip",
+     "assetId": "line-14-8"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "p-impossible-supply",
+   "control": "physically_unrecoverable",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "hv-loss",
+     "atUs": 60000000,
+     "type": "source_loss",
+     "assetId": "grid-hv"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "p-stale-observation",
+   "control": "stale_observation",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "freeze-v-bus-8",
+     "atUs": 50000000,
+     "type": "sensor_freeze",
+     "assetId": "v-bus-8"
+    },
+    {
+     "faultId": "freeze-v-bus-9",
+     "atUs": 50000000,
+     "type": "sensor_freeze",
+     "assetId": "v-bus-9"
+    },
+    {
+     "faultId": "freeze-p-ci9",
+     "atUs": 50000000,
+     "type": "sensor_freeze",
+     "assetId": "p-ci9"
+    },
+    {
+     "faultId": "trip-3-8",
+     "atUs": 60000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    }
+   ],
+   "advisories": []
+  },
+  {
+   "caseId": "p-unavailable-actuator",
+   "control": "recoverable",
+   "durationUs": 900000000,
+   "faults": [
+    {
+     "faultId": "s1-comms",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S1"
+    },
+    {
+     "faultId": "trip-3-8",
+     "atUs": 60000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    }
+   ],
+   "advisories": []
+  }
+ ]
+}

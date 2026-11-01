@@ -1,0 +1,157 @@
+{
+  "schemaVersion": "lifeline.power-control-policy.v1",
+  "policyId": "power-control-v1",
+  "note": "Admissible electrical actions for the CIGRE MV development network. Delays, dwell times, reserves, costs, shedding order and the incompatible pair are scenario engineering assumptions, not utility practice or equipment data.",
+  "network": "cigre-mv-der-v1",
+  "decisionPeriodUs": 30000000,
+  "switches": {
+    "sw-S1": {
+      "dwellUs": 60000000,
+      "delayUs": 2000000,
+      "cost": 1.0
+    },
+    "sw-S2": {
+      "dwellUs": 60000000,
+      "delayUs": 2000000,
+      "cost": 1.0
+    },
+    "sw-S3": {
+      "dwellUs": 60000000,
+      "delayUs": 2000000,
+      "cost": 1.0
+    }
+  },
+  "sheddable": {
+    "load-r3": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r4": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r5": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r6": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r8": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r10": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-r11": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    },
+    "load-ci10": {
+      "delayUs": 1000000,
+      "cost": 0.5
+    }
+  },
+  "sheddingOrder": [
+    "load-r11",
+    "load-r10",
+    "load-r8",
+    "load-r6",
+    "load-r5",
+    "load-r4",
+    "load-r3",
+    "load-ci10"
+  ],
+  "protectedLoads": [
+    "load-ci3",
+    "load-ci7",
+    "load-ci9"
+  ],
+  "storage": {
+    "bess-1": {
+      "reserveJ": 1728000000,
+      "maxStepW": 300000,
+      "delayUs": 1000000,
+      "cost": 0.1,
+      "reserveHorizonUs": 1800000000
+    },
+    "bess-2": {
+      "reserveJ": 576000000,
+      "maxStepW": 100000,
+      "delayUs": 1000000,
+      "cost": 0.1,
+      "reserveHorizonUs": 1800000000
+    }
+  },
+  "incompatible": [
+    [
+      "sw-S2",
+      "sw-S3"
+    ]
+  ],
+  "transition": {
+    "maxLoading": 1.0,
+    "rule": "no action prefix may create a thermal violation that the starting state does not have"
+  },
+  "local": {
+    "restoration": [
+      {
+        "watch": [
+          "v-bus-3",
+          "v-bus-4",
+          "v-bus-7",
+          "v-bus-8",
+          "v-bus-9",
+          "v-bus-11"
+        ],
+        "ties": [
+          "sw-S1",
+          "sw-S3",
+          "sw-S2"
+        ],
+        "delayUs": 120000000
+      }
+    ],
+    "relief": {
+      "loadingSensors": [
+        "ld-line-1-2",
+        "ld-line-2-3",
+        "ld-line-3-8",
+        "ld-line-12-13",
+        "ld-line-14-8",
+        "ld-trafo-0",
+        "ld-trafo-1"
+      ],
+      "threshold": 1.0,
+      "reconnectBelow": 0.8,
+      "reconnectAfterUs": 120000000,
+      "undervoltageV": 18000,
+      "note": "undervoltageV is 0.90 pu of the 20 kV feeder base, matching the scenario voltage band"
+    }
+  },
+  "predictive": {
+    "horizonUs": 300000000,
+    "maxActions": 2,
+    "shedDepths": [
+      1,
+      2,
+      3,
+      5
+    ],
+    "storageLevels": [
+      0.0,
+      0.5,
+      1.0
+    ],
+    "weights": {
+      "essentialJ": 1.0,
+      "nonessentialJ": 0.1,
+      "constraintSecondJ": 1000000.0,
+      "actionCostJ": 100000.0
+    },
+    "minImprovementJ": 100000.0
+  }
+}

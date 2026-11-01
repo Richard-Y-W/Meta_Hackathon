@@ -30,7 +30,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 | New phase | State | Next evidence |
 | --- | --- | --- |
 | P00–P05 foundation / Q1 | Active: P00, P01, P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [P05](lifeline-infra-p05-run-0.md)); P03 active ([P03](lifeline-infra-p03-run-0.md)); P04 kernel built, scheduling budget pending P02 data | P02 communications v2 comparison (running); P03 live adapter run |
-| P06–P10 power and water / Q2 | Active: P06 qualified ([P06](lifeline-infra-p06-run-0.md): pandapower adapter, restart/fork, CIGRE MV reference run) | P07 electrical control and Grid2Op profile; P08 water adapter |
+| P06–P10 power and water / Q2 | Active: P06, P07 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md): local and predictive electrical baselines on 9 development cases; Grid2Op acceptance record) | P08 water adapter (WNTR 1.5.0 / EPANET 2.2 in `.work/environments/water`) |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |

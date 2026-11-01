@@ -41,7 +41,9 @@ ACTIONS = {
     'set_load_connected': {'loadId': 'id', 'connected': 'bool'},
     'set_storage_power': {'storageId': 'id', 'dischargeW': 'W'},
 }
-FAULTS = {'line_trip': 'lines', 'source_loss': 'sources', 'generator_unavailable': 'generators', 'load_change': 'loads'}
+FAULTS = {'line_trip': 'lines', 'source_loss': 'sources', 'generator_unavailable': 'generators', 'load_change': 'loads',
+          'actuator_unavailable': 'switches', 'sensor_freeze': 'sensors', 'sensor_offset': 'sensors'}
+WORLD_FAULTS = ('line_trip', 'source_loss', 'generator_unavailable', 'load_change', 'actuator_unavailable')  # a forecast may assume these
 TABLES = {'buses': 'bus', 'lines': 'line', 'switches': 'switch', 'loads': 'load', 'sources': 'ext_grid', 'generators': 'gen', 'storage': 'storage'}
 
 
@@ -137,6 +139,10 @@ def initial_state(spec, faults):
         'loads': {lid: {'connected': True, 'scale': 1.0} for lid in index['loads']},
         'storage': {sid: {'energyJ': float(cfg['energyJ']), 'dischargeW': 0.0} for sid, cfg in storage_specs.items()},
         'memory': {},
+        'sensorFaults': {},
+        'unavailableActuators': [],
+        'operations': {},
+        'events': [],
         'faults': sorted(faults, key=lambda f: (f['atUs'], f['faultId'])),
         'appliedFaults': [],
         'ledger': [],
@@ -157,11 +163,36 @@ class PowerPlant:
         self.nominal = {lid: (float(self.net.load.at[i, 'p_mw']), float(self.net.load.at[i, 'q_mvar'])) for lid, i in self.index['loads'].items()}
         self.essential = set(self.spec.get('essentialLoads') or [l['id'] for l in self.spec.get('loads', []) if l.get('essential')])
         self.storage_cfg = self.spec.get('storageState') or {s['id']: s for s in self.spec.get('storage', [])}
+        self.index['sensors'] = {sensor['id']: n for n, sensor in enumerate(self.spec['sensors'])}
+        self.protection = self.spec.get('protection', {}).get('overcurrent', {})
+        for lid in self.protection:
+            if lid not in self.state['lines']:
+                raise Rejected('unknown_asset', 'protected line %s' % lid)
+        for key, empty in (('sensorFaults', {}), ('unavailableActuators', []), ('operations', {}), ('events', [])):
+            self.state.setdefault(key, empty)
         for fault in self.state['faults']:
             self._check_fault(fault)
         self.solution = None
         self.solve_status = None
         self.dirty = True
+        self._spec_digest = checkpoints.digest(self.spec)
+        self._scratch = None
+
+    def reload(self, state):
+        """Point this plant at another state of the same network without rebuilding it; every solve
+        re-applies the full mutable state to the network, so no earlier configuration carries over."""
+        if checkpoints.digest(state['spec']) != self._spec_digest:
+            raise Rejected('checkpoint_network_mismatch')
+        for key, empty in (('sensorFaults', {}), ('unavailableActuators', []), ('operations', {}), ('events', [])):
+            state.setdefault(key, empty)
+        self.state, self.solution, self.solve_status, self.dirty = state, None, None, True
+        return self
+
+    def fork_state(self, state):
+        """A scratch plant (built once per live plant) loaded with `state`, for previews and checks."""
+        if self._scratch is None:
+            self._scratch = PowerPlant(None, state=copy.deepcopy(state))
+        return self._scratch.reload(state)
 
     # ---- construction / restart ---------------------------------------------------------------
     @classmethod
@@ -175,18 +206,15 @@ class PowerPlant:
         return checkpoints.digest(self.state)
 
     def restore(self, record):
-        state = checkpoints.unseal(record)
-        if checkpoints.digest(state['spec']) != checkpoints.digest(self.spec):
-            raise Rejected('checkpoint_network_mismatch')
-        self.state = state
-        self.dirty = True
+        self.reload(checkpoints.unseal(record))
 
     def admitted_model(self):
-        """Estimated model a controller may fork: current configuration and storage as observed, with no
-        fault schedule, ledger or receipts."""
-        state = copy.deepcopy(self.state)
-        state.update(kind='admitted', faults=[], appliedFaults=[], ledger=[], receipts={})
-        return checkpoints.seal(state)
+        """Estimated model a controller may fork: current configuration, storage, relay timers and actuator
+        availability as reported by SCADA; no fault schedule, ledger, receipts or knowledge of which
+        sensors are faulty."""
+        state = {key: value for key, value in self.state.items() if key not in ('faults', 'appliedFaults', 'ledger', 'receipts', 'sensorFaults')}
+        state.update(kind='admitted', faults=[], appliedFaults=[], ledger=[], receipts={}, sensorFaults={})
+        return checkpoints.seal(state)  # seal() copies
 
     @property
     def now_us(self):
@@ -209,6 +237,10 @@ class PowerPlant:
             lo, hi = self.envelope['loadScale']
             if not lo <= fault['scale'] <= hi:
                 raise Rejected('outside_model_envelope', 'load scale %s' % fault['scale'])
+        if fault['type'] == 'actuator_unavailable' and fault['assetId'] not in self.state['switches']:
+            raise Rejected('unknown_actuator', fault['assetId'])
+        if fault['type'] == 'sensor_offset' and not isinstance(fault.get('scale'), (int, float)):
+            raise Rejected('invalid_fault', fault.get('faultId', ''))
 
     # ---- state -> network ---------------------------------------------------------------------
     def _apply(self, scale):
@@ -245,8 +277,28 @@ class PowerPlant:
                 continue
         return False
 
+    def _has_reference(self):
+        st = self.state
+        return any(st['sources'].values()) or any(up and g.get('slack') for gid, up in st['generators'].items()
+                                                   for g in self.spec.get('generators', []) if g['id'] == gid)
+
+    def _dead_solution(self):
+        """No in-service source or slack generator: every bus is de-energized (pandapower refuses to
+        solve a network without a reference bus, which is not a numerical failure)."""
+        zero = lambda table: {key: 0.0 for key in table}
+        return {'atUs': self.now_us, 'busVoltageV': zero(self.index['buses']), 'busVmPu': zero(self.index['buses']), 'lineLoading': zero(self.index['lines']),
+                'trafoLoading': {'trafo:%d' % i: 0.0 for i in self.net.trafo.index}, 'lineLossW': zero(self.index['lines']), 'loadsW': zero(self.index['loads']),
+                'storageW': zero(self.index['storage']), 'generatorsW': zero(self.index['generators']), 'sourcesW': zero(self.index['sources']),
+                'constraintEvents': [], 'loadBus': {}}
+
     def solve(self):
         started = time.perf_counter()
+        if not self._has_reference():
+            self._apply(1.0)
+            self.solve_status = {'status': 'converged', 'diagnostics': {'noReferenceSource': True}, 'atUs': self.now_us, 'solveSeconds': 0.0}
+            self.solution = self._dead_solution()
+            self.dirty = False
+            return self.solve_status
         status, diagnostics = classify_solve(self._run)
         if status != 'converged':
             self._apply(1.0)  # leave the network at the commanded state; its result tables are not used
@@ -275,6 +327,12 @@ class PowerPlant:
             loading[lid] = 0.0 if value != value else float(value) / 100
             if loading[lid] > self.limits['maxLoading']:
                 events.append({'type': 'thermal_limit', 'assetId': lid, 'value': loading[lid], 'unit': '1'})
+        trafo_loading = {}
+        for i in net.trafo.index:
+            value = net.res_trafo.loading_percent.at[i]
+            trafo_loading['trafo:%d' % i] = 0.0 if value != value else float(value) / 100
+            if trafo_loading['trafo:%d' % i] > self.limits['maxLoading']:
+                events.append({'type': 'thermal_limit', 'assetId': 'trafo:%d' % i, 'value': trafo_loading['trafo:%d' % i], 'unit': '1'})
         bus_of_load = {lid: int(net.load.at[i, 'bus']) for lid, i in idx['loads'].items()}
         loads = {}
         for lid, i in idx['loads'].items():
@@ -292,7 +350,7 @@ class PowerPlant:
         voltage = {b: (float(vm.at[i]) * float(net.bus.at[i, 'vn_kv']) * 1000 if energized[b] else 0.0) for b, i in idx['buses'].items()}
         return {
             'atUs': self.now_us, 'busVoltageV': voltage, 'busVmPu': {b: (float(vm.at[i]) if energized[b] else 0.0) for b, i in idx['buses'].items()},
-            'lineLoading': loading, 'lineLossW': {lid: (0.0 if net.res_line.pl_mw.at[i] != net.res_line.pl_mw.at[i] else float(net.res_line.pl_mw.at[i]) * W_PER_MW) for lid, i in idx['lines'].items()},
+            'lineLoading': loading, 'trafoLoading': trafo_loading, 'lineLossW': {lid: (0.0 if net.res_line.pl_mw.at[i] != net.res_line.pl_mw.at[i] else float(net.res_line.pl_mw.at[i]) * W_PER_MW) for lid, i in idx['lines'].items()},
             'loadsW': loads, 'storageW': storage, 'generatorsW': gens,
             'sourcesW': {sid: (0.0 if net.res_ext_grid.p_mw.at[i] != net.res_ext_grid.p_mw.at[i] else float(net.res_ext_grid.p_mw.at[i]) * W_PER_MW) for sid, i in idx['sources'].items()},
             'constraintEvents': events, 'loadBus': bus_of_load,
@@ -313,6 +371,13 @@ class PowerPlant:
             kind = FAULTS[fault['type']]
             if kind == 'loads':
                 st['loads'][fault['assetId']]['scale'] = float(fault['scale'])
+            elif fault['type'] == 'actuator_unavailable':
+                st['unavailableActuators'] = sorted(set(st['unavailableActuators']) | {fault['assetId']})
+            elif kind == 'sensors':
+                # Observation faults change what is reported, never the plant or its revision.
+                self._ensure_solved()
+                current = self._sensor_value(self.spec['sensors'][self.index['sensors'][fault['assetId']]])
+                st['sensorFaults'][fault['assetId']] = {'type': fault['type'], 'atUs': st['nowUs'], 'value': current[0], 'scale': fault.get('scale')}
             else:
                 st[kind][fault['assetId']] = False
                 st['revision'] += 1
@@ -345,6 +410,9 @@ class PowerPlant:
                 raise Rejected('limit_exceeded', str(value))
             target = ('storage', params['storageId'], float(value))
         kind, asset, value = target
+        if asset in st['unavailableActuators']:
+            raise Rejected('actuator_unavailable', asset)
+        st['operations'][asset] = st['nowUs']
         if kind == 'switches':
             st['switches'][asset] = value
         elif kind == 'loads':
@@ -367,7 +435,13 @@ class PowerPlant:
         while st['nowUs'] < to_us:
             self._apply_due_faults()
             self._ensure_solved()
+            next_trip = self._protection()
+            while self.dirty:  # a protection trip changes the topology at this instant
+                self._ensure_solved()
+                next_trip = self._protection()
             end = min(to_us, st['nowUs'] + step)
+            if next_trip is not None:
+                end = min(end, next_trip)
             if st['faults']:
                 end = min(end, max(st['faults'][0]['atUs'], st['nowUs'] + 1))
             usable = self._usable()
@@ -391,43 +465,89 @@ class PowerPlant:
         self._apply_due_faults()
         return {'atUs': st['nowUs'], 'revision': st['revision'], 'solveStatus': (self.solve_status or {}).get('status')}
 
+    def _protection(self):
+        """Local overcurrent protection: a protected line above its trip loading for its delay opens. Timers
+        live in plant memory, so checkpoints, restores and forks carry them. Returns the next trip time."""
+        st = self.state
+        timers = st['memory'].setdefault('overcurrent', {})
+        if not self._usable():
+            return None
+        upcoming = None
+        for lid, cfg in sorted(self.protection.items()):
+            if not st['lines'][lid] or self.solution['lineLoading'][lid] <= cfg['tripLoading']:
+                timers.pop(lid, None)
+                continue
+            due = timers.setdefault(lid, st['nowUs']) + cfg['delayUs']
+            if due <= st['nowUs']:
+                st['lines'][lid] = False
+                st['revision'] += 1
+                timers.pop(lid)
+                st['events'].append({'atUs': st['nowUs'], 'type': 'protection_trip', 'assetId': lid})
+                self.dirty = True
+            else:
+                upcoming = due if upcoming is None else min(upcoming, due)
+        return upcoming
+
     def _record(self, usable):
         st = self.state
         demand = {lid: self.nominal[lid][0] * W_PER_MW * load['scale'] for lid, load in st['loads'].items()}
         st['ledger'].append({
             'atUs': st['nowUs'], 'status': self.solve_status['status'], 'demand': demand,
             'loads': {lid: (self.solution['loadsW'][lid] if usable else None) for lid in st['loads']},
+            'constraintEvents': len(self.solution['constraintEvents']) if usable else None,
             'storage': {sid: {'dischargeW': (self.solution['storageW'][sid] if usable else None), 'energyJ': s['energyJ']} for sid, s in st['storage'].items()},
         })
 
     # ---- controller-facing views ----------------------------------------------------------------
+    def _sensor_value(self, sensor):
+        """(value, missingReason) of a sensor from the true state, before observation faults."""
+        metric, asset = sensor['metric'], sensor['assetId']
+        if metric == 'power.switch_state':
+            return (1 if self.state['switches'][asset] else 0), None
+        if metric == 'energy.stored':
+            return self.state['storage'][asset]['energyJ'], None
+        if not self._usable():
+            return None, 'solution_unavailable'
+        sol = self.solution
+        if metric == 'power.loading':
+            return (sol['trafoLoading'] if asset.startswith('trafo:') else sol['lineLoading'])[asset], None
+        return {'power.voltage': sol['busVoltageV'], 'power.active': sol['loadsW']}[metric][asset], None
+
     def observe(self):
+        """Declared sensors only. A frozen sensor keeps reporting its last value with its original
+        observation time (stale by age); an offset sensor reports a scaled value with a fresh time."""
         self._ensure_solved()
-        usable = self._usable()
-        sol = self.solution if usable else None
         readings = []
         for sensor in self.spec['sensors']:
-            metric, asset = sensor['metric'], sensor['assetId']
-            value, reason = None, 'solution_unavailable'
-            if metric == 'power.switch_state':
-                value, reason = (1 if self.state['switches'][asset] else 0), None
-            elif metric == 'energy.stored':
-                value, reason = self.state['storage'][asset]['energyJ'], None
-            elif sol is not None:
-                reason = None
-                value = {'power.voltage': sol['busVoltageV'], 'power.active': sol['loadsW'], 'power.loading': sol['lineLoading']}[metric][asset]
-            entry = {'sensorId': sensor['id'], 'assetId': asset, 'metric': metric, 'value': value, 'unit': UNITS[metric]}
+            value, reason = self._sensor_value(sensor)
+            observed = self.now_us
+            fault = self.state['sensorFaults'].get(sensor['id'])
+            if fault and fault['type'] == 'sensor_freeze':
+                value, observed = fault['value'], fault['atUs']
+                reason = None if value is not None else 'solution_unavailable'
+            elif fault and fault['type'] == 'sensor_offset' and value is not None:
+                value = value * fault['scale']
+            entry = {'sensorId': sensor['id'], 'assetId': sensor['assetId'], 'metric': sensor['metric'], 'value': value, 'unit': UNITS[sensor['metric']], 'observedAtUs': observed}
             if value is None:
                 entry['missingReason'] = reason
             readings.append(entry)
-        return {'atUs': self.now_us, 'configurationRevision': self.revision, 'solveStatus': self.solve_status['status'], 'readings': readings}
+        return {'atUs': self.now_us, 'configurationRevision': self.revision, 'solveStatus': self.solve_status['status'],
+                'staleAfterUs': self.spec.get('staleAfterUs', 10000000), 'unavailableActuators': list(self.state['unavailableActuators']), 'readings': readings}
 
     def preview(self, plan, model_record):
+        """Fork the admitted model, apply the plan's actions and any forecast assumptions (world events the
+        caller expects), advance over the horizon and report service outcomes. Never a receipt."""
         state = checkpoints.unseal(model_record)
         if state.get('kind') != 'admitted':
             raise Rejected('model_not_admitted')
         start = state['nowUs']
-        fork = PowerPlant(None, state=state)
+        fork = self.fork_state(state)
+        assumed = plan.get('assume', [])
+        for event in assumed:
+            if event.get('type') not in WORLD_FAULTS:
+                raise Rejected('invalid_assumption', str(event.get('type')))
+            fork._check_fault(event)
+        fork.state['faults'] = sorted(assumed, key=lambda f: (f['atUs'], f['faultId']))
         for action in plan.get('actions', []):
             fork.change(action, fork.revision)
         horizon = plan['horizonUs']
@@ -435,7 +555,9 @@ class PowerPlant:
         summary = fork.service_summary(from_us=start)
         statuses = sorted({s['status'] for s in fork.state['ledger']})
         return {'kind': 'preview', 'modelHash': model_record['hash'], 'modelVersion': MODEL_VERSION, 'horizonUs': horizon, 'solveStatuses': statuses,
-                'essential_unserved_j': summary['essentialUnservedJ'], 'essential_demand_j': summary['essentialDemandJ'], 'status': summary['status'],
+                'essential_unserved_j': summary['essentialUnservedJ'], 'essential_demand_j': summary['essentialDemandJ'],
+                'nonessential_unserved_j': summary['nonessentialUnservedJ'], 'constraint_event_seconds': summary['constraintEventSeconds'],
+                'protection_trips': [e for e in fork.state['events'] if e['atUs'] >= start], 'assumptions': [e['faultId'] for e in assumed], 'status': summary['status'],
                 'constraintEvents': (fork.solution or {}).get('constraintEvents', []) if fork._usable() else []}
 
     # ---- private evaluator views ----------------------------------------------------------------
@@ -460,10 +582,16 @@ class PowerPlant:
             r = score_service(case)
             by_load[lid] = {'demandJ': r['demandIntegral'], 'servedJ': r['servedIntegral'], 'deficitJ': r['deficitIntegral'], 'score': r['score'], 'status': r['status']}
         essential = [by_load[l] for l in sorted(self.essential)]
+        other = [r for l, r in sorted(by_load.items()) if l not in self.essential]
         complete = all(r['status'] == 'scored' for r in essential)
+        samples = [s for s in self.state['ledger'] if s['atUs'] >= from_us]
+        ends = [s['atUs'] for s in samples[1:]] + [self.now_us]
+        event_seconds = sum((e - s['atUs']) / 1e6 for s, e in zip(samples, ends) if s.get('constraintEvents'))
         return {'byLoad': by_load, 'status': 'scored' if complete else 'capture_incomplete',
                 'essentialDemandJ': sum(r['demandJ'] for r in essential),
-                'essentialUnservedJ': sum(r['deficitJ'] for r in essential) if complete else None}
+                'essentialUnservedJ': sum(r['deficitJ'] for r in essential) if complete else None,
+                'nonessentialUnservedJ': sum(r['deficitJ'] for r in other) if all(r['status'] == 'scored' for r in other) else None,
+                'constraintEventSeconds': event_seconds}
 
 
 # ---- stdio worker --------------------------------------------------------------------------------
