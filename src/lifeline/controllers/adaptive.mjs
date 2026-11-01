@@ -11,7 +11,7 @@ const PERSIST = 3;    // consecutive degraded samples before the unexplained-deg
 const HOLD_MS = 5000;
 const PROBE = { packetCount: 16, payloadBytes: 1000, intervalMs: 10 };
 
-export function createAdaptiveController(inventory, policy) {
+export function createAdaptiveController(inventory, policy, { unexplainedRule = () => true } = {}) {
   const beliefs = new CapacityBeliefs(inventory);
   const holdUntil = {};
   const probed = {}; // path key -> {ok, atMs}
@@ -67,6 +67,7 @@ export function createAdaptiveController(inventory, policy) {
   // Conventional rule for degradation the capacity model cannot explain (e.g. loss on a switch that
   // stopped reporting): probe the best alternative path, and move only if the probe is clean.
   function unexplained(observation, routes, backgroundRates, nowMs, remaining, current, up) {
+    if (!unexplainedRule()) return null; // the AI-assisted supervisor hands this role to the model
     const flow = inventory.essential.find(f => degraded[f.flowId] >= PERSIST && !unavailable.includes(f.flowId) && (holdUntil[f.flowId] ?? 0) <= nowMs);
     if (!flow) return null;
     const here = current[flow.flowId].path.join();
@@ -93,6 +94,7 @@ export function createAdaptiveController(inventory, policy) {
   return {
     name: 'adaptive',
     beliefs,
+    degradedFlows: () => inventory.essential.filter(f => degraded[f.flowId] >= PERSIST).map(f => f.flowId),
     plan,
     unavailable: () => unavailable,
     applied(intent, result) {

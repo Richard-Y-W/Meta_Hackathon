@@ -1,0 +1,23 @@
+{
+  "description": "Mock model outputs for parser qualification only; none is provider evidence.",
+  "evidenceIds": ["obs-40", "obs-41", "rcpt-3"],
+  "valid": {
+    "hypotheses": [
+      { "id": "h1", "statement": "r1-r2 is dropping packets without reporting counters", "evidence": ["obs-40", "obs-41"], "wouldContradict": "a clean probe of r1-r2-r3" },
+      { "id": "h2", "statement": "field-clinic is congested by bulk-field", "evidence": ["obs-41"], "wouldContradict": "no backlog on any reporting link" }
+    ],
+    "selected": "h1",
+    "actions": [{ "type": "probe_path", "sourceId": "field", "destinationId": "clinic", "path": ["r1", "r2", "r3"], "packetCount": 16, "payloadBytes": 1000, "intervalMs": 10 }],
+    "expected": [{ "flowId": "field-clinic", "onTimeFraction": [0.5, 0.8] }],
+    "beliefUpdates": [],
+    "stop": false
+  },
+  "invalid": {
+    "inventedEvidence": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-999"], "wouldContradict": "y" }], "selected": "h1", "actions": [{ "type": "retain_policy", "reasonCode": "wait" }], "expected": [], "beliefUpdates": [], "stop": true },
+    "unsupportedAction": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-40"], "wouldContradict": "y" }], "selected": "h1", "actions": [{ "type": "reboot_switch", "node": "r2" }], "expected": [], "beliefUpdates": [], "stop": false },
+    "invalidUnits": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-40"], "wouldContradict": "y" }], "selected": "h1", "actions": [{ "type": "set_background_rate", "sourceId": "bulk-field", "bitsPerSecond": "2 Mbps" }], "expected": [], "beliefUpdates": [], "stop": false },
+    "missingField": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-40"], "wouldContradict": "y" }], "actions": [], "expected": [], "beliefUpdates": [], "stop": true },
+    "selectedUnknown": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-40"], "wouldContradict": "y" }], "selected": "h7", "actions": [{ "type": "retain_policy", "reasonCode": "wait" }], "expected": [], "beliefUpdates": [], "stop": true },
+    "tooManyActions": { "hypotheses": [{ "id": "h1", "statement": "x", "evidence": ["obs-40"], "wouldContradict": "y" }], "selected": "h1", "actions": [{ "type": "retain_policy", "reasonCode": "a" }, { "type": "retain_policy", "reasonCode": "b" }, { "type": "retain_policy", "reasonCode": "c" }], "expected": [], "beliefUpdates": [], "stop": false }
+  }
+}

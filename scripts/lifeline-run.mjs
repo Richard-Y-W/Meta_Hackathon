@@ -20,6 +20,8 @@ import { CapacityBeliefs } from '../src/lifeline/beliefs.mjs';
 import { forecast } from '../src/lifeline/forecast.mjs';
 import { createPriorityController } from '../src/lifeline/controllers/priority.mjs';
 import { createAdaptiveController } from '../src/lifeline/controllers/adaptive.mjs';
+import { createMetaController } from '../src/lifeline/controllers/meta.mjs';
+import { PROVIDER_CONFIG, callModel } from '../src/lifeline/meta-provider.mjs';
 import { backgroundPath, backgroundWireBps, buildInventory, candidatePaths, effectiveRoute, essentialDemandBps, linkBetween } from '../src/lifeline/controllers/common.mjs';
 import { WorkerClient } from '../src/lifeline/worker-client.mjs';
 
@@ -105,7 +107,7 @@ function score(runDir, scenario, epochNs, startAtMs, durationMs, faults) {
 async function main() {
   const opt = args(process.argv.slice(2));
   if (opt.backend !== 'mininet') throw new Error('only the mininet backend exists');
-  if (!['fixed', 'scripted', 'priority', 'adaptive'].includes(opt.controller)) throw new Error(`controller ${opt.controller} is not implemented yet`);
+  if (!['fixed', 'scripted', 'priority', 'adaptive', 'meta'].includes(opt.controller)) throw new Error(`controller ${opt.controller} is not implemented yet`);
   if (opt.controller === 'scripted' && !opt.script) throw new Error('--script is required for the scripted diagnostic controller');
   const out = resolve(opt.out);
   const admitted = admitOutputPath(REPO, out, { role: process.platform === 'linux' ? 'guest' : 'host' });
@@ -154,7 +156,12 @@ async function main() {
     const budgets = new RunBudgets(policy);
     const controller = opt.controller === 'scripted' ? createScriptedController(JSON.parse(readFileSync(resolve(opt.script), 'utf8')))
       : opt.controller === 'priority' ? createPriorityController(inventory, policy)
-        : opt.controller === 'adaptive' ? createAdaptiveController(inventory, policy) : null;
+        : opt.controller === 'adaptive' ? createAdaptiveController(inventory, policy)
+          : opt.controller === 'meta' ? createMetaController(inventory, policy, {
+            callModel: ({ prompt }) => callModel({ apiKey: process.env.MODEL_API_KEY, prompt }), // key stays in this process
+            chargeModelCall: () => budgets.charge('modelCalls', 1, 'meta investigation call'),
+          }) : null;
+    if (opt.controller === 'meta') manifest.provider = { ...PROVIDER_CONFIG, model: process.env.META_MODEL || 'muse-spark-1.3', credentialPresent: Boolean(process.env.MODEL_API_KEY) };
     if (opt.script) manifest.script = { path: opt.script, sha256: sha256(resolve(opt.script)) };
     let latest = null;
     const history = [];
@@ -198,6 +205,7 @@ async function main() {
       if ([...nowDown].some(id => !downLinks.has(id))) budgets.resetIncident(`links down: ${[...nowDown].join(',')}`);
       downLinks = nowDown;
       const intent = controller.decide({ observation, rates, routes: executor.currentRoutes, backgroundRates: { ...backgroundRates }, nowMs: nowMs(), trafficMs: nowMs() - startAtMs, remaining: budgets.remaining() });
+      for (const e of controller.drainEvents?.() ?? []) record(`controller_${e.type}`, { controller: controller.name, ...e, atMs: e.atMs ?? nowMs() });
       const unavailable = JSON.stringify(controller.unavailable?.() ?? []);
       if (unavailable !== lastUnavailable) { record('service_unavailable', { controller: controller.name, flows: JSON.parse(unavailable), atMs: nowMs() }); lastUnavailable = unavailable; }
       if (!intent) return;
@@ -221,7 +229,7 @@ async function main() {
       }
       const predicted = forecast({ inventory, beliefs, routes: nextRoutes, rates: nextRates, observation: latest });
       const decision = { ...admitProposal(proposal, { runId, configRevision: latest.configRevision, nowMs: nowMs(), policy, policyId, topology, observation, budgets, transition }), forecastId: predicted.forecastId };
-      record('decision', { controller: controller.name, rationale: intent.rationale, proposal, decision,
+      record('decision', { controller: controller.name, source: intent.source ?? controller.name, rationale: intent.rationale, modelTrace: intent.modelTrace, proposal, decision,
         forecast: { status: predicted.status, beliefRevision: beliefs.revision, flows: predicted.flows?.map(f => ({ flowId: f.flowId, predictedOnTime: f.predictedOnTime, peakUtilization: f.peakUtilization })), nominalAssumed: predicted.nominalAssumed } });
       if (!decision.admitted) { suppressUntil = nowMs() + 2000; controller.applied?.(proposal, { status: 'rejected', nowMs: nowMs() }); return; }
       outstanding = executor.execute(decision, proposal).then(result => {
@@ -255,6 +263,7 @@ async function main() {
       await sleep(Math.max(5, Math.min(50, nextSample - nowMs())));
     }
     if (outstanding) await outstanding;
+    for (const e of controller?.drainEvents?.() ?? []) record(`controller_${e.type}`, { controller: controller.name, ...e, atMs: e.atMs ?? nowMs() });
     const collected = await orchestrator.request('collect', {});
     record('collected', collected);
     const teardown = await orchestrator.request('teardown', {}, { timeoutMs: 60_000 });
