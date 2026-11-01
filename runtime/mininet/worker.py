@@ -9,6 +9,7 @@ Commands are allowlisted per role; arguments never reach a shell without registr
 import argparse
 import json
 import os
+import signal
 import socket
 import sys
 import threading
@@ -365,6 +366,10 @@ class MininetBackend:
                 'orphanProcesses': [p.pid for p in self.procs if p.poll() is None]}
 
 
+def _terminate(signum, frame):
+    raise SystemExit(143)  # unwinds into main's finally, which tears down run-owned objects
+
+
 def main(argv):
     parser = argparse.ArgumentParser()
     parser.add_argument('--run-id', required=True)
@@ -386,6 +391,7 @@ def main(argv):
     owner = int(os.environ.get('SUDO_UID', os.getuid()))
     os.chown(args.socket, owner, -1)
     os.chmod(args.socket, 0o600)
+    signal.signal(signal.SIGTERM, _terminate)
     server.listen(4)
     server.settimeout(0.5)
     threads = []

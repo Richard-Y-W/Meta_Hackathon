@@ -250,6 +250,11 @@ async function main() {
     orchestrator?.close(); supervisor?.close();
     await Promise.race([new Promise(r => worker.once('exit', r)), sleep(10_000)]);
     manifest.workerExitCode = worker.exitCode;
+    if (manifest.terminal !== 'completed' || worker.exitCode !== 0) {
+      // An interrupted worker may leave run-owned objects; remove only those carrying this run's tag.
+      try { manifest.cleanup = JSON.parse(execFileSync('sudo', ['-n', 'python3', join(REPO, 'runtime/mininet/cleanup.py'), '--tag', opt.tag]).toString()); }
+      catch (error) { manifest.cleanup = { error: String(error.message).slice(0, 200) }; }
+    }
     manifest.endedAtUnixMs = Date.now();
     writeFileSync(join(out, 'worker.log'), workerLog);
     manifest.ledger = ledger.finalize();
