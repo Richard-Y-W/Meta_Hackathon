@@ -11,7 +11,14 @@ import { scoreRun } from '../src/lifeline/run-score.mjs';
 import { validateProposal } from '../src/lifeline/contracts.mjs';
 import { canonicalRecord } from '../src/lifeline/identity.mjs';
 
-const CONTRACT_CODES = new Set(['proposal_invalid', 'policy_mismatch', 'configuration_stale', 'observation_stale', 'route_unavailable', 'action_rejected']);
+// Compare a recorded decision's contract-level check with a replayed validateProposal result. Guard
+// checks that need run state (link state, preconditions, transitions, budgets) are not replayable here.
+export function compareContractDecision(decision, replayed) {
+  const check = (decision.checks ?? []).find(c => c.check === 'contract');
+  if (!check) return 'not_comparable';
+  if (check.ok) return replayed.ok ? 'agree' : 'disagree';
+  return !replayed.ok && replayed.code === check.code && replayed.detail === check.detail ? 'agree' : 'disagree';
+}
 
 export function replayRun(dir, repo) {
   const read = p => JSON.parse(readFileSync(p, 'utf8'));
@@ -41,13 +48,11 @@ export function replayRun(dir, repo) {
       if (!fresh) continue;
       const contract = validateProposal(d.proposal, { runId: manifest.runId, configRevision: d.decision.configRevision, nowMs: d.decision.decidedAtMs, policy, policyId: manifest.policy.sha256, topology,
         freshObservation: { seq: fresh.seq, atMs: fresh.collectedAtMs }, budgets: { remainingBundles: 1, remainingIncidentProbeBytes: Infinity } });
-      const recordedContract = d.decision.admitted || CONTRACT_CODES.has(d.decision.code) ? (d.decision.admitted ? 'ok' : d.decision.code) : null;
-      if (recordedContract === null) continue; // decided by preconditions or budgets, which need run state
+      const verdict = compareContractDecision(d.decision, contract);
+      if (verdict === 'not_comparable') continue;
       compared++;
-      const replayed = contract.ok ? 'ok' : contract.code;
-      if (replayed === recordedContract || (!contract.ok && !d.decision.admitted)) agreed++;
-      else if (d.decision.admitted && contract.ok) agreed++;
-      else disagreements.push({ proposalId: d.proposal.proposalId, recorded: recordedContract, replayed });
+      if (verdict === 'agree') agreed++;
+      else disagreements.push({ proposalId: d.proposal.proposalId, recorded: (d.decision.checks.find(c => c.check === 'contract')), replayed: contract });
     }
   }
   report.checks.contracts = { ok: disagreements.length === 0, compared, agreed, disagreements };

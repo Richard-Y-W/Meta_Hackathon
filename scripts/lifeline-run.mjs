@@ -259,6 +259,8 @@ async function main() {
     const rawDir = join(out, 'raw');
     mkdirSync(rawDir, { recursive: true });
     for (const name of readdirSync(runDir).filter(n => n.endsWith('.jsonl'))) copyFileSync(join(runDir, name), join(rawDir, name));
+    // The guest run directory is RAM-backed tmpfs; once the evidence bundle holds the logs, release it.
+    try { execFileSync('sudo', ['-n', 'rm', '-rf', '--', runDir]); } catch { record('run_dir_cleanup_failed', { runDir }); }
     // controller-view.jsonl was appended as each observation was admitted, so a live display can follow it.
     const audit = auditControllerView(observations, faults);
     const summary = { runId, ...scoreRun(rawDir, full, epochNs, startAtMs, durationMs, faults), controllerViewAudit: { observations: observations.length, findings: audit } };

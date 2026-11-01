@@ -35,7 +35,8 @@ function costOf(dir) {
 
 function runEpisode(e, attempt, out) {
   const dir = join(out, attempt > 1 ? `${e.episodeId}.a${attempt}` : e.episodeId);
-  const tag = attempt > 1 ? `lf${e.tag.slice(2, 3)}${'zyxw'[attempt - 2]}` : e.tag;
+  // Reruns get their own tags: no two consecutive runs share run-owned object names.
+  const tag = attempt > 1 ? `lf${'wxyz'[attempt - 2]}${'abcdefghijklmnopqrstuvwxyz0123456789'[(e.order - 1) % 36]}` : e.tag;
   const started = Date.now();
   const run = spawnSync(process.execPath, ['--env-file-if-exists=.env', join(REPO, 'scripts/lifeline-run.mjs'), '--scenario', e.path, '--controller', e.controller, '--backend', 'mininet', '--tag', tag, '--out', dir],
     { cwd: REPO, encoding: 'utf8', timeout: 420_000 });
@@ -85,6 +86,22 @@ const schedule = buildSchedule(protocol);
 writeFileSync(join(out, 'schedule.json'), JSON.stringify({ protocol: protocolPath, protocolRevision: protocol.protocolRevision, orderSeed: protocol.orderSeed, episodes: schedule }, null, 2) + '\n');
 const save = row => { rows.push(row); appendFileSync(indexPath, `${JSON.stringify(row)}\n`); };
 
+// --reclassify: re-apply the current replay checker and validity rule to every recorded first attempt,
+// without rerunning traffic. Each change is appended to reclassification.jsonl; reruns that the corrected
+// rule would not have triggered are withdrawn from the comparison but stay in the index.
+const reclassified = {};
+if (argv.includes('--reclassify')) {
+  for (const r of rows.filter(x => x.attempt === 1)) {
+    const manifest = existsSync(join(r.dir, 'manifest.json')) ? read(join(r.dir, 'manifest.json')) : null;
+    const summary = existsSync(join(r.dir, 'summary.json')) ? read(join(r.dir, 'summary.json')) : null;
+    let replay = null;
+    try { replay = manifest && summary ? replayRun(r.dir, REPO) : null; } catch (error) { replay = { ok: false, checks: { replay: { ok: false, detail: error.message } } }; }
+    const after = classifyRun({ manifest, replay, summary });
+    reclassified[r.episodeId] = after;
+    appendFileSync(join(out, 'reclassification.jsonl'), `${JSON.stringify({ episodeId: r.episodeId, attempt: 1, before: { status: r.status, reason: r.reason ?? null }, after, checker: 'compareContractDecision (contract check only)', atUnixMs: Date.now() })}\n`);
+  }
+}
+
 for (const e of schedule) {
   if (rows.some(r => r.episodeId === e.episodeId && r.attempt === 1)) continue;
   const row = runEpisode(e, 1, out);
@@ -92,7 +109,8 @@ for (const e of schedule) {
   console.log(JSON.stringify({ order: e.order, episode: e.episodeId, status: row.status, reason: row.reason, onTime: row.primary?.deliveryRate, wallSeconds: Math.round(row.wallSeconds) }));
 }
 // Infrastructure-invalid runs: rerun the whole paired block once, retaining the original attempts.
-for (const block of [...new Set(rows.filter(r => r.status === 'infrastructure_invalid' && r.attempt === 1).map(r => r.block))]) {
+const statusOf = r => (r.attempt === 1 && reclassified[r.episodeId] ? reclassified[r.episodeId].status : r.status);
+for (const block of [...new Set(rows.filter(r => statusOf(r) === 'infrastructure_invalid' && r.attempt === 1).map(r => r.block))]) {
   if (rows.some(r => r.block === block && r.attempt === 2)) continue;
   for (const e of schedule.filter(x => x.block === block)) {
     const row = runEpisode(e, 2, out);
@@ -100,9 +118,17 @@ for (const block of [...new Set(rows.filter(r => r.status === 'infrastructure_in
     console.log(JSON.stringify({ rerun: e.episodeId, status: row.status, onTime: row.primary?.deliveryRate }));
   }
 }
-const latest = Object.fromEntries([...new Set(rows.map(r => r.block))].map(b => [b, Math.max(...rows.filter(r => r.block === b).map(r => r.attempt))]));
-const forCompare = rows.map(r => (r.attempt < latest[r.block] ? { ...r, superseded: true, status: r.status === 'valid' ? 'superseded' : r.status } : r));
-const comparison = { version: 'lifeline.pilot-comparison.v1', protocol: { path: arg('--protocol'), revision: protocol.protocolRevision, frozenAtCommit: protocol.frozenAtCommit }, ...compare(forCompare) };
+// A block's rerun counts only if the (current) rule found its first attempt infrastructure-invalid.
+const needsRerun = new Set(rows.filter(r => r.attempt === 1 && statusOf(r) === 'infrastructure_invalid').map(r => r.block));
+const forCompare = rows.map(r => {
+  const current = r.attempt === 1 && reclassified[r.episodeId] ? { ...r, ...reclassified[r.episodeId], reason: reclassified[r.episodeId].reason } : r;
+  if (r.attempt > 1 && !needsRerun.has(r.block)) return { ...current, status: 'withdrawn', reason: 'rerun not required under the corrected rule' };
+  if (r.attempt === 1 && needsRerun.has(r.block) && rows.some(x => x.block === r.block && x.attempt > 1)) return { ...current, superseded: true, status: statusOf(r) === 'valid' ? 'superseded' : statusOf(r) };
+  return current;
+});
+const comparison = { version: 'lifeline.pilot-comparison.v1', protocol: { path: arg('--protocol'), revision: protocol.protocolRevision, frozenAtCommit: protocol.frozenAtCommit },
+  reclassification: Object.keys(reclassified).length ? { applied: true, changed: rows.filter(r => r.attempt === 1 && reclassified[r.episodeId] && reclassified[r.episodeId].status !== r.status).map(r => ({ episodeId: r.episodeId, before: r.reason, after: reclassified[r.episodeId].status })), withdrawnAttempts: forCompare.filter(r => r.status === 'withdrawn').length } : { applied: false },
+  ...compare(forCompare.map(r => (r.status === 'withdrawn' ? { ...r, status: 'withdrawn' } : r))) };
 writeFileSync(join(out, 'comparison.json'), JSON.stringify(comparison, null, 2) + '\n');
 writeFileSync(join(out, 'comparison.md'), markdown(comparison, forCompare));
 console.log(JSON.stringify({ done: true, episodes: comparison.episodes, summary: comparison.summary }));
