@@ -98,11 +98,11 @@ now = 67000; assert.equal(b.remainingMs(), 0);
 
 **Files:** Create `src/lifeline/kernel/contracts.mjs`, `clock.mjs`, `services.mjs`, `src/lifeline/domains/communications.mjs`, `test/lifeline/infra/contracts.test.mjs`, `clock.test.mjs`, `adapter-conformance.test.mjs`, `fixtures/lifeline/infra/contract-v1.json`. Existing V1 `contracts.mjs` stays versioned separately.
 
-- [ ] Define the design's observation, capability, service, forecast, plan, action and receipt schemas, including canonical units and integer microsecond clocks.
-- [ ] RED: reject a water flow supplied as electrical power, negative timestamps, unknown capabilities, incompatible schema versions, cross-run evidence, stale configuration and missing observations interpreted as zero.
-- [ ] GREEN: implement strict `validateEnvelope(value)` returning `{ok, code}`; implement explicit unit conversion at adapter admission. Internal records use canonical units.
-- [ ] Wrap actual communications behavior, preserving its route/rate/probe semantics and receipt scorer. State unsupported adapter operations explicitly; do not fill them with successful stubs.
-- [ ] Test all adapter lifecycle methods, duplicate request handling, close/reset isolation and capability discovery.
+- [x] Define the design's observation, capability, service, forecast, plan, action and receipt schemas, including canonical units and integer microsecond clocks.
+- [x] RED: reject a water flow supplied as electrical power, negative timestamps, unknown capabilities, incompatible schema versions, cross-run evidence, stale configuration and missing observations interpreted as zero.
+- [x] GREEN: implement strict `validateEnvelope(value)` returning `{ok, code}`; implement explicit unit conversion at adapter admission. Internal records use canonical units.
+- [x] Wrap actual communications behavior, preserving its route/rate/probe semantics and receipt scorer. State unsupported adapter operations explicitly; do not fill them with successful stubs.
+- [x] Test all adapter lifecycle methods, duplicate request handling, close/reset isolation and capability discovery.
 - [ ] Retain a communications run through the common interface with raw network receipts matching the original scorer.
 
 **Example rejection:**
@@ -114,6 +114,8 @@ assert.deepEqual(validateEnvelope(candidate), { ok: false, code: 'unit_mismatch'
 ```
 
 **Run:** `node --test test/lifeline/infra/contracts.test.mjs test/lifeline/infra/clock.test.mjs test/lifeline/infra/adapter-conformance.test.mjs`.
+
+**State (Nov 1):** `active` in [P03 run 0](../../trials/lifeline-infra-p03-run-0.md): contracts, clock and adapter conformance qualified; the live adapter-driven run remains.
 
 **Gate:** One real adapter passes conformance and rejects incompatible physics/identities. Defining the interface alone does not qualify a new domain.
 
@@ -140,13 +142,15 @@ assert.deepEqual(validateEnvelope(candidate), { ok: false, code: 'unit_mismatch'
 
 **Files:** Create `src/lifeline/kernel/measurement.mjs`, `runtime/infra/scoring.py`, `test/lifeline/infra/measurement.test.mjs`, `runtime/infra/tests/test_scoring.py`, `fixtures/lifeline/infra/analytic-service-cases.json`.
 
-- [ ] Define immutable demand schedules and independent supplied-quality observations. Power uses unserved energy; water uses unmet demand subject to pressure/quality; communications uses unique on-time receipts.
-- [ ] RED: shedding demand cannot shrink the denominator; two retries cannot count as two served messages; missing observations cannot score as delivered supply.
-- [ ] GREEN: implement per-service deficit integrals and predeclared normalized service scores. Keep component metrics beside any composite facility metric to expose double counting.
-- [ ] Test ten-second 50% supply against a hand-calculated deficit, tank reserve exhaustion, complete partition, zero demand, censored recovery and quality below the usability threshold.
-- [ ] Isolate evaluator-only truth and independently recompute outcomes from raw records. Delete controller explanations and verify scores are identical.
-- [ ] Test that both missing capture and a method-caused service loss remain visible with different statuses. The invalid-run rules come from the frozen protocol.
+- [x] Define immutable demand schedules and independent supplied-quality observations. Power uses unserved energy; water uses unmet demand subject to pressure/quality; communications uses unique on-time receipts.
+- [x] RED: shedding demand cannot shrink the denominator; two retries cannot count as two served messages; missing observations cannot score as delivered supply.
+- [x] GREEN: implement per-service deficit integrals and predeclared normalized service scores. Keep component metrics beside any composite facility metric to expose double counting.
+- [x] Test ten-second 50% supply against a hand-calculated deficit, tank reserve exhaustion, complete partition, zero demand, censored recovery and quality below the usability threshold.
+- [x] Isolate evaluator-only truth and independently recompute outcomes from raw records. Delete controller explanations and verify scores are identical.
+- [x] Test that both missing capture and a method-caused service loss remain visible with different statuses. The invalid-run rules come from the frozen protocol.
 
 **Run:** `node --test test/lifeline/infra/measurement.test.mjs` and `python3 -m unittest discover -s runtime/infra/tests -p test_scoring.py`.
+
+**State (Nov 1):** `qualified` in [P05 run 0](../../trials/lifeline-infra-p05-run-0.md).
 
 **Gate Q1:** P00–P05 evidence exists; every metric has an independent denominator, unit, quality rule and missing-data policy. This qualifies infrastructure plumbing, not power/water operation.
