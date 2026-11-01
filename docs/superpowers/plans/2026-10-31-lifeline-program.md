@@ -366,19 +366,21 @@ Evidence: `docs/trials/lifeline-baseline-run-0.md`, including controller configu
 
 **Dependencies:** Task 7. **Files:** Create `src/lifeline/{beliefs,forecast}.mjs` and `test/lifeline/{beliefs,forecast}.test.mjs`.
 
-- [ ] Test observation-derived capacity intervals, missing measurements, conflicting evidence, model revision, and evidence IDs that do not exist.
-- [ ] Require an empty or contradictory model to produce `model_inconsistent`; it cannot certify an intervention.
-- [ ] Implement a bounded flow/capacity estimator with explicit assumptions and uncertain inputs. Never read hidden fault settings.
-- [ ] Qualify flow conservation, capacity constraints, priority ordering, and no-path cases against hand-calculated examples.
-- [ ] Compare predictions with packet outcomes across the public development scenarios. Record residuals, optimistic errors, and cases outside model support.
-- [ ] Set forecast tolerances from development evidence before evaluation. When the model is unsupported or fails calibration, keep its predictions advisory and use deterministic control.
-- [ ] Qualify G2 only after the guard, executor, and model limitations are exercised together.
+- [x] Test observation-derived capacity intervals, missing measurements, conflicting evidence, model revision, and evidence IDs that do not exist.
+- [x] Require an empty or contradictory model to produce `model_inconsistent`; it cannot certify an intervention.
+- [x] Implement a bounded flow/capacity estimator with explicit assumptions and uncertain inputs. Never read hidden fault settings.
+- [x] Qualify flow conservation, capacity constraints, priority ordering, and no-path cases against hand-calculated examples.
+- [x] Compare predictions with packet outcomes across the public development scenarios. Record residuals, optimistic errors, and cases outside model support.
+- [x] Set forecast tolerances from development evidence before evaluation. When the model is unsupported or fails calibration, keep its predictions advisory and use deterministic control.
+- [x] Qualify G2 only after the guard, executor, and model limitations are exercised together.
 
 ```sh
 node --test test/lifeline/beliefs.test.mjs test/lifeline/forecast.test.mjs
 ```
 
 Evidence: `docs/trials/lifeline-forecast-run-0.md`. Forecast agreement is not a network safety guarantee.
+
+**State (Nov 1):** `qualified`; G2 qualified in [forecast run 0](../../trials/lifeline-forecast-run-0.md): 99.6% interval coverage over 1,371 windows; misses only at an unannounced partition; uninformative near capacity; loss without backlog not represented.
 
 ### Task 9: Integrate meaningful Meta investigation
 

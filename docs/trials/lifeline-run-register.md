@@ -1,6 +1,6 @@
 # LIFELINE Living Status and Run Register
 
-**Updated:** October 31, 2026. **Project:** Emergency communications first; broader infrastructure resilience after domain-specific qualification.
+**Updated:** November 1, 2026. **Project:** Emergency communications first; broader infrastructure resilience after domain-specific qualification.
 
 **Program:** [Living plan](../superpowers/plans/2026-10-31-lifeline-program.md). **Behavior:** [Design](../superpowers/specs/2026-10-31-lifeline-design.md). **Claims and measurement:** [Evaluation protocol](../research/lifeline-evaluation-protocol.md).
 
@@ -8,10 +8,10 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Tasks 1–7 qualified; G0 and G1 qualified |
+| Current state | Tasks 1–8 qualified; G0, G1, G2 qualified |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 8 (beliefs, forecast), then Task 9; owner decision on harder development cases |
+| Next task | Predeclare revised development pilot (owner approved harder cases), then Task 9 |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
@@ -20,8 +20,8 @@
 | LIFELINE comparative results | None |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
 | Provider | `muse-spark-1.3` live: 4.7–8.1 s per call; 1,500-token cap truncates reasoning; 4,000 parsed 3/3 |
-| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) |
-| Owner decisions | Emergency communications selected; ambitious long-term scope retained |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md) |
+| Owner decisions | Emergency communications selected; ambitious long-term scope retained; harder development cases approved (Nov 1) |
 
 ## Initial evidence record
 
@@ -40,6 +40,7 @@
 | E011 | 2026-10-31 | Two versioned route updates and a throttle confirmed on live traffic with 0/4,800 messages lost; cascade regression 0.631 | Execution path qualified without congestion; no controller decisions yet |
 | E012 | 2026-10-31 | On `dev-cascade-1`: fixed 0.631, priority 0.9985, adaptive 1.000; controls pass for both conventional controllers | G1 qualified; this cascade leaves no headroom for an AI gain |
 | E013 | 2026-10-31 | 10/10 live calls succeeded in 4.7–8.1 s, but 6/10 truncated at the 1,500-token cap during reasoning; 3/3 parsed at 4,000 | G0 qualified; per-call timeout and token cap must rise in Task 9 |
+| E014 | 2026-11-01 | Forecast intervals covered 1,365/1,371 observed windows; 6 misses at an unannounced partition; 12% uninformative near capacity | G2 qualified; forecast is advisory and limits are recorded |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -48,8 +49,8 @@ The earlier repository review exercised the legacy device prototype. This planni
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
 | G0 Runtime and provider | Qualified | [Runtime run 0](lifeline-runtime-run-0.md) | Re-measure under the frozen Task 9 prompt |
-| G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) | Repeat runs for variance before G4a |
-| G2 Bounded control | Partial | Guard, executor and live versioned updates ([execution run 0](lifeline-execution-run-0.md)) | Forecast qualification with guard and executor (Task 8) |
+| G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md) | Repeat runs for variance before G4a |
+| G2 Bounded control | Qualified | [Execution run 0](lifeline-execution-run-0.md), [forecast run 0](lifeline-forecast-run-0.md) | Recheck with the Meta controller |
 | G3 AI prototype | Planned | No run | Real Meta decision with measured consequence |
 | G4a Pilot comparison | Planned | No run | All 48 scheduled development episodes accounted for |
 | G4b Held-out qualification | Planned | No run | Frozen split, matched controllers, uncertainty and ablations |
@@ -126,3 +127,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-10-31 | Task 6 execution run 0: versioned routes, rollback, rate control, executor reconciliation; live transition run | Bounded execution qualified |
 | 2026-10-31 | Task 7 baseline run 0: priority and adaptive controllers, probes, resolved counters; 9 runs of record | G1 qualified |
 | 2026-10-31 | Task 1 provider qualification: smoke, ten-request sample, token-cap diagnosis | G0 qualified |
+| 2026-11-01 | Task 8 forecast run 0: beliefs, forecast, calibration replay, integrated run | G2 qualified |
