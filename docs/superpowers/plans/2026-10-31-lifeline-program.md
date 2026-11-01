@@ -212,17 +212,19 @@ Expected GREEN: capability checks report actual support; packet delivery is meas
 
 Public interfaces are `canonicalRecord(value) -> {json, sha256}` and `validateProposal(proposal, context) -> {ok, code}`. The context contains run ID, current configuration revision, current time, policy identity, registered topology/flows, and remaining budgets. No validator mutates its input.
 
-- [ ] Add RED cases for valid record round-trip, key-order-independent identity, input immutability, and identity changes for every authority field.
-- [ ] Reject unknown authority fields, NaN/Infinity, negative times, duplicate object IDs, route cycles, bad endpoints, unknown links, essential-source throttling, oversized probes, and unsupported versions.
-- [ ] Implement strict parsing before canonicalization. Canonical serialization sorts object keys, preserves ordered arrays, permits only the declared JSON values, and rejects unsupported JS values.
-- [ ] Require exact run/policy/configuration bindings. A stale observation reference must be checked against the explicit age policy, not accepted because its hash is well-formed.
-- [ ] Run GREEN and pin a reviewed canonical fixture. Keep policy changes versioned and outside model authority.
+- [x] Add RED cases for valid record round-trip, key-order-independent identity, input immutability, and identity changes for every authority field.
+- [x] Reject unknown authority fields, NaN/Infinity, negative times, duplicate object IDs, route cycles, bad endpoints, unknown links, essential-source throttling, oversized probes, and unsupported versions.
+- [x] Implement strict parsing before canonicalization. Canonical serialization sorts object keys, preserves ordered arrays, permits only the declared JSON values, and rejects unsupported JS values.
+- [x] Require exact run/policy/configuration bindings. A stale observation reference must be checked against the explicit age policy, not accepted because its hash is well-formed.
+- [x] Run GREEN and pin a reviewed canonical fixture. Keep policy changes versioned and outside model authority.
 
 ```sh
 node --test test/lifeline/contracts.test.mjs
 ```
 
 Expected RED: missing contract behavior. Expected GREEN: all positive and malformed controls pass with stable reason codes. Evidence: `docs/trials/lifeline-contracts-run-0.md`.
+
+**State (Oct 31):** `qualified` at contract level in [contracts run 0](../../trials/lifeline-contracts-run-0.md). Duplicate keys in raw model JSON remain for the Task 9 parser.
 
 ### Task 3: Make the service metric independently correct
 

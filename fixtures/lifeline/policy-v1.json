@@ -1,0 +1,26 @@
+{
+  "version": "ServicePolicyV1",
+  "policyRevision": 1,
+  "status": "development; freeze with measured provider timing before evaluation",
+  "priorityOrder": "lower number is more important",
+  "essentialFlows": [
+    { "flowId": "dispatch-clinic", "source": "dispatch", "destination": "clinic", "priority": 1, "deadlineMs": 500 },
+    { "flowId": "field-clinic", "source": "field", "destination": "clinic", "priority": 1, "deadlineMs": 500 },
+    { "flowId": "dispatch-shelter", "source": "dispatch", "destination": "shelter", "priority": 2, "deadlineMs": 500 }
+  ],
+  "backgroundSources": [
+    { "sourceId": "bulk-shelter", "source": "shelter", "destination": "dispatch", "minBitsPerSecond": 500000, "maxBitsPerSecond": 12000000 },
+    { "sourceId": "bulk-field", "source": "field", "destination": "clinic", "minBitsPerSecond": 500000, "maxBitsPerSecond": 12000000 }
+  ],
+  "allowedActions": ["set_route", "set_background_rate", "probe_path", "retain_policy"],
+  "limits": {
+    "proposalLifetimeMs": 10000,
+    "maxObservationAgeMs": 2000,
+    "maxActionsPerBundle": 4,
+    "probeMaxPackets": 64,
+    "probeMaxBytes": 65536,
+    "probeMinIntervalMs": 5,
+    "incidentProbeBytes": 262144
+  },
+  "budgets": { "modelCallsPerRun": 12, "modelCallsPerDecision": 2, "interventionBundlesPerRun": 12 }
+}
