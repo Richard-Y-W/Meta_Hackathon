@@ -8,6 +8,7 @@ export { CapacityBeliefs };
 const LIMIT = 0.95;
 const DEGRADED = 0.9; // on-time fraction below which a flow counts as degraded
 const PERSIST = 3;    // consecutive degraded samples before the unexplained-degradation rule acts
+const REJECTED_HOLD_MS = 15_000; // a plan the guard refused is not re-proposed unchanged within this time
 const HOLD_MS = 5000;
 const PROBE = { packetCount: 16, payloadBytes: 1000, intervalMs: 10 };
 
@@ -18,6 +19,8 @@ export function createAdaptiveController(inventory, policy, { unexplainedRule = 
   let pendingProbe = null;
   let lastBest = null;
   const degraded = {};
+  const rejected = new Map(); // plan signature -> time of the guard's refusal
+  const signature = actions => JSON.stringify(actions.map(({ actionId, ...a }) => a));
   let unavailable = [];
 
   function evaluate(routes, rates, observation) {
@@ -98,6 +101,7 @@ export function createAdaptiveController(inventory, policy, { unexplainedRule = 
     plan,
     unavailable: () => unavailable,
     applied(intent, result) {
+      if (result.status === 'rejected') { rejected.set(signature(intent.actions), result.nowMs); return; }
       if (intent.actions[0]?.type === 'probe_path') {
         const m = result.receipts?.[0]?.measurement;
         probed[intent.actions[0].path.join()] = { ok: Boolean(m) && m.lossFraction <= 0.05, atMs: result.nowMs };
@@ -108,7 +112,16 @@ export function createAdaptiveController(inventory, policy, { unexplainedRule = 
       for (const a of intent.actions) holdUntil[a.flowId ?? a.sourceId] = result.nowMs + HOLD_MS;
       lastBest = null;
     },
-    decide({ observation, rates, routes, backgroundRates, nowMs, remaining }) {
+    decide(state) {
+      // Every plan leaves through here: an unchanged plan the guard refused recently is withheld.
+      const intent = decideInner(state);
+      if (!intent) return null;
+      const refusedAt = rejected.get(signature(intent.actions));
+      return refusedAt !== undefined && state.nowMs - refusedAt < REJECTED_HOLD_MS ? null : intent;
+    },
+  };
+
+  function decideInner({ observation, rates, routes, backgroundRates, nowMs, remaining }) {
       if (observation.stale) return null;
       beliefs.update(observation, rates);
       for (const f of inventory.essential) {
@@ -156,6 +169,5 @@ export function createAdaptiveController(inventory, policy, { unexplainedRule = 
         rationale: `plan score ${best.score.join('/')} vs ${now.weighted}/${now.background}/${now.peak}`,
         transition: { capacityBps: Object.fromEntries(inventory.topology.links.map(l => [l.linkId, Math.min(beliefs.planning(`${l.a}>${l.b}`), beliefs.planning(`${l.b}>${l.a}`))])) },
       };
-    },
-  };
+  }
 }

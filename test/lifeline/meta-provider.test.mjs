@@ -100,3 +100,10 @@ test('call: a cancelled investigation aborts the request and is reported as canc
   assert.equal(r.code, 'provider_cancelled');
   assert.ok(r.durationMs < 1000);
 });
+
+test('call: a fractional timeout still sends the request instead of failing locally', async () => {
+  let sent = false;
+  const r = await callModel({ apiKey: KEY, prompt: 'p', timeoutMs: 11_999.73, fetchImpl: async () => { sent = true; return reply(envelope('{"a":1}'))(); } });
+  assert.equal(sent, true);
+  assert.equal(r.code, 'ok');
+});

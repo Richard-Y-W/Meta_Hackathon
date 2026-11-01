@@ -239,3 +239,15 @@ test('adaptive: a lossy alternative probe is not followed, and a briefly degrade
   assert.equal(fresh.decide({ ...silent, nowMs: 30_000 }), null);
   assert.equal(fresh.decide({ ...silent, nowMs: 30_500 }), null);
 });
+
+test('adaptive: a plan the guard refused is not re-proposed unchanged for a hold period', () => {
+  const c = createAdaptiveController(INV, POLICY);
+  const s = t => state({ obs: { down: ['r0-r3', 'r1-r2'] }, nowMs: t });
+  const first = c.decide(s(30_000));
+  assert.ok(first, 'an outage produces a plan');
+  c.applied(first, { status: 'rejected', code: 'action_rejected', nowMs: 30_000 });
+  assert.equal(c.decide(s(33_000)), null, 'identical plan suppressed after rejection');
+  assert.equal(c.decide(s(44_000)), null);
+  const again = c.decide(s(45_500));
+  assert.deepEqual(again?.actions, first.actions, 'retried once the hold has passed');
+});

@@ -26,3 +26,11 @@ test('invalid budgets are refused rather than silently unbounded', () => {
     assert.throws(() => createInvestigationBudget({ ...bad, nowMs: () => 0 }), /invalid_budget/);
   }
 });
+
+test('per-call timeouts are whole milliseconds, because AbortSignal.timeout refuses fractions', () => {
+  let now = 49_000.27;
+  const b = createInvestigationBudget({ startedAtMs: 31_000.5, deadlineMs: 30_000, nowMs: () => now });
+  assert.ok(Number.isInteger(b.callTimeoutMs(18_000)));
+  assert.equal(b.callTimeoutMs(18_000), 12_000);
+  assert.doesNotThrow(() => AbortSignal.timeout(b.callTimeoutMs(18_000)));
+});

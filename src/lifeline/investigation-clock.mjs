@@ -9,6 +9,6 @@ export function createInvestigationBudget({ startedAtMs, deadlineMs, nowMs }) {
     startedAtMs, deadlineAtMs,
     remainingMs,
     expired: () => remainingMs() === 0,
-    callTimeoutMs: perCallMs => Math.min(perCallMs, remainingMs()),
+    callTimeoutMs: perCallMs => Math.floor(Math.min(perCallMs, remainingMs())), // AbortSignal.timeout needs an integer
   };
 }

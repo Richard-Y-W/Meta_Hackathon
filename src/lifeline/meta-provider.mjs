@@ -27,7 +27,7 @@ export async function callModel({ apiKey, prompt, model = process.env.META_MODEL
   const started = now();
   try {
     const response = await fetchImpl(PROVIDER_CONFIG.endpoint, {
-      method: 'POST', body, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
+      method: 'POST', body, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(Math.max(1, Math.floor(timeoutMs)))]) : AbortSignal.timeout(Math.max(1, Math.floor(timeoutMs))),
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
