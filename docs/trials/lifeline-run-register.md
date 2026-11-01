@@ -14,7 +14,7 @@
 | Next task | P08 water adapter (EPANET 2.2 via WNTR 1.5.0, replay restart) on the host; then P09–P10 (Q2). |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
-| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
+| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1 met (Nov 1); Q2–Q9 unqualified. |
 | LIFELINE packet runs | Runtime, packet, baseline, investigator, pilot and live-rehearsal evidence retained; see linked run notes. |
 | LIFELINE live Meta runs | Development/integration traces, 16 Meta pilot episodes, and live-rehearsal evidence; see meta/pilot/release notes. |
 | LIFELINE comparative results | V1: 48 first attempts; meta − adaptive −1.35 pp. v2 (repaired, 56 first attempts): meta − adaptive −0.003 pp (regression removed); meta − meta-disabled interval −0.003 to +0.015 pp (AI value not shown). Power P07: development baselines only. |

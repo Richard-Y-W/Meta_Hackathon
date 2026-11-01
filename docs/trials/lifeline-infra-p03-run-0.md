@@ -1,6 +1,6 @@
 # LIFELINE Infra P03 Run 0 — Versioned contracts and adapter conformance
 
-**Date:** November 1, 2026. **Task:** P03. **State:** qualified. Contracts, clock and adapter conformance are qualified; the live run through the adapter waits for the VM to be free of the P02 comparison.
+**Date:** November 1, 2026. **Task:** P03. **State:** qualified. Contracts, clock and adapter conformance are qualified, and a live adapter-driven run in the guest closes the task (below).
 
 | Item | Value |
 | --- | --- |
