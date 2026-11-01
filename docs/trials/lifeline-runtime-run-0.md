@@ -2,7 +2,7 @@
 
 **Run ID:** `runtime-run-0`. **Date:** October 31, 2026. **Task:** 1, qualify storage, Linux packet runtime and Meta provider.
 
-**Result:** Storage and the packet runtime are qualified. The Meta provider is not: no credential is configured, so the smoke recorded `provider_unavailable/credential_missing` without sending a request. **G0 remains unqualified.**
+**Result:** Storage, the packet runtime and the Meta provider are qualified. **G0 is qualified** (provider half added October 31, late evening; see the provider section).
 
 ## Code and environment identity
 
@@ -74,13 +74,39 @@ f7ec04312b93b2ff64e532a6727ca3efa74832a39c634c34151c380ac26f28c6  artifacts/life
 
 The VM can create a run-owned Mininet network, carry real UDP messages, measure receipts on a shared monotonic clock, apply and read back the four control primitives, and remove only its own objects. Project state for this run stayed on the SSD.
 
+## Provider qualification
+
+The owner added `MODEL_API_KEY` to the git-ignored `.env`. All calls went to `https://api.meta.ai/v1/responses` with `muse-spark-1.3`, prompt `lifeline-smoke-v1`: a development-sized diagnostic request over three synthetic observations, asking for a typed `{hypothesis, action, evidence}` decision. Artifacts hold the payload hash, never the key.
+
+| Run | Limits | Outcome |
+| --- | --- | --- |
+| First smoke | 6 s timeout, 1,500 output tokens | `provider_timeout` at 6.0 s |
+| Diagnostic | 90 s, 1,500 tokens | HTTP 200 in 6.21 s, `resp_6ae6d407d8e163a8545f40ea`, valid decision; 240 input tokens (227 cached), 1,485 output tokens (1,426 reasoning) |
+| Ten sequential | 30 s, 1,500 tokens | 10/10 HTTP 200; 4.71, 5.07, 5.97, 6.48, 6.66, 6.78, 6.79, 6.80, 6.82, 8.13 s; **only 4/10 parsed**. All 6 failures used exactly 1,500 output tokens (1,498 reasoning): truncated before the answer, not malformed |
+| Confirmation | 60 s, 4,000 tokens | 3/3 HTTP 200 and valid; 8.03, 5.38, 6.43 s; 2,149, 1,564 and 1,454 output tokens |
+
+Connectivity to the endpoint: TCP connect 9 ms, TLS 19 ms (unauthenticated `GET /v1/models` returned 401, as expected).
+
+What this means for budgets (to be frozen in Task 9; ten observations are a distribution, not a stable tail estimate):
+
+- The design's 6 s per-call timeout is below the median latency (6.7 s) and would time out most calls.
+- The 1,500-token cap truncates most decisions, because reasoning alone often exceeds it. A cap near 4,000 tokens parsed every confirmation call, with latency still around 5–8 s.
+- A 10 s decision deadline allows one call, not the two the design budgets.
+- Model latency is roughly 5–8 s while the network keeps running, so the deterministic controller must keep the immediate response role. The model's role is supervisory investigation, as the design assumes.
+
+```text
+4b2e9eca16b8b33d6f319037fee66f6835f0fb43d9878557717fb140ac944071  artifacts/lifeline/provider-smoke.json
+b4dde6537e6dd4a7af8ab617c2c12b9380c340ecaea0813fc3287bfe89200026  artifacts/lifeline/provider-smoke-90s.json
+20f66d798f0f082d55da80440503b7cd42cf9322804e2a7c6a535f5337bccf30  artifacts/lifeline/provider-latency-10.json
+b527a2571a6e0a57581f2a2b628312a937508da3800597687ba18e1c12355cc9  artifacts/lifeline/provider-latency-4000tok.json
+```
+
 ## What remains unqualified
 
-- Any live Meta response, its latency distribution, usage and parser behavior. Requires `MODEL_API_KEY` in `.env`, then the single smoke and `--count 10`.
 - Clean deletion with pre-existing unrelated bridges present (none existed in the guest).
 - The six-switch scenario, background contention and fault cascades (Task 4).
 - Packet timing under heavier load; one quiet VM measurement only.
 
 ## Decision and next task
 
-Packet work proceeds to Tasks 2–3, which need neither networking nor a model. G0 qualifies when a real provider call succeeds and the ten-request distribution is retained.
+Packet work proceeds to Tasks 2–3, which need neither networking nor a model. Provider budgets are frozen with the measured timing in Task 9.

@@ -8,18 +8,18 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Tasks 2–7 qualified; G1 qualified; Task 1 provider half blocked on credential |
+| Current state | Tasks 1–7 qualified; G0 and G1 qualified |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Task 8 (beliefs, forecast); Task 9 needs `MODEL_API_KEY`; owner decision on harder development cases |
+| Next task | Task 8 (beliefs, forecast), then Task 9; owner decision on harder development cases |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
 | LIFELINE packet runs | Task 1: 2 two-host; Task 4: 2 cascade (120 s), 1 partition, 4 short controls; all fixed policy |
-| LIFELINE live Meta runs | 0 |
+| LIFELINE live Meta runs | 0 control runs; 15 provider qualification calls |
 | LIFELINE comparative results | None |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
-| Provider dependency | **Blocked:** no `.env`/`MODEL_API_KEY`; smoke recorded `credential_missing` |
+| Provider | `muse-spark-1.3` live: 4.7–8.1 s per call; 1,500-token cap truncates reasoning; 4,000 parsed 3/3 |
 | Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained |
 
@@ -39,6 +39,7 @@
 | E010 | 2026-10-31 | Fixed-policy cascade on clean `21764ca`: primary on-time 0.630; incident 2 collapses clinic flows to 0.4% with 2.1× retries; partition delivers only shelter | Cascade is causal and measured; baseline comparison still needed |
 | E011 | 2026-10-31 | Two versioned route updates and a throttle confirmed on live traffic with 0/4,800 messages lost; cascade regression 0.631 | Execution path qualified without congestion; no controller decisions yet |
 | E012 | 2026-10-31 | On `dev-cascade-1`: fixed 0.631, priority 0.9985, adaptive 1.000; controls pass for both conventional controllers | G1 qualified; this cascade leaves no headroom for an AI gain |
+| E013 | 2026-10-31 | 10/10 live calls succeeded in 4.7–8.1 s, but 6/10 truncated at the 1,500-token cap during reasoning; 3/3 parsed at 4,000 | G0 qualified; per-call timeout and token cap must rise in Task 9 |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -46,7 +47,7 @@ The earlier repository review exercised the legacy device prototype. This planni
 
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
-| G0 Runtime and provider | Partial | [Runtime run 0](lifeline-runtime-run-0.md): packets qualified | Live provider response and ten-request distribution |
+| G0 Runtime and provider | Qualified | [Runtime run 0](lifeline-runtime-run-0.md) | Re-measure under the frozen Task 9 prompt |
 | G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md) | Repeat runs for variance before G4a |
 | G2 Bounded control | Partial | Guard, executor and live versioned updates ([execution run 0](lifeline-execution-run-0.md)) | Forecast qualification with guard and executor (Task 8) |
 | G3 AI prototype | Planned | No run | Real Meta decision with measured consequence |
@@ -124,3 +125,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-10-31 | Task 5 guard run 0: admission guard and budget ledger (21 tests, 5 mutations caught) | Contract-level qualification |
 | 2026-10-31 | Task 6 execution run 0: versioned routes, rollback, rate control, executor reconciliation; live transition run | Bounded execution qualified |
 | 2026-10-31 | Task 7 baseline run 0: priority and adaptive controllers, probes, resolved counters; 9 runs of record | G1 qualified |
+| 2026-10-31 | Task 1 provider qualification: smoke, ten-request sample, token-cap diagnosis | G0 qualified |

@@ -21,11 +21,11 @@ const DEVELOPMENT_CONTEXT = {
   allowedActions: ACTIONS,
 };
 
-function requestBody(model) {
+function requestBody(model, maxOutputTokens) {
   return {
     model,
     input: [{ role: 'user', content: `You are a network incident investigator for a synthetic emulated network. Using only these observations, return ONLY JSON {"hypothesis": <one sentence>, "action": <one of ${JSON.stringify(ACTIONS)}>, "evidence": [<observation ids>]}.\n${JSON.stringify(DEVELOPMENT_CONTEXT)}` }],
-    max_output_tokens: 1500,
+    max_output_tokens: maxOutputTokens,
   };
 }
 
@@ -42,9 +42,9 @@ function parseDecision(text) {
   return ok ? 'valid' : 'invalid_fields';
 }
 
-export async function smokeOnce({ apiKey, model, timeoutMs = 6000, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
-  const body = JSON.stringify(requestBody(model));
-  const base = { model, promptVersion: PROMPT_VERSION, endpoint: ENDPOINT, payloadSha256: createHash('sha256').update(body).digest('hex'), startedAtUnixMs: Date.now() };
+export async function smokeOnce({ apiKey, model, timeoutMs = 6000, maxOutputTokens = 1500, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
+  const body = JSON.stringify(requestBody(model, maxOutputTokens));
+  const base = { model, promptVersion: PROMPT_VERSION, maxOutputTokens, endpoint: ENDPOINT, payloadSha256: createHash('sha256').update(body).digest('hex'), startedAtUnixMs: Date.now() };
   if (!apiKey) return { ...base, code: 'provider_unavailable', reason: 'credential_missing', durationMs: 0 };
   const scrub = text => String(text).split(apiKey).join('[redacted]').slice(0, 300);
   const started = now();
@@ -92,7 +92,7 @@ async function main(argv) {
   const model = process.env.META_MODEL || 'muse-spark-1.3';
   const records = [];
   for (let i = 0; i < count; i++) {
-    const record = await smokeOnce({ apiKey: process.env.MODEL_API_KEY, model, timeoutMs: Number(arg('--timeout-ms') ?? 6000) });
+    const record = await smokeOnce({ apiKey: process.env.MODEL_API_KEY, model, timeoutMs: Number(arg('--timeout-ms') ?? 6000), maxOutputTokens: Number(arg('--max-output-tokens') ?? 1500) });
     records.push({ attempt: i + 1, ...record });
     if (record.reason === 'credential_missing') break;
   }
