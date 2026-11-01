@@ -11,7 +11,7 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P08 water adapter (EPANET 2.2 via WNTR 1.5.0, replay restart) on the host; P03 live adapter-driven communications run in the guest; then P09–P10. |
+| Next task | P08 water adapter (EPANET 2.2 via WNTR 1.5.0, replay restart) on the host; then P09–P10 (Q2). |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
 | Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
@@ -29,7 +29,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 
 | New phase | State | Next evidence |
 | --- | --- | --- |
-| P00–P05 foundation / Q1 | Active: P00, P01, P02, P04, P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [v2 run 0](lifeline-communications-v2-run-0.md), [P04](lifeline-infra-p04-run-0.md), [P05](lifeline-infra-p05-run-0.md)); P03 active ([P03](lifeline-infra-p03-run-0.md)) | P03 live adapter-driven communications run, then Q1 |
+| P00–P05 foundation / Q1 | **Q1 met:** P00–P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [v2 run 0](lifeline-communications-v2-run-0.md), [P03](lifeline-infra-p03-run-0.md), [P04](lifeline-infra-p04-run-0.md), [P05](lifeline-infra-p05-run-0.md)) | — |
 | P06–P10 power and water / Q2 | Active: P06, P07 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md): local and predictive electrical baselines on 9 development cases; Grid2Op acceptance record) | P08 water adapter (WNTR 1.5.0 / EPANET 2.2 in `.work/environments/water`) |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |

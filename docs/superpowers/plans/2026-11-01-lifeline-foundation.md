@@ -105,7 +105,7 @@ now = 67000; assert.equal(b.remainingMs(), 0);
 - [x] GREEN: implement strict `validateEnvelope(value)` returning `{ok, code}`; implement explicit unit conversion at adapter admission. Internal records use canonical units.
 - [x] Wrap actual communications behavior, preserving its route/rate/probe semantics and receipt scorer. State unsupported adapter operations explicitly; do not fill them with successful stubs.
 - [x] Test all adapter lifecycle methods, duplicate request handling, close/reset isolation and capability discovery.
-- [ ] Retain a communications run through the common interface with raw network receipts matching the original scorer.
+- [x] Retain a communications run through the common interface with raw network receipts matching the original scorer.
 
 **Example rejection:**
 
@@ -117,7 +117,7 @@ assert.deepEqual(validateEnvelope(candidate), { ok: false, code: 'unit_mismatch'
 
 **Run:** `node --test test/lifeline/infra/contracts.test.mjs test/lifeline/infra/clock.test.mjs test/lifeline/infra/adapter-conformance.test.mjs`.
 
-**State (Nov 1):** `active` in [P03 run 0](../../trials/lifeline-infra-p03-run-0.md): contracts, clock and adapter conformance qualified; the live adapter-driven run remains.
+**State (Nov 1):** `qualified` in [P03 run 0](../../trials/lifeline-infra-p03-run-0.md), including a live adapter-driven communications run in the guest whose measurement matches the original scorer.
 
 **Gate:** One real adapter passes conformance and rejects incompatible physics/identities. Defining the interface alone does not qualify a new domain.
 
@@ -157,4 +157,4 @@ assert.deepEqual(validateEnvelope(candidate), { ok: false, code: 'unit_mismatch'
 
 **State (Nov 1):** `qualified` in [P05 run 0](../../trials/lifeline-infra-p05-run-0.md).
 
-**Gate Q1:** P00–P05 evidence exists; every metric has an independent denominator, unit, quality rule and missing-data policy. This qualifies infrastructure plumbing, not power/water operation.
+**Gate Q1 (Nov 1): met** — P00–P05 qualified with retained evidence. P00–P05 evidence exists; every metric has an independent denominator, unit, quality rule and missing-data policy. This qualifies infrastructure plumbing, not power/water operation.
