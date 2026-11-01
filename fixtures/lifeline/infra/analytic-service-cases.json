@@ -1,0 +1,62 @@
+{
+  "version": "AnalyticServiceCasesV1",
+  "note": "Hand-calculated service accounting controls. Demand is piecewise constant over [fromUs, toUs); supply samples hold until the next sample. Integrals are in the canonical unit times seconds (W·s = J; m3/s·s = m3).",
+  "cases": [
+    {
+      "id": "half-supply-10s", "metric": "power.active",
+      "demand": [{ "fromUs": 0, "toUs": 10000000, "value": 1000 }],
+      "supply": [{ "atUs": 0, "value": 500 }], "fromUs": 0, "toUs": 10000000,
+      "expected": { "demandIntegral": 10000, "servedIntegral": 5000, "deficitIntegral": 5000, "score": 0.5, "status": "scored" },
+      "derivation": "1000 W for 10 s = 10000 J demanded; 500 W supplied = 5000 J served; 5000 J unserved."
+    },
+    {
+      "id": "tank-exhaustion", "metric": "water.flow",
+      "demand": [{ "fromUs": 0, "toUs": 10000000000, "value": 0.1 }],
+      "supply": [{ "atUs": 0, "value": 0.1 }, { "atUs": 6000000000, "value": 0 }], "fromUs": 0, "toUs": 10000000000,
+      "expected": { "demandIntegral": 1000, "servedIntegral": 600, "deficitIntegral": 400, "score": 0.6, "status": "scored" },
+      "derivation": "A 600 m3 tank at 0.1 m3/s empties at 6000 s; over 10000 s demand is 1000 m3, 600 m3 served, 400 m3 unmet."
+    },
+    {
+      "id": "complete-partition", "metric": "water.flow",
+      "demand": [{ "fromUs": 0, "toUs": 5000000, "value": 0.02 }],
+      "supply": [{ "atUs": 0, "value": 0 }], "fromUs": 0, "toUs": 5000000,
+      "expected": { "demandIntegral": 0.1, "servedIntegral": 0, "deficitIntegral": 0.1, "score": 0, "status": "scored" },
+      "derivation": "No path: zero supply observed for 5 s of 0.02 m3/s demand."
+    },
+    {
+      "id": "zero-demand", "metric": "power.active",
+      "demand": [{ "fromUs": 0, "toUs": 5000000, "value": 0 }],
+      "supply": [{ "atUs": 0, "value": 300 }], "fromUs": 0, "toUs": 5000000,
+      "expected": { "demandIntegral": 0, "servedIntegral": 0, "deficitIntegral": 0, "score": null, "status": "scored" },
+      "derivation": "No demand: the score is undefined (null), never 100%; surplus supply is not service."
+    },
+    {
+      "id": "pressure-below-usable", "metric": "water.flow", "quality": { "metric": "water.pressure", "min": 140000 },
+      "demand": [{ "fromUs": 0, "toUs": 10000000, "value": 0.01 }],
+      "supply": [{ "atUs": 0, "value": 0.01, "qualityValue": 200000 }, { "atUs": 4000000, "value": 0.01, "qualityValue": 90000 }], "fromUs": 0, "toUs": 10000000,
+      "expected": { "demandIntegral": 0.1, "servedIntegral": 0.04, "deficitIntegral": 0.06, "score": 0.4, "status": "scored" },
+      "derivation": "Flow meets demand throughout, but pressure falls below 140 kPa at 4 s: only the first 4 s (0.04 m3) is usable service."
+    },
+    {
+      "id": "missing-capture", "metric": "power.active",
+      "demand": [{ "fromUs": 0, "toUs": 10000000, "value": 1000 }],
+      "supply": [{ "atUs": 0, "value": 1000 }, { "atUs": 6000000, "value": null }], "fromUs": 0, "toUs": 10000000,
+      "expected": { "demandIntegral": 10000, "servedIntegral": 6000, "missingIntegral": 4000, "servedBounds": [6000, 10000], "score": null, "status": "capture_incomplete" },
+      "derivation": "Supply unobserved from 6 s: 4000 J of demand has unknown service. Bounds 6000-10000 J served; no point score."
+    },
+    {
+      "id": "shed-demand-stays-in-denominator", "metric": "power.active",
+      "demand": [{ "fromUs": 0, "toUs": 10000000, "value": 1000 }],
+      "supply": [{ "atUs": 0, "value": 1000 }, { "atUs": 5000000, "value": 0, "shed": true }], "fromUs": 0, "toUs": 10000000,
+      "expected": { "demandIntegral": 10000, "servedIntegral": 5000, "deficitIntegral": 5000, "score": 0.5, "status": "scored" },
+      "derivation": "A controller shedding the load after 5 s does not shrink the immutable 10000 J demand."
+    }
+  ],
+  "recovery": {
+    "id": "censored-recovery", "threshold": 0.95, "sustainUs": 10000000, "incidentAtUs": 20000000,
+    "series": [{ "atUs": 20000000, "fraction": 0.4 }, { "atUs": 40000000, "fraction": 0.97 }, { "atUs": 45000000, "fraction": 0.5 }, { "atUs": 50000000, "fraction": 0.99 }],
+    "endUs": 55000000,
+    "expected": { "recovered": false, "censoredAtUs": 55000000 },
+    "derivation": "0.97 at 40 s lasts only 5 s; 0.99 from 50 s lasts 5 s before the 55 s end: never sustained 10 s, so recovery is censored."
+  }
+}
