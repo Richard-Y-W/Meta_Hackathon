@@ -1,5 +1,7 @@
 # Competition alignment and evidence plan
 
+This document describes the **legacy Blackbox Apprentice prototype**. The current LIFELINE direction, verified final-project rubric, and required evidence are in the [LIFELINE evaluation protocol](research/lifeline-evaluation-protocol.md#11-hackathon-rubric-to-evidence) and [living program](superpowers/plans/2026-10-31-lifeline-program.md). The October 30 assessment below is retained as historical context.
+
 Checked October 30, 2026 against the public organizer pages:
 
 - https://dev.meta.ai/events/global-hackathon

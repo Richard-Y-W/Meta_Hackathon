@@ -2,6 +2,14 @@
 
 An observation-driven apprentice that learns an unfamiliar virtual device, completes outcome-based tasks, and revises its model when predictions fail.
 
+## LIFELINE project plan
+
+The next project direction is **LIFELINE**, an emergency communications prototype that investigates network failures and tests whether AI-assisted control preserves essential message delivery. The current runnable application remains the Blackbox Apprentice device prototype.
+
+Start with the [living LIFELINE program and TDD plan](docs/superpowers/plans/2026-10-31-lifeline-program.md). It links the architecture, evaluation protocol, release gates, longer-term roadmap, and [current evidence register](docs/trials/lifeline-run-register.md). LIFELINE implementation and performance qualification have not started.
+
+**Storage requirement:** Use `/Volumes/PortableSSD/Meta_Hackathon` as the canonical workspace. All project files, environments, caches, VM disks and outputs must remain on the SSD; see the [storage rule](docs/superpowers/plans/2026-10-31-lifeline-program.md#0-ssd-workspace-and-storage-rule). The old home-directory path is a symlink.
+
 ## Run locally
 
 Requires Node.js 22.9 or newer. No dependencies, hardware, camera, or API key are needed for local mode.
