@@ -6,6 +6,8 @@ import { CapacityBeliefs } from '../beliefs.mjs';
 export { CapacityBeliefs };
 
 const LIMIT = 0.95;
+const DEGRADED = 0.9; // on-time fraction below which a flow counts as degraded
+const PERSIST = 3;    // consecutive degraded samples before the unexplained-degradation rule acts
 const HOLD_MS = 5000;
 const PROBE = { packetCount: 16, payloadBytes: 1000, intervalMs: 10 };
 
@@ -15,6 +17,7 @@ export function createAdaptiveController(inventory, policy) {
   const probed = {}; // path key -> {ok, atMs}
   let pendingProbe = null;
   let lastBest = null;
+  const degraded = {};
   let unavailable = [];
 
   function evaluate(routes, rates, observation) {
@@ -61,6 +64,32 @@ export function createAdaptiveController(inventory, policy) {
     return { ...best, current, combos, exhaustive: true };
   }
 
+  // Conventional rule for degradation the capacity model cannot explain (e.g. loss on a switch that
+  // stopped reporting): probe the best alternative path, and move only if the probe is clean.
+  function unexplained(observation, routes, backgroundRates, nowMs, remaining, current, up) {
+    const flow = inventory.essential.find(f => degraded[f.flowId] >= PERSIST && !unavailable.includes(f.flowId) && (holdUntil[f.flowId] ?? 0) <= nowMs);
+    if (!flow) return null;
+    const here = current[flow.flowId].path.join();
+    const fresh = key => probed[key] && nowMs - probed[key].atMs < 20_000;
+    const options = candidatePaths(up, flow.from, flow.to)
+      .filter(p => p.join() !== here && !(fresh(p.join()) && !probed[p.join()].ok))
+      .map(p => ({ p, e: evaluate({ ...current, [flow.flowId]: { path: p, ackPath: [...p].reverse() } }, backgroundRates, observation) }))
+      .sort((x, y) => y.e.weighted - x.e.weighted || x.e.peak - y.e.peak);
+    if (!options.length) return null;
+    const { p } = options[0];
+    if (fresh(p.join()) && probed[p.join()].ok) {
+      degraded[flow.flowId] = 0;
+      return {
+        actions: [{ actionId: 'a1', type: 'set_route', flowId: flow.flowId, path: p, ackPath: [...p].reverse() }],
+        preconditions: [{ kind: 'service_on_time_below', flowId: flow.flowId, onTimeFraction: DEGRADED }],
+        rationale: `unexplained degradation of ${flow.flowId}; clean probe of ${p.join('-')}`,
+      };
+    }
+    if (remaining.incidentProbeBytes < PROBE.packetCount * PROBE.payloadBytes) return null;
+    pendingProbe = { atMs: nowMs };
+    return { actions: [{ actionId: 'a1', type: 'probe_path', sourceId: flow.source, destinationId: flow.destination, ...PROBE, path: p }], preconditions: [], rationale: `unexplained degradation of ${flow.flowId}: probe ${p.join('-')}` };
+  }
+
   return {
     name: 'adaptive',
     beliefs,
@@ -80,6 +109,10 @@ export function createAdaptiveController(inventory, policy) {
     decide({ observation, rates, routes, backgroundRates, nowMs, remaining }) {
       if (observation.stale) return null;
       beliefs.update(observation, rates);
+      for (const f of inventory.essential) {
+        const fraction = rates.services?.[f.flowId]?.recentOnTimeFraction;
+        degraded[f.flowId] = typeof fraction === 'number' && fraction < DEGRADED ? (degraded[f.flowId] ?? 0) + 1 : 0;
+      }
       const up = { ...inventory.topology, links: inventory.topology.links.filter(l => observation.links?.[l.linkId]?.state === 'up') };
       unavailable = inventory.essential.filter(f => candidatePaths(up, f.from, f.to, 1).length === 0).map(f => f.flowId);
       if (pendingProbe && nowMs - pendingProbe.atMs < 3000) return null;
@@ -90,7 +123,7 @@ export function createAdaptiveController(inventory, policy) {
       const now = evaluate(Object.fromEntries(inventory.essential.map(f => [f.flowId, best.current[f.flowId]])), backgroundRates, observation);
       // Act for essential feasibility or to restore background; headroom only ranks plans once acting.
       const improves = best.score[0] > now.weighted || (best.score[0] === now.weighted && best.score[1] > now.background * 1.1);
-      if ((!changed.length && !rateChanges.length) || !improves) { lastBest = null; return null; }
+      if ((!changed.length && !rateChanges.length) || !improves) { lastBest = null; return unexplained(observation, routes, backgroundRates, nowMs, remaining, best.current, up); }
       const outage = changed.some(f => !pathUp(best.current[f.flowId].path, inventory.topology, observation) || !pathUp(best.current[f.flowId].ackPath, inventory.topology, observation));
       const signature = JSON.stringify([changed.map(f => best.routes[f.flowId].path), rateChanges.map(s => best.rates[s.sourceId])]);
       if (!outage && lastBest !== signature) { lastBest = signature; return null; } // persistence: the same plan twice

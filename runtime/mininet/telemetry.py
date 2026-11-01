@@ -49,8 +49,11 @@ def parse_tc(text):
     return {'drops': drops, 'backlogBytes': backlog_bytes, 'backlogPackets': backlog_packets}
 
 
-def port_counters(ports, ofport, intf_name):
-    """OVS reports OpenFlow 1.3 port statistics by port number; fall back to the interface name."""
+def port_counters(ports, ofport, intf_name, silent=False):
+    """OVS reports OpenFlow 1.3 port statistics by port number; fall back to the interface name.
+    A switch that has stopped reporting (counter_loss) yields nothing: missing, never zero."""
+    if silent:
+        return {}
     return ports.get(str(ofport)) or ports.get(intf_name) or {}
 
 
@@ -71,7 +74,7 @@ def build_observation(run_id, seq, sample, spec, config_revision, now_ms, interv
     }
 
 
-def collect_links(spec, names, ports):
+def collect_links(spec, names, ports, silent=()):
     """Read OVS port counters, link state and root-qdisc counters for each registered link end."""
     per_switch = {}
     for s in spec['topology']['switches']:
@@ -83,11 +86,11 @@ def collect_links(spec, names, ports):
         up = True
         for end, peer in ((link['a'], link['b']), (link['b'], link['a'])):
             ofport, intf = ports[(end, peer)]
-            counters = port_counters(per_switch[end], ofport, intf)
+            counters = port_counters(per_switch[end], ofport, intf, silent=end in silent)
             entry['txBytes'][end] = counters.get('txBytes')
             entry['txPackets'][end] = counters.get('txPackets')
             entry['txDrops'][end] = counters.get('txDrops')
-            queue = parse_tc(subprocess.run(['tc', '-s', 'qdisc', 'show', 'dev', intf], capture_output=True, text=True).stdout)
+            queue = {'drops': None, 'backlogBytes': None} if end in silent else parse_tc(subprocess.run(['tc', '-s', 'qdisc', 'show', 'dev', intf], capture_output=True, text=True).stdout)
             entry['queueDrops'][end] = queue['drops']
             entry['backlogBytes'][end] = queue['backlogBytes']
             state = subprocess.run(['cat', '/sys/class/net/%s/operstate' % intf], capture_output=True, text=True).stdout.strip()

@@ -209,3 +209,33 @@ test('adaptive: an idle link reporting zero throughput is not capacity evidence'
   assert.equal(beliefs.measured('r1>r4'), false);
   assert.equal(beliefs.measured('r4>r3'), true);
 });
+
+test('adaptive: a persistently degraded flow with no capacity explanation is probed elsewhere, then moved', () => {
+  const c = createAdaptiveController(INV, POLICY);
+  // Counters on r2 are missing and nothing is saturated, yet field-clinic keeps missing deadlines.
+  const silent = state({ rates: rates({ onTime: { 'field-clinic': 0.7 } }) });
+  let intent = null;
+  for (let i = 0; i < 6 && !intent; i++) intent = c.decide({ ...silent, nowMs: 30_000 + i * 500 });
+  assert.equal(intent.actions[0].type, 'probe_path');
+  assert.equal(intent.actions[0].sourceId, 'field');
+  assert.notDeepEqual(intent.actions[0].path, ['r1', 'r2', 'r3']);
+  c.applied(intent, { status: 'confirmed', nowMs: 33_000, receipts: [{ status: 'confirmed', measurement: { lossFraction: 0, sent: 16, received: 16 } }] });
+  const move = c.decide({ ...silent, nowMs: 33_500 });
+  assert.deepEqual(move.actions.map(a => [a.type, a.flowId]), [['set_route', 'field-clinic']]);
+  assert.deepEqual(move.actions[0].path, intent.actions[0].path);
+  assert.ok(move.preconditions.some(p => p.kind === 'service_on_time_below' && p.flowId === 'field-clinic'));
+});
+
+test('adaptive: a lossy alternative probe is not followed, and a briefly degraded flow is left alone', () => {
+  const c = createAdaptiveController(INV, POLICY);
+  const silent = state({ rates: rates({ onTime: { 'field-clinic': 0.7 } }) });
+  let intent = null;
+  for (let i = 0; i < 6 && !intent; i++) intent = c.decide({ ...silent, nowMs: 30_000 + i * 500 });
+  c.applied(intent, { status: 'confirmed', nowMs: 33_000, receipts: [{ status: 'confirmed', measurement: { lossFraction: 0.4, sent: 16, received: 10 } }] });
+  const next = c.decide({ ...silent, nowMs: 33_500 });
+  assert.ok(!next || next.actions[0].type === 'probe_path');
+  if (next) assert.notDeepEqual(next.actions[0].path, intent.actions[0].path);
+  const fresh = createAdaptiveController(INV, POLICY);
+  assert.equal(fresh.decide({ ...silent, nowMs: 30_000 }), null);
+  assert.equal(fresh.decide({ ...silent, nowMs: 30_500 }), null);
+});

@@ -216,6 +216,14 @@ class FaultValidationTests(unittest.TestCase):
         faults.validate_fault({'atMs': 0, 'kind': 'link_down', 'linkId': 'r0-r3'}, spec)
         faults.validate_fault({'atMs': 0, 'kind': 'link_rate', 'linkId': 'r1-r2', 'bwMbit': 3}, spec)
         faults.validate_fault({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 6000}, spec)
+        faults.validate_fault({'atMs': 0, 'kind': 'link_loss', 'linkId': 'r1-r4', 'lossPercent': 40}, spec)
+        faults.validate_fault({'atMs': 0, 'kind': 'counter_loss', 'switchId': 'r2'}, spec)
+        with self.assertRaises(faults.FaultError) as caught:
+            faults.validate_fault({'atMs': 0, 'kind': 'counter_loss', 'switchId': 'r9'}, spec)
+        self.assertEqual(caught.exception.detail, 'unknown_node')
+        for bad in ({'atMs': 0, 'kind': 'link_loss', 'linkId': 'r1-r4', 'lossPercent': 0}, {'atMs': 0, 'kind': 'link_loss', 'linkId': 'r1-r4', 'lossPercent': 101}):
+            with self.assertRaises(faults.FaultError):
+                faults.validate_fault(bad, spec)
         for bad, detail in [({'atMs': 0, 'kind': 'power_off', 'linkId': 'r0-r3'}, 'unknown_fault_kind'),
                             ({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 0}, 'bad_quantity'),
                             ({'atMs': 0, 'kind': 'telemetry_hold', 'durationMs': 5, 'linkId': 'r0-r3'}, 'unknown_field'),
@@ -262,6 +270,11 @@ qdisc netem 10: parent 5:1 limit 200 delay 5ms
         self.assertEqual(ports['1']['txBytes'], 400)
         self.assertEqual(telemetry.port_counters(ports, 1, 'lfs1r0-eth2')['txDrops'], 2)
         self.assertEqual(telemetry.port_counters(ports, 7, 'missing'), {})
+
+    def test_silent_switch_counters_are_missing_not_zero(self):
+        ports = {'1': {'txBytes': 10, 'txPackets': 1, 'txDrops': 0}}
+        self.assertEqual(telemetry.port_counters(ports, 1, 'x', silent=True), {})
+        self.assertEqual(telemetry.port_counters(ports, 1, 'x')['txBytes'], 10)
 
     def test_queue_counters_exclude_configured_rate(self):
         queue = telemetry.parse_tc(self.TC)

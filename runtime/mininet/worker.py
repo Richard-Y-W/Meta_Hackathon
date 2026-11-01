@@ -250,7 +250,7 @@ class MininetBackend:
             raise Rejected('not_built')
         if time.monotonic_ns() < getattr(self, 'hold_until_ns', 0):
             raise Rejected('telemetry_unavailable')
-        links = telemetry.collect_links(self.spec, self.names, self.ports)
+        links = telemetry.collect_links(self.spec, self.names, self.ports, silent=getattr(self, 'silent_switches', set()))
         collected = telemetry.now_ms(self.epoch_ns)
         sample = {'collectedAtMs': round(collected, 3), 'links': links, 'services': self._service_counters()}
         self.telemetry_seq += 1
@@ -260,6 +260,9 @@ class MininetBackend:
     def inject_fault(self, fault):
         if self.net is None:
             raise Rejected('not_built')
+        if fault['kind'] == 'counter_loss':
+            self.silent_switches = getattr(self, 'silent_switches', set()) | {fault['switchId']}
+            return {'applied': True, 'appliedAtMs': round((time.monotonic_ns() - self.epoch_ns) / 1e6, 3)}
         if fault['kind'] == 'telemetry_hold':
             self.hold_until_ns = time.monotonic_ns() + int(fault['durationMs'] * 1e6)
             return {'applied': True, 'appliedAtMs': round((time.monotonic_ns() - self.epoch_ns) / 1e6, 3)}

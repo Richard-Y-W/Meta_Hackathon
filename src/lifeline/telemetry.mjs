@@ -1,7 +1,7 @@
 // Supervisor-side observation admission and the controller-view information audit.
 
 const FORBIDDEN_KEYS = new Set(['fault', 'faults', 'kind', 'bwMbit', 'queuePackets', 'schedule', 'atMs', 'hidden']);
-const FORBIDDEN_VALUES = /\b(link_down|link_up|link_rate|fault)\b/;
+const FORBIDDEN_VALUES = /\b(link_down|link_up|link_rate|link_loss|counter_loss|telemetry_hold|fault)\b/;
 
 export function admitObservation(observation, { runId, nowMs, lastSeq, maxAgeMs }) {
   if (observation?.version !== 'ObservationV1') return { ok: false, code: 'unsupported_version' };
