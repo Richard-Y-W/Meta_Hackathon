@@ -32,11 +32,11 @@ Faults were applied 9 ms (incident 1) and 19 ms (incident 2) after their schedul
 
 After incident 2, `dispatch-clinic` and `field-clinic` each delivered 0.4% on time; `dispatch-shelter` delivered 100% throughout. Essential transmissions per offered message: 2.14 and 2.13 for the clinic flows, 1.00 for shelter. Background delivered fraction over the primary window: `bulk-field` 0.63, `bulk-shelter` 0.0006.
 
-Mechanism, from the retained telemetry and records:
+Mechanism, from the run-of-record telemetry and records:
 
-- Incident 1: fast-failover moved `dispatch-clinic` onto `r0-r1-r2-r3`. The `r1` egress backlog on `r1-r2` rose from about 5 KB to 119 KB, and on-time delivery for that flow dipped to 92–98% per 3-second bin.
+- Incident 1: fast-failover moved `dispatch-clinic` onto `r0-r1-r2-r3`. The `r1` egress backlog on `r1-r2` rose from about 6 KB (15 s) to 120 KB (30 s), and on-time delivery for that flow dipped to 92–99% per 3-second bin between 39 and 65 s.
 - `bulk-shelter` was blackholed after incident 1. Its ingress switch `r4` watches only `r4-r3`, which stayed up, while the failed hop `r3-r0` is downstream. The fixed policy has this weakness; it is not a measurement error.
-- Incident 2: no port went down, so no failover occurred. Queue drops on `r1-r2` reached 12,434 by 80 s, and sender transmissions rose to 1.7× offered as retries added load.
+- Incident 2: no port went down, so no failover occurred. Queue drops at the `r1` end of `r1-r2` reached 12,426 by 80 s, and `dispatch-clinic` transmissions reached 1.71× offered (10,935 for 6,404) as retries added load.
 
 Repeatability: development run `lfc0` gave 0.6303 (primary), 0.9898 and 0.3361 (incident windows) and the same retry amplification. Two runs do not estimate variance.
 
