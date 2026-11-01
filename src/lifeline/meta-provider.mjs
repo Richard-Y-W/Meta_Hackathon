@@ -20,14 +20,14 @@ export const PROVIDER_CONFIG = Object.freeze({
 
 const scrub = (text, key) => (key ? String(text).split(key).join('[redacted]') : String(text)).slice(0, 300);
 
-export async function callModel({ apiKey, prompt, model = process.env.META_MODEL || 'muse-spark-1.3', timeoutMs = PROVIDER_CONFIG.callTimeoutMs, maxOutputTokens = PROVIDER_CONFIG.maxOutputTokens, reasoningEffort = PROVIDER_CONFIG.reasoningEffort, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
+export async function callModel({ apiKey, prompt, model = process.env.META_MODEL || 'muse-spark-1.3', timeoutMs = PROVIDER_CONFIG.callTimeoutMs, maxOutputTokens = PROVIDER_CONFIG.maxOutputTokens, reasoningEffort = PROVIDER_CONFIG.reasoningEffort, signal, fetchImpl = globalThis.fetch, now = () => performance.now() }) {
   const body = JSON.stringify({ model, input: [{ role: 'user', content: prompt }], max_output_tokens: maxOutputTokens, reasoning: { effort: reasoningEffort } });
   const base = { model, promptVersion: PROVIDER_CONFIG.promptVersion, promptSha256: createHash('sha256').update(body).digest('hex'), startedAtUnixMs: Date.now() };
   if (!apiKey) return { ...base, code: 'provider_unavailable', reason: 'credential_missing', durationMs: 0 };
   const started = now();
   try {
     const response = await fetchImpl(PROVIDER_CONFIG.endpoint, {
-      method: 'POST', body, signal: AbortSignal.timeout(timeoutMs),
+      method: 'POST', body, signal: signal ? AbortSignal.any([signal, AbortSignal.timeout(timeoutMs)]) : AbortSignal.timeout(timeoutMs),
       headers: { Authorization: `Bearer ${apiKey}`, 'Content-Type': 'application/json' },
     });
     if (!response.ok) {
@@ -41,6 +41,7 @@ export async function callModel({ apiKey, prompt, model = process.env.META_MODEL
     if (text.length > PROVIDER_CONFIG.maxResponseChars) return { ...meta, code: 'provider_invalid_response', reason: 'response_too_large' };
     return { ...meta, code: 'ok', text };
   } catch (error) {
+    if (signal?.aborted) return { ...base, code: 'provider_cancelled', reason: 'investigation_cancelled', durationMs: now() - started }; // superseded or run stopped
     const timedOut = error?.name === 'TimeoutError' || error?.name === 'AbortError';
     return { ...base, code: timedOut ? 'provider_timeout' : 'provider_unavailable', reason: timedOut ? 'timeout' : 'transport_error', detail: scrub(error?.message ?? error, apiKey), durationMs: now() - started };
   }

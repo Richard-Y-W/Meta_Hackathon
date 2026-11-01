@@ -109,8 +109,10 @@ async function main() {
       : opt.controller === 'priority' ? createPriorityController(inventory, policy)
         : opt.controller === 'adaptive' ? createAdaptiveController(inventory, policy)
           : opt.controller === 'meta' ? createMetaController(inventory, policy, {
-            callModel: ({ prompt }) => callModel({ apiKey: process.env.MODEL_API_KEY, prompt }), // key stays in this process
+            // The key stays in this process; each call is bounded by the investigation's remaining time and cancellable.
+            callModel: ({ prompt, timeoutMs, signal }) => callModel({ apiKey: process.env.MODEL_API_KEY, prompt, timeoutMs, signal }),
             chargeModelCall: () => budgets.charge('modelCalls', 1, 'meta investigation call'),
+            now: () => nowMs(), // the episode's monotonic clock: completions and fallbacks are stamped when they happen
           }) : null;
     if (opt.controller === 'meta') manifest.provider = { ...PROVIDER_CONFIG, model: process.env.META_MODEL || 'muse-spark-1.3', credentialPresent: Boolean(process.env.MODEL_API_KEY) };
     if (opt.script) manifest.script = { path: opt.script, sha256: sha256(resolve(opt.script)) };
@@ -248,7 +250,9 @@ async function main() {
       }
       await sleep(Math.max(5, Math.min(50, nextSample - nowMs())));
     }
+    controller?.stop?.(); // cancel investigations: an end-of-run arrival must not act
     if (outstanding) await outstanding;
+    await sleep(50);
     for (const e of controller?.drainEvents?.() ?? []) record(`controller_${e.type}`, { controller: controller.name, ...e, atMs: e.atMs ?? nowMs() });
     const collected = await orchestrator.request('collect', {});
     record('collected', collected);

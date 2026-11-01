@@ -90,3 +90,13 @@ test('parse: a belief update must cite known evidence and use numeric units', ()
   assert.equal(parseModelDecision(withUpdate({ link: 'r1>r2', hiBps: 3_000_000, evidence: ['obs-7'] }), { evidenceIds: ids }).detail, 'evidence_unknown');
   assert.equal(parseModelDecision(withUpdate({ link: 'r1>r2', hiBps: -1, evidence: ['obs-41'] }), { evidenceIds: ids }).detail, 'invalid_units');
 });
+
+test('call: a cancelled investigation aborts the request and is reported as cancelled, not as a provider failure', async () => {
+  const abort = new AbortController();
+  const hang = (_u, { signal }) => new Promise((_, reject) => signal.addEventListener('abort', () => reject(signal.reason)));
+  const pending = callModel({ apiKey: KEY, prompt: 'p', timeoutMs: 10_000, signal: abort.signal, fetchImpl: hang });
+  abort.abort();
+  const r = await pending;
+  assert.equal(r.code, 'provider_cancelled');
+  assert.ok(r.durationMs < 1000);
+});

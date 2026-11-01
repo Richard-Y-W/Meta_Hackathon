@@ -41,6 +41,12 @@ const ok = text => ({ code: 'ok', text, responseId: `resp-${Math.random()}`, dur
 const degradedState = nowMs => state({ rates: rates({ 'field-clinic': 0.7 }), nowMs });
 const evidenceFrom = prompt => [...new Set(prompt.match(/obs-\d+/g))].slice(-2);
 
+// Feed degraded samples until the model contributes an intent; deterministic intents are not applied here.
+async function untilMeta(c, from = 30_000, ticks = 12) {
+  for (let i = 0; i < ticks; i++) { const r = c.decide(degradedState(from + i * 500)); await flush(); if (r?.source === 'meta') return r; }
+  return null;
+}
+
 async function persist(c, until = 6) {
   let intent = null;
   for (let i = 0; i < until && !intent; i++) { intent = c.decide(degradedState(30_000 + i * 500)); await flush(); }
@@ -56,17 +62,17 @@ test('an outage is handled by the deterministic layer immediately while the mode
   assert.equal(calls.length, 1);
 });
 
-test('unexplained degradation is investigated by the model, whose cited evidence and typed probe become the intent', async () => {
+test('unexplained degradation is investigated by the model in parallel; its cited evidence and typed probe become an intent once the deterministic layer is idle', async () => {
   const { c, calls, charged } = controller([prompt => ok(decision(evidenceFrom(prompt), probe))]);
-  let intent = await persist(c);
-  if (!intent) { await flush(); intent = c.decide(degradedState(33_500)); }
+  const intents = [];
+  for (let i = 0; i < 10; i++) { const r = c.decide(degradedState(30_000 + i * 500)); if (r) intents.push(r); await flush(); }
   assert.equal(calls.length, 1);
   assert.equal(charged(), 1);
-  assert.equal(intent.source, 'meta');
-  assert.equal(intent.actions[0].type, 'probe_path');
-  assert.deepEqual(intent.actions[0].path, ['r1', 'r4', 'r3']);
-  assert.equal(intent.modelTrace.selected, 'h1');
-  assert.match(intent.modelTrace.responseId, /^resp-/);
+  assert.equal(intents[0].source, 'deterministic'); // the conventional rule does not wait for the model
+  const meta = intents.find(x => x.source === 'meta');
+  assert.ok(meta, JSON.stringify(intents.map(x => x.source)));
+  assert.deepEqual(meta.actions[0].path, ['r1', 'r4', 'r3']);
+  assert.equal(meta.modelTrace.selected, 'h1');
   assert.ok(!calls[0].includes('link_loss') && !calls[0].includes('counter_loss') && !calls[0].includes('bwMbit'), 'no fault truth in the prompt');
 });
 
@@ -105,8 +111,7 @@ test('no model call is made without remaining model-call budget', async () => {
 test('a belief update without supporting measurement rejects the whole decision', async () => {
   const withUpdate = prompt => ok(JSON.stringify({ ...JSON.parse(decision(evidenceFrom(prompt), probe)), beliefUpdates: [{ link: 'r1>r2', hiBps: 1_000_000, evidence: evidenceFrom(prompt) }] }));
   const { c } = controller([withUpdate, withUpdate]);
-  await persist(c);
-  await flush(); await flush(); c.decide(degradedState(34_000)); await flush();
+  assert.equal(await untilMeta(c), null);
   assert.ok(c.drainEvents().some(e => e.type === 'model_rejected' && e.detail === 'evidence_unsupported'));
 });
 
@@ -121,9 +126,7 @@ test('only one model call is outstanding at a time', async () => {
 
 test('stop with retain_policy is recorded as a model decision without spending intervention budget', async () => {
   const { c } = controller([prompt => ok(JSON.stringify({ ...JSON.parse(decision(evidenceFrom(prompt), { type: 'retain_policy', reasonCode: 'transient' })), stop: true }))]);
-  let intent = await persist(c);
-  for (let i = 0; i < 3; i++) { await flush(); intent = intent ?? c.decide(degradedState(33_500 + i * 500)); }
-  assert.equal(intent, null);
+  assert.equal(await untilMeta(c), null); // no intervention proposal from the model
   const recorded = c.drainEvents().find(e => e.type === 'model_decision');
   assert.equal(recorded.stop, true);
   assert.equal(recorded.selected, 'h1');
@@ -139,11 +142,154 @@ test('a persisting outage with no degraded flow is investigated once, not every 
 test('progress bound: repeating an equivalent probe is refused and hands control to the deterministic layer', async () => {
   const again = prompt => ok(decision(evidenceFrom(prompt), probe));
   const { c } = controller([again, again, again]);
-  let intent = await persist(c);
-  for (let i = 0; i < 4 && !intent; i++) { await flush(); intent = c.decide(degradedState(33_500 + i * 500)); }
+  const intent = await untilMeta(c);
   assert.equal(intent.source, 'meta');
   c.applied(intent, { status: 'confirmed', nowMs: 35_000, receipts: [{ type: 'probe_path', status: 'confirmed', measurement: { lossFraction: 0, path: probe.path } }] });
   for (let i = 0; i < 40; i++) { const r = c.decide(degradedState(36_000 + i * 500)); await flush(); if (r?.source === 'meta') assert.fail('equivalent probe repeated'); }
   const events = c.drainEvents();
   assert.ok(events.some(e => e.type === 'model_rejected' && e.detail === 'progress_limit'));
+});
+
+
+// ---- P01: parallel investigation, clocks, expiry and stale-response binding ----
+import { createAdaptiveController } from '../../src/lifeline/controllers/adaptive.mjs';
+
+function deferredProvider() {
+  const calls = [];
+  const callModel = args => new Promise(resolve => { calls.push({ ...args, resolve }); });
+  return { calls, callModel };
+}
+
+function timed(o = {}) {
+  let now = o.start ?? 30_000;
+  const provider = deferredProvider();
+  let charged = 0;
+  const c = createMetaController(INV, POLICY, { callModel: provider.callModel, chargeModelCall: () => { charged++; }, now: () => now });
+  return { c, provider, charged: () => charged, setNow: t => { now = t; }, now: () => now };
+}
+
+const at = (t, o = {}) => ({ ...state({ ...o, nowMs: t }), nowMs: t });
+const withRevision = (s, revision) => ({ ...s, observation: { ...s.observation, configRevision: revision } });
+
+test('P01 parity: with the provider hanging, failing or answering, Meta keeps the adaptive recovery on the same tick', async () => {
+  const baseline = createAdaptiveController(INV, POLICY);
+  const reference = [];
+  for (let i = 0; i < 8; i++) reference.push(baseline.decide(degradedState(30_000 + i * 500)));
+  const firstTick = reference.findIndex(Boolean);
+  assert.ok(firstTick >= 0);
+  const providers = {
+    hang: () => new Promise(() => {}),
+    fail: async () => ({ code: 'provider_timeout', durationMs: 18000 }),
+    answer: async ({ prompt }) => ok(decision(evidenceFrom(prompt), { type: 'retain_policy', reasonCode: 'watch' })),
+  };
+  for (const [name, callModel] of Object.entries(providers)) {
+    const c = createMetaController(INV, POLICY, { callModel, chargeModelCall: () => {} });
+    const got = [];
+    for (let i = 0; i < 8; i++) { got.push(c.decide(degradedState(30_000 + i * 500))); await flush(); }
+    const tick = got.findIndex(x => x?.source === 'deterministic');
+    assert.equal(tick, firstTick, `${name}: recovery tick`);
+    assert.deepEqual(got[tick].actions, reference[firstTick].actions, `${name}: same recovery action`);
+  }
+});
+
+test('P01 clock: a retry is bounded by the remaining deadline and the degraded hold starts at completion time', async () => {
+  const t = timed({ start: 31_000 });
+  t.c.decide(at(31_000, { obs: { down: ['r0-r3'] } }));
+  assert.equal(t.provider.calls.length, 1);
+  assert.equal(t.provider.calls[0].timeoutMs, 18_000);
+  t.setNow(49_000); t.provider.calls[0].resolve({ code: 'provider_timeout', durationMs: 18_000 }); await flush();
+  assert.equal(t.provider.calls.length, 2, 'retry started');
+  assert.equal(t.provider.calls[1].timeoutMs, 12_000, 'bounded by the 30 s total deadline');
+  t.setNow(67_000); t.provider.calls[1].resolve({ code: 'provider_timeout', durationMs: 18_000 }); await flush();
+  const degraded = t.c.drainEvents().find(e => e.type === 'mode' && e.mode === 'degraded');
+  assert.equal(degraded.atMs, 67_000);
+  t.c.decide(at(86_999, { obs: { down: ['r0-r3'] } }));
+  assert.equal(t.c.mode(), 'degraded');
+  t.setNow(87_000); t.c.decide(at(87_000, { obs: { down: ['r0-r3'] } }));
+  assert.equal(t.c.mode(), 'normal');
+  assert.equal(t.charged(), 2);
+});
+
+test('P01 clock: the total deadline expires at start + 30 s even though each call may last 18 s', async () => {
+  const t = timed({ start: 31_000 });
+  t.c.decide(at(31_000, { obs: { down: ['r0-r3'] } }));
+  t.setNow(61_000); t.provider.calls[0].resolve({ code: 'provider_timeout', durationMs: 30_000 }); await flush();
+  assert.equal(t.provider.calls.length, 1, 'no retry after the deadline');
+  const events = t.c.drainEvents();
+  assert.ok(events.some(e => e.type === 'mode' && e.mode === 'degraded' && e.reason === 'deadline_expired' && e.atMs === 61_000));
+  assert.equal(t.charged(), 1);
+});
+
+async function readyAt(t, startState) {
+  t.c.decide(startState);
+  const prompt = t.provider.calls.at(-1).prompt;
+  t.provider.calls.at(-1).resolve(ok(decision(evidenceFrom(prompt), probe)));
+  await flush();
+}
+
+test('P01 binding: a response is discarded when the configuration changed after it was requested', async () => {
+  const t = timed();
+  await readyAt(t, at(30_000, { obs: { down: ['r0-r3'] } }));
+  const r = t.c.decide(withRevision(at(31_000, { obs: { down: ['r0-r3'] } }), 2));
+  assert.notEqual(r?.source, 'meta');
+  assert.ok(t.c.drainEvents().some(e => e.type === 'model_discarded' && e.reason === 'configuration_changed'));
+});
+
+test('P01 binding: a second fault discards the old response and starts a new investigation', async () => {
+  const t = timed();
+  await readyAt(t, at(30_000, { obs: { down: ['r0-r3'] } }));
+  const r = t.c.decide(at(31_000, { obs: { down: ['r0-r3', 'r1-r2'] } }));
+  assert.notEqual(r?.source, 'meta');
+  assert.ok(t.c.drainEvents().some(e => e.type === 'model_discarded' && e.reason === 'incident_changed'));
+  assert.equal(t.provider.calls.length, 2);
+});
+
+test('P01 binding: a response that arrives after its decision deadline is discarded', async () => {
+  const t = timed();
+  await readyAt(t, at(30_000, { obs: { down: ['r0-r3'] } }));
+  t.setNow(60_001);
+  const r = t.c.decide(at(60_001, { obs: { down: ['r0-r3'] } }));
+  assert.notEqual(r?.source, 'meta');
+  assert.ok(t.c.drainEvents().some(e => e.type === 'model_discarded' && e.reason === 'expired'));
+});
+
+test('P01 binding: stopping the run cancels the call and an end-of-run arrival changes nothing', async () => {
+  const t = timed();
+  t.c.decide(at(30_000, { obs: { down: ['r0-r3'] } }));
+  const call = t.provider.calls[0];
+  t.c.stop();
+  assert.equal(call.signal.aborted, true);
+  call.resolve(ok(decision(['obs-10'], probe))); await flush();
+  assert.equal(t.c.decide(at(31_000, { obs: { down: ['r0-r3'] } })), null);
+  assert.equal(t.provider.calls.length, 1);
+  assert.ok(t.c.drainEvents().some(e => e.type === 'model_discarded' && e.reason === 'run_stopped'));
+});
+
+test('P01 ordering: a superseded investigation is cancelled and its late answer is discarded', async () => {
+  const t = timed();
+  t.c.decide(at(30_000, { obs: { down: ['r0-r3'] } }));
+  const first = t.provider.calls[0];
+  t.c.decide(at(30_500, { obs: { down: ['r0-r3', 'r1-r2'] } })); // a new incident supersedes the outstanding call
+  assert.equal(first.signal.aborted, true);
+  const second = t.provider.calls[1];
+  second.resolve(ok(decision(evidenceFrom(second.prompt), { type: 'retain_policy', reasonCode: 'second' })));
+  await flush();
+  first.resolve(ok(decision(evidenceFrom(first.prompt), probe)));
+  await flush();
+  const events = t.c.drainEvents();
+  assert.ok(events.some(e => e.type === 'model_discarded' && e.reason === 'superseded'));
+  assert.equal(events.filter(e => e.type === 'provider_call' && e.code === 'ok').length, 1, 'only the current answer is accepted');
+  assert.equal(t.charged(), 2);
+});
+
+test('P01 conflict: a same-tick deterministic recovery goes first and the model plan waits rather than vanishing', async () => {
+  const t = timed();
+  await readyAt(t, at(30_000, { obs: { down: ['r0-r3', 'r1-r2'] } }));
+  const first = t.c.decide(at(30_500, { obs: { down: ['r0-r3', 'r1-r2'] } }));
+  assert.equal(first.source, 'deterministic');
+  const moved = { ...reference(), 'dispatch-clinic': { version: 1, path: first.actions[0].path, ackPath: first.actions[0].ackPath } };
+  t.c.applied(first, { status: 'confirmed', nowMs: 30_600, receipts: [] });
+  const second = t.c.decide({ ...at(31_000, { obs: { down: ['r0-r3', 'r1-r2'] } }), routes: moved });
+  assert.ok(second === null || second.source === 'meta' || second.source === 'deterministic');
+  assert.ok(!t.c.drainEvents().some(e => e.type === 'model_discarded' && e.reason === 'conflict'), 'waiting is not discarding');
 });

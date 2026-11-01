@@ -2,11 +2,13 @@
 // planning; the Meta model investigates incidents and unexplained degradation and proposes typed probes
 // or interventions. Every model decision is strictly parsed, its evidence and belief updates checked,
 // its consequence forecast, and it then passes the same guard and executor as any other proposal.
-// Provider failure hands the investigation role back to the deterministic rule, visibly.
+// P01: the conventional layer runs in full at all times; investigations run in parallel on the episode
+// clock, bounded by a total deadline, cancellable, and bound to the evidence and configuration they used.
 import { createAdaptiveController } from './adaptive.mjs';
 import { directedLinks, effectiveRoute, essentialDemandBps } from './common.mjs';
 import { forecast } from '../forecast.mjs';
 import { PROVIDER_CONFIG, parseModelDecision } from '../meta-provider.mjs';
+import { createInvestigationBudget } from '../investigation-clock.mjs';
 
 const DEGRADED_HOLD_MS = 20_000;
 const REINVESTIGATE_MS = 15_000;
@@ -16,14 +18,16 @@ const ROUTE_CHANGES_PER_INCIDENT = 2;
 
 const round = (v, digits = 0) => (typeof v === 'number' ? Math.round(v * 10 ** digits) / 10 ** digits : v ?? null);
 
-export function createMetaController(inventory, policy, { callModel, chargeModelCall = () => {} } = {}) {
+export function createMetaController(inventory, policy, { callModel, chargeModelCall = () => {}, now: clock } = {}) {
   let mode = 'normal';
   let degradedUntil = 0;
-  const adaptive = createAdaptiveController(inventory, policy, { unexplainedRule: () => mode === 'degraded' });
+  // Full conventional behaviour, including its unexplained-degradation rule, regardless of provider health.
+  const adaptive = createAdaptiveController(inventory, policy);
+  const now = () => (clock ? clock() : lastState?.nowMs ?? 0);
   const events = [];
   const evidence = new Map(); // obs-<seq> -> measured rates at that sample
   const outcomes = [];        // rcpt-<n> -> recent action outcomes
-  let pending = null, ready = null, attempts = 0;
+  let pending = null, ready = null, attempts = 0, inv = null, stopped = false, investigationCount = 0;
   let lastTrigger = '', lastInvestigationAt = -Infinity, lastState = null, receiptCount = 0;
   const probedAt = {};       // path -> time of last completed probe (any layer)
   let routeChanges = {};     // flowId -> model route changes in the current incident
@@ -73,26 +77,65 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
     ].join('\n');
   }
 
-  function fail(detail, nowMs) {
-    if (attempts < PROVIDER_CONFIG.callsPerDecision && (lastState?.remaining.modelCalls ?? 0) - attempts > 0) { investigate(lastState, lastTrigger); return; }
+  const downKey = observation => Object.entries(observation.links).filter(([, l]) => l.state !== 'up').map(([id]) => id).sort().join(',');
+
+  function giveUp(reason) {
     attempts = 0;
-    setMode('degraded', detail, nowMs);
+    inv = null;
+    setMode('degraded', reason, now());
+  }
+
+  function fail(detail) {
+    if (!inv) return;
+    if (inv.budget.expired()) return giveUp('deadline_expired');
+    if (attempts < PROVIDER_CONFIG.callsPerDecision && (lastState?.remaining.modelCalls ?? 0) - attempts > 0) return attemptCall();
+    giveUp(detail);
+  }
+
+  function attemptCall() {
+    if (inv.budget.expired()) return giveUp('deadline_expired');
+    attempts++;
+    chargeModelCall(); // charged once per attempt, whatever its outcome
+    const current = inv;
+    const abort = new AbortController();
+    current.abort = abort;
+    const prompt = buildPrompt(lastState, current.trigger);
+    const ids = evidenceIds();
+    pending = current.id;
+    Promise.resolve(callModel({ prompt, timeoutMs: current.budget.callTimeoutMs(PROVIDER_CONFIG.callTimeoutMs), signal: abort.signal }))
+      .then(res => onResult(current, res, ids))
+      .catch(error => onResult(current, { code: 'provider_unavailable', reason: 'client_error', detail: String(error?.message ?? error).slice(0, 200) }, ids));
+  }
+
+  function onResult(origin, res, ids) {
+    if (stopped) { events.push({ type: 'model_discarded', reason: 'run_stopped', investigation: origin.id, responseId: res.responseId ?? null, atMs: now() }); return; }
+    if (inv?.id !== origin.id) { events.push({ type: 'model_discarded', reason: 'superseded', investigation: origin.id, responseId: res.responseId ?? null, atMs: now() }); return; }
+    pending = null;
+    events.push({ type: 'provider_call', code: res.code, reason: res.reason, httpStatus: res.httpStatus, durationMs: res.durationMs, responseId: res.responseId, usage: res.usage, promptSha256: res.promptSha256, promptVersion: PROVIDER_CONFIG.promptVersion, attempt: attempts, trigger: origin.trigger, atMs: now() });
+    if (res.code !== 'ok') return fail(res.code);
+    const parsed = parseModelDecision(res.text, { evidenceIds: ids });
+    if (!parsed.ok) { events.push({ type: 'model_rejected', code: parsed.code, detail: parsed.detail, responseId: res.responseId, text: String(res.text).slice(0, 4000), atMs: now() }); return fail(parsed.detail); }
+    ready = { decision: parsed.decision, response: res, trigger: origin.trigger, downKey: origin.downKey, originRevision: origin.originRevision, originAtMs: origin.budget.startedAtMs, investigation: origin.id };
+    inv = null;
   }
 
   function investigate(state, trigger) {
-    attempts++;
-    lastInvestigationAt = state.nowMs;
-    chargeModelCall();
-    const prompt = buildPrompt(state, trigger);
-    const ids = evidenceIds();
-    pending = Promise.resolve(callModel({ prompt })).then(res => {
-      events.push({ type: 'provider_call', code: res.code, reason: res.reason, httpStatus: res.httpStatus, durationMs: res.durationMs, responseId: res.responseId, usage: res.usage, promptSha256: res.promptSha256, promptVersion: PROVIDER_CONFIG.promptVersion, attempt: attempts, trigger });
-      pending = null;
-      if (res.code !== 'ok') return fail(res.code, state.nowMs);
-      const parsed = parseModelDecision(res.text, { evidenceIds: ids });
-      if (!parsed.ok) { events.push({ type: 'model_rejected', code: parsed.code, detail: parsed.detail, responseId: res.responseId, text: String(res.text).slice(0, 4000) }); return fail(parsed.detail, state.nowMs); }
-      ready = { decision: parsed.decision, response: res, trigger };
-    }).catch(error => { pending = null; events.push({ type: 'provider_call', code: 'provider_unavailable', reason: 'client_error', detail: String(error?.message ?? error).slice(0, 200) }); fail('provider_unavailable', state.nowMs); });
+    if (inv?.abort) inv.abort.abort(); // a newer incident supersedes an outstanding call
+    attempts = 0;
+    lastInvestigationAt = now();
+    inv = {
+      id: ++investigationCount, trigger, downKey: downKey(state.observation), originRevision: state.observation.configRevision,
+      budget: createInvestigationBudget({ startedAtMs: now(), deadlineMs: PROVIDER_CONFIG.decisionDeadlineMs, nowMs: now }),
+    };
+    attemptCall();
+  }
+
+  // A response may only act on the world it was requested about.
+  function stale(r, state) {
+    if (state.observation.configRevision !== r.originRevision) return 'configuration_changed';
+    if (downKey(state.observation) !== r.downKey) return 'incident_changed';
+    if (now() - r.originAtMs > PROVIDER_CONFIG.decisionDeadlineMs) return 'expired';
+    return null;
   }
 
   function fromModel({ decision, response, trigger }, state) {
@@ -101,15 +144,14 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
     const repeated = decision.actions.find(a => (a.type === 'probe_path' && a.path && nowMs - (probedAt[a.path.join()] ?? -Infinity) < EQUIVALENT_PROBE_MS)
       || (a.type === 'set_route' && (routeChanges[a.flowId] ?? 0) >= ROUTE_CHANGES_PER_INCIDENT));
     if (repeated) {
-      events.push({ type: 'model_rejected', code: 'proposal_invalid', detail: 'progress_limit', action: repeated.type, responseId: response.responseId });
-      attempts = PROVIDER_CONFIG.callsPerDecision; // no retry: the limit is about progress, not parsing
-      fail('progress_limit', nowMs);
+      events.push({ type: 'model_rejected', code: 'proposal_invalid', detail: 'progress_limit', action: repeated.type, responseId: response.responseId, atMs: now() });
+      giveUp('progress_limit'); // no retry: the limit is about progress, not parsing
       return null;
     }
     const store = Object.fromEntries(evidence);
     for (const update of decision.beliefUpdates) {
       const result = adaptive.beliefs.applyProposedUpdate(update, store);
-      if (!result.ok) { events.push({ type: 'model_rejected', code: 'proposal_invalid', detail: result.code, responseId: response.responseId }); fail(result.code, nowMs); return null; }
+      if (!result.ok) { events.push({ type: 'model_rejected', code: 'proposal_invalid', detail: result.code, responseId: response.responseId, atMs: now() }); giveUp(result.code); return null; }
     }
     const next = Object.fromEntries(inventory.essential.map(f => [f.flowId, effectiveRoute(f, routes[f.flowId], observation, inventory)]));
     const rates = { ...backgroundRates };
@@ -119,7 +161,7 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
     }
     let predicted;
     try { predicted = forecast({ inventory, beliefs: adaptive.beliefs, routes: next, rates, observation }); } catch { predicted = { status: 'forecast_unavailable' }; }
-    if (predicted.status !== 'ok') { events.push({ type: 'model_rejected', code: predicted.status, detail: predicted.status, responseId: response.responseId }); fail(predicted.status, nowMs); return null; }
+    if (predicted.status !== 'ok') { events.push({ type: 'model_rejected', code: predicted.status, detail: predicted.status, responseId: response.responseId, atMs: now() }); giveUp(predicted.status); return null; }
     attempts = 0;
     const down = Object.entries(observation.links).filter(([, l]) => l.state !== 'up').map(([id]) => id).slice(0, 4);
     const degradedNow = adaptive.degradedFlows().filter(f => typeof state.rates.services?.[f]?.recentOnTimeFraction === 'number');
@@ -136,7 +178,7 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
     name: 'meta',
     beliefs: adaptive.beliefs,
     mode: () => mode,
-    investigating: () => pending !== null,
+    investigating: () => inv !== null,
     unavailable: () => adaptive.unavailable(),
     drainEvents: () => events.splice(0),
     applied(intent, result) {
@@ -149,35 +191,46 @@ export function createMetaController(inventory, policy, { callModel, chargeModel
       }
       if (intent.source === 'meta') events.push({ type: 'model_outcome', responseId: intent.modelTrace?.responseId, status: result.status });
     },
+    stop() {
+      stopped = true;
+      inv?.abort?.abort();
+      inv = null; pending = null; ready = null;
+    },
     decide(state) {
       lastState = state;
-      const { observation, rates, nowMs, remaining } = state;
+      if (stopped) return null;
+      const { observation, rates, remaining } = state;
       if (!observation.stale) {
         evidence.set(`obs-${observation.seq}`, { collectedAtMs: observation.collectedAtMs, down: Object.entries(observation.links).filter(([, l]) => l.state !== 'up').map(([id]) => id), links: rates.links ?? {}, services: rates.services ?? {} });
         while (evidence.size > EVIDENCE_KEPT) evidence.delete(evidence.keys().next().value);
       }
-      if (mode === 'degraded' && nowMs >= degradedUntil && (remaining.modelCalls ?? 0) > 0) setMode('normal', 'hold_elapsed', nowMs);
+      if (mode === 'degraded' && now() >= degradedUntil && (remaining.modelCalls ?? 0) > 0) setMode('normal', 'hold_elapsed', now());
+      if (ready && !observation.stale) {
+        const reason = stale(ready, state);
+        if (reason) { events.push({ type: 'model_discarded', reason, investigation: ready.investigation, responseId: ready.response.responseId, atMs: now() }); ready = null; }
+      }
       const deterministic = adaptive.decide(state);
       if (!observation.stale) {
         const down = Object.entries(observation.links).filter(([, l]) => l.state !== 'up').map(([id]) => id).sort();
         const trigger = [...down.map(d => `down:${d}`), ...adaptive.degradedFlows().map(f => `degraded:${f}`)].join(',');
-        // Investigate a new incident once; re-investigate an unchanged one only while a flow stays degraded.
         const stillDegraded = adaptive.degradedFlows().length > 0;
-        if (trigger && !pending && !ready && mode === 'normal' && (trigger !== lastTrigger || (stillDegraded && nowMs - lastInvestigationAt > REINVESTIGATE_MS))) {
-          if ((remaining.modelCalls ?? 0) < 1) setMode('degraded', 'model_budget_exhausted', nowMs);
+        const newIncident = inv && inv.downKey !== downKey(observation);
+        if (newIncident) investigate(state, trigger), lastTrigger = trigger;
+        else if (trigger && !inv && !ready && mode === 'normal' && (trigger !== lastTrigger || (stillDegraded && now() - lastInvestigationAt > REINVESTIGATE_MS))) {
+          if ((remaining.modelCalls ?? 0) < 1) setMode('degraded', 'model_budget_exhausted', now());
           else {
             if (trigger !== lastTrigger) routeChanges = {}; // a new incident resets the per-incident bound
-            lastTrigger = trigger; attempts = 0; investigate(state, trigger);
+            lastTrigger = trigger; investigate(state, trigger);
           }
         }
       }
-      if (deterministic) return { ...deterministic, source: 'deterministic' };
+      if (deterministic) return { ...deterministic, source: 'deterministic' }; // recovery never waits on the model
       if (ready && !observation.stale) {
         const r = ready; ready = null;
         if (r.decision.stop && r.decision.actions.every(a => a.type === 'retain_policy')) {
           // A decision to change nothing is retained as evidence; it is not an intervention and spends no bundle.
           attempts = 0;
-          events.push({ type: 'model_decision', stop: true, selected: r.decision.selected, hypotheses: r.decision.hypotheses, expected: r.decision.expected, actions: r.decision.actions, responseId: r.response.responseId, durationMs: r.response.durationMs, trigger: r.trigger, atMs: nowMs });
+          events.push({ type: 'model_decision', stop: true, selected: r.decision.selected, hypotheses: r.decision.hypotheses, expected: r.decision.expected, actions: r.decision.actions, responseId: r.response.responseId, durationMs: r.response.durationMs, trigger: r.trigger, atMs: now() });
           return null;
         }
         return fromModel(r, state);
