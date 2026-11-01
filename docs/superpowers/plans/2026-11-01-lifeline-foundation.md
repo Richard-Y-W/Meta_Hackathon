@@ -50,13 +50,13 @@ Inspect the preflight's actual CLI before recording a full invocation. Packet/ro
 
 **Files:** Modify `src/lifeline/controllers/meta.mjs`, `src/lifeline/controllers/adaptive.mjs` only if needed for its public seam, `src/lifeline/meta-provider.mjs`, `scripts/lifeline-run.mjs`, `test/lifeline/meta-controller.test.mjs`, `test/lifeline/meta-provider.test.mjs`. Create `src/lifeline/investigation-clock.mjs` and `test/lifeline/investigation-clock.test.mjs`.
 
-- [ ] RED: while a model promise remains unresolved, feed identical unexplained degradation to adaptive and Meta-assisted controllers. Both must retain the baseline probe/recovery opportunity within the same control ticks. Provider success, failure, and hang must not toggle that capability.
-- [ ] RED: start at 31,000 ms, observe a timeout at 49,000, start a retry then complete it at 67,000. A 20,000 ms degraded hold must end at 87,000, not 69,000. In a separate test, a 30,000 ms investigation deadline started at 31,000 must expire at 61,000 even when per-call timeouts are 18,000.
-- [ ] Define an injected monotonic `nowMs()` using the episode's time origin. The helper `createInvestigationBudget({startedAtMs, deadlineMs, nowMs})` exposes `remainingMs()` and `expired()`; clamp remaining time at zero.
-- [ ] GREEN: keep the full adaptive rule active, bound each call by remaining total time, cancel timed-out requests, and timestamp completion/fallback using current time. Charge attempts exactly once, including failures.
-- [ ] RED/GREEN: bind a pending response to its originating evidence and configuration revision. A conventional reroute, second fault, expired observation, stopped run, or new run must prevent an old response from mutating current state.
-- [ ] Test simultaneous baseline/model proposals, duplicate completions, out-of-order responses, provider recovery and end-of-run arrival. Model work may wait or be discarded; baseline recovery must not wait on it.
-- [ ] Retain a live slow-provider run and a failed-provider run. Separate changed controller behavior from model/prompt latency changes.
+- [x] RED: while a model promise remains unresolved, feed identical unexplained degradation to adaptive and Meta-assisted controllers. Both must retain the baseline probe/recovery opportunity within the same control ticks. Provider success, failure, and hang must not toggle that capability.
+- [x] RED: start at 31,000 ms, observe a timeout at 49,000, start a retry then complete it at 67,000. A 20,000 ms degraded hold must end at 87,000, not 69,000. In a separate test, a 30,000 ms investigation deadline started at 31,000 must expire at 61,000 even when per-call timeouts are 18,000.
+- [x] Define an injected monotonic `nowMs()` using the episode's time origin. The helper `createInvestigationBudget({startedAtMs, deadlineMs, nowMs})` exposes `remainingMs()` and `expired()`; clamp remaining time at zero.
+- [x] GREEN: keep the full adaptive rule active, bound each call by remaining total time, cancel timed-out requests, and timestamp completion/fallback using current time. Charge attempts exactly once, including failures.
+- [x] RED/GREEN: bind a pending response to its originating evidence and configuration revision. A conventional reroute, second fault, expired observation, stopped run, or new run must prevent an old response from mutating current state.
+- [x] Test simultaneous baseline/model proposals, duplicate completions, out-of-order responses, provider recovery and end-of-run arrival. Model work may wait or be discarded; baseline recovery must not wait on it.
+- [x] Retain a live slow-provider run and a failed-provider run. Separate changed controller behavior from model/prompt latency changes.
 
 **Behavioral assertions for the injected clock:**
 
@@ -70,6 +70,8 @@ now = 67000; assert.equal(b.remainingMs(), 0);
 ```
 
 **Run:** `node --test test/lifeline/meta-controller.test.mjs test/lifeline/meta-provider.test.mjs test/lifeline/investigation-clock.test.mjs`.
+
+**State (Nov 1):** `qualified` in [P01 run 0](../../trials/lifeline-infra-p01-run-0.md); the adaptive baseline gained a refused-plan hold (baseline revision for v2).
 
 **Gate:** No branch of provider health disables conventional recovery; stale work cannot execute; total deadlines and fallback holds obey observed time. This is integration qualification, not an improvement result.
 

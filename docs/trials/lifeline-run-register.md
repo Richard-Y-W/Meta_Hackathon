@@ -11,7 +11,7 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P01: keep conventional recovery active during investigations; repair clocks and expiry. Then P02–P05, then P06–P10. Owner submission items remain separate. |
+| Next task | P02: fresh v2 cases and frozen protocol; adaptive, priority, repaired meta, model-disabled meta. Then P03–P05, then P06–P10. |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
 | Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
@@ -29,7 +29,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 
 | New phase | State | Next evidence |
 | --- | --- | --- |
-| P00–P05 foundation / Q1 | Active: P00 qualified ([P00 run 0](lifeline-infra-p00-run-0.md)) | P01 parallel investigation repair |
+| P00–P05 foundation / Q1 | Active: P00, P01 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md)) | P02 communications v2 comparison |
 | P06–P10 power and water / Q2 | Planned | Domain solver/control/forecast qualification |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
@@ -163,3 +163,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | Date | Change | Result |
 | --- | --- | --- |
 | 2026-11-01 | P00 run 0: evidence manifest, preflight capacity/cache/image checks, clean-room guest from pinned definition, README setup | P00 qualified |
+| 2026-11-01 | P01 run 0: parallel investigation, clocks, expiry, stale binding; fixed fractional timeouts and refused-plan loops | P01 qualified (integration) |
