@@ -29,7 +29,9 @@ export function replayRun(dir, repo) {
 
   const scenario = read(resolve(repo, manifest.scenario.path));
   report.checks.scenarioIdentity = { ok: canonicalRecord(scenario).sha256 === manifest.scenario.sha256 };
-  const faults = scenario.faults.filter(f => f.atMs < manifest.durationMs);
+  // Windows follow the faults actually applied: scheduled and judge faults are both in the ledger.
+  const applied = readEvents(join(dir, 'events.jsonl')).filter(e => e.type === 'admin_fault' || e.type === 'operator_fault').map(e => e.fault);
+  const faults = applied.length ? applied.filter(f => f.atMs < manifest.durationMs) : scenario.faults.filter(f => f.atMs < manifest.durationMs);
   const recomputed = scoreRun(join(dir, 'raw'), scenario, BigInt(manifest.workerEpochMonotonicNs), manifest.trafficStartAtMs, manifest.durationMs, faults);
   const strip = r => JSON.stringify(Object.fromEntries(Object.entries(r.results).map(([w, v]) => [w, { offered: v.offered, onTime: v.onTime, late: v.late, lost: v.lost }])));
   report.checks.score = { ok: strip(recomputed) === strip(summary), primary: recomputed.results.primary && { offered: recomputed.results.primary.offered, onTime: recomputed.results.primary.onTime, deliveryRate: recomputed.results.primary.deliveryRate } };
