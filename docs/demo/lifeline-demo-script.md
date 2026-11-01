@@ -1,6 +1,6 @@
 # LIFELINE Demo Script
 
-**Status:** Draft, written before the pilot comparison finished. Every number spoken in the demo must come from a retained run or `artifacts/lifeline/pilot-v1/comparison.json`. Placeholders are marked `[from pilot]`.
+**Status:** Rehearsed on November 1, 2026 ([release run 0](../trials/lifeline-release-run-0.md)). Every number spoken comes from a retained run or `artifacts/lifeline/guest/pilot-v1/comparison.json`.
 
 **Length:** about 3 minutes live, with the recorded replay as fallback. **Screen:** `http://127.0.0.1:3210/lifeline`, served from the Linux VM (port forwarded by Lima).
 
@@ -36,7 +36,7 @@ Be explicit about what the evidence shows: the model's first diagnosis in that t
 
 ## 5. What we measured (30 s)
 
-Switch to the **Pilot comparison** panel: 8 frozen cases × 3 controllers × 2 repetitions, receipt-scored. Read the actual row values `[from pilot]`. State the result plainly, whether gain, tie or loss: "On these cases LIFELINE was [from pilot] the adaptive baseline."
+Switch to the **Pilot comparison** panel: 8 frozen cases × 3 controllers × 2 repetitions, receipt-scored. Say it plainly: "On six cases LIFELINE tied our strongest conventional controller; on two it was worse, by 7.2 and 0.9 points. The model's diagnoses were often right, but each call takes 14 to 18 seconds, and in this version it replaced a rule that acts in two. Our next version runs the model alongside that rule."
 
 ## 6. Trust and failure handling (20 s)
 
@@ -46,8 +46,8 @@ Click **Export evidence**.
 
 ## Rehearsal checklist (Task 14)
 
-- [ ] Ordinary two-fault live run from a clean start.
-- [ ] An unexpected admitted fault chosen by someone else.
-- [ ] Provider interruption (remove the key or block the endpoint) showing degraded mode.
-- [ ] Recorded replay of the same commit, labeled `RECORDED REPLAY`.
-- [ ] Video recorded from the same qualified commit.
+- [x] Ordinary two-fault live run from a clean start (`live-mvxlqkzc-0`, 91.4%).
+- [x] Unexpected admitted faults (`live-mvxlv6t0-1`, 100.0%).
+- [x] Provider interruption with an invalid key showing degraded mode (`live-mvxlzjpu-0`, 97.9%).
+- [x] Recorded replay of the same commit, labeled `RECORDED REPLAY` (screenshots in `artifacts/lifeline/release-run-0/`).
+- [x] Silent video from the same commit (`artifacts/lifeline/release-run-0/video-a-two-fault/`). A narrated pitch video is still to be recorded by the team.

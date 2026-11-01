@@ -1,87 +1,78 @@
-# Blackbox Apprentice
+# LIFELINE
 
-An observation-driven apprentice that learns an unfamiliar virtual device, completes outcome-based tasks, and revises its model when predictions fail.
+**Emergency communications resilience with a Meta-assisted investigator.** LIFELINE runs a real packet network, watches essential messages (dispatch, clinic, shelter) as failures cascade, investigates what is going wrong, and acts within strict limits to keep messages on time. Every action passes the same guard and executor, whichever controller proposed it. Every result is scored from receiver receipts, never from a controller's own account.
 
-## LIFELINE project plan
+Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator, with no connection to any real dispatch, clinic or radio service.
 
-The next project direction is **LIFELINE**, an emergency communications prototype that investigates network failures and tests whether AI-assisted control preserves essential message delivery. The current runnable application remains the Blackbox Apprentice device prototype.
+## What we measured
 
-Start with the [living LIFELINE program and TDD plan](docs/superpowers/plans/2026-10-31-lifeline-program.md). It links the architecture, evaluation protocol, release gates, longer-term roadmap, and [current evidence register](docs/trials/lifeline-run-register.md). LIFELINE implementation and performance qualification have not started.
+| Claim | Status | Evidence |
+| --- | --- | --- |
+| Real packet network with independent receipt scoring | Supported | [Packet run 0](docs/trials/lifeline-packet-run-0.md): fixed-policy cascade 63.1% on time; [metrics](docs/trials/lifeline-metrics-run-0.md) |
+| Strong conventional baseline | Supported | [Baseline run 0](docs/trials/lifeline-baseline-run-0.md): adaptive 100% on the development cascade; no-fault, partition and stale-telemetry controls pass |
+| Meta model takes part in real decisions with measured consequences | Supported (prototype) | [Meta run 0](docs/trials/lifeline-meta-run-0.md): typed hypotheses citing observations, discriminating probes (60% vs 0% loss on a silent lossy link), guarded interventions |
+| Failure handling (invalid, stale, partial, provider failure) | Supported | [Guard](docs/trials/lifeline-guard-run-0.md), [execution](docs/trials/lifeline-execution-run-0.md), [recovery](docs/trials/lifeline-recovery-run-0.md) runs; provider interruption rehearsal |
+| **AI improves essential delivery over the strong baseline** | **Not supported** | [Pilot run 0](docs/trials/lifeline-pilot-run-0.md): 48 paired episodes, meta − adaptive **−1.35 pp** (6 ties, p5 −7.24, p6 −0.88) |
 
-**Storage requirement:** Use `/Volumes/PortableSSD/Meta_Hackathon` as the canonical workspace. All project files, environments, caches, VM disks and outputs must remain on the SSD; see the [storage rule](docs/superpowers/plans/2026-10-31-lifeline-program.md#0-ssd-workspace-and-storage-rule). The old home-directory path is a symlink.
+**Why the AI did not win.** Live Muse Spark calls took 14–18 s, and 21% of pilot calls timed out. The deterministic layer handles failover in about a second. In this version the model replaced a fast conventional rule for unexplained degradation, so it recovered later. The model's diagnoses were often right ("r4→r3 reduced to ~3 Mbps"), but they came too late to beat the rule. The next protocol revision keeps the rule active and runs the model in parallel. That is a design hypothesis, not a result.
 
-## Run locally
+## Architecture
 
-Requires Node.js 22.9 or newer. No dependencies, hardware, camera, or API key are needed for local mode.
-
-```sh
-npm start
+```
+judge / benchmark faults ──► isolated Mininet network ◄── bounded executor ◄── guard + forecast ◄── typed proposals
+                                   │                                                  ▲
+                                   ▼                                                  │
+                    telemetry (counters, age; no fault truth) ──► deterministic controller + Meta investigator
+                                   │
+                                   ▼
+               sender/receiver records ──► independent receipt scorer ──► hash-chained ledger ──► replay verifier
 ```
 
-Open **http://127.0.0.1:3210**. The server binds to loopback only.
+- **Worker** (`runtime/mininet/`): privileged Python process in the Linux VM; allowlisted commands; only the orchestrator role may build scenarios or inject faults.
+- **Supervisor** (`scripts/lifeline-run.mjs`, `src/lifeline/`): typed worker transport, telemetry admission and audit, evidence-linked capacity beliefs, forecasts, the admission guard, the executor (versioned routes, read-back, reconciliation, rollback), the run ledger.
+- **Controllers** (`src/lifeline/controllers/`): `priority` (failover and shedding), `adaptive` (measured capacity, probes, exhaustive route × rate search, hysteresis), `meta` (adaptive layer plus the Muse Spark investigator).
+- **Interface** (`/lifeline`): network map, receipt-scored service strips, investigation timeline labeled META or DETERMINISTIC, replay scrubber, judge fault controls, pilot comparison, evidence export.
 
-1. Click **Start discovery**. Watch the surviving hypotheses shrink and inspect the experiment ledger.
-2. Choose **Run the motor**, then **Run task**. Success is checked against a fresh device observation.
-3. Click **Change hidden rules**. The learner's model is not reset or told about the change.
-4. Click **Check & relearn**. A systematic prediction check finds a contradiction and exploration resumes.
-5. Run another task and export the session JSON.
+## Run it
 
-**New device** discards the current in-memory session. Export its evidence first if you want to keep it. One local session is shared across browser tabs. This is a local research prototype, not a hosted multi-user service.
+**Storage rule:** all project files, environments, caches, VM disks and outputs stay on `/Volumes/PortableSSD/Meta_Hackathon` ([rule](docs/superpowers/plans/2026-10-31-lifeline-program.md#0-ssd-workspace-and-storage-rule)).
 
-## What actually works
-
-- A randomized virtual device runs in a separate child process. Its selected mechanism is never exposed to the learner or browser.
-- The learner begins with an explicit family of 36 possible deterministic mechanisms: six button assignments, three motor interlocks, and two amber/motor interactions.
-- Active learning compares predicted outcomes and selects informative experiments. Navigation uses transitions on which every surviving hypothesis agrees.
-- Contradictions invalidate the current model and trigger identification from fresh evidence.
-- A task planner searches transitions supported by all surviving hypotheses and verifies observations after each action.
-- Verification systematically covers reachable state/action predictions rather than merely repeating a fixed button sequence.
-- Evidence includes predicted outcomes, observed outcomes, surviving hypotheses, model revisions, verified tasks, and operator rule-change boundaries.
-- Optional Muse Spark integration selects experiments from the grounded candidate set. Credentials stay on the server.
-
-This is **bounded model identification**, not unrestricted discovery of arbitrary devices. The agent knows the possible mechanism family and the meanings of the three observed booleans. It does not know the selected mechanism. Virtual observations are symbolic; visual grounding with SAM 3.1 is **not implemented**. No physical or model API success is implied by local results.
-
-## Use Muse Spark
-
-Copy `.env.example` to `.env`, add your Meta Model API key as `MODEL_API_KEY`, and restart the server. Select **Muse Spark · Meta API** in the lab. Default model: `muse-spark-1.3`.
-
-The adapter uses Meta's documented `POST https://api.meta.ai/v1/responses`. Muse receives the current observation, surviving hypotheses, recent evidence, and candidate experiments. Its choice must pass validation before an action occurs. Failed API requests or invalid choices stop the operation; there is no silent local fallback. Local information gain and task verification remain explicit deterministic components. Successful live API calls still need to be validated with an available account.
-
-Official API reference: https://dev.meta.ai/docs/overview
-
-## Validation
+Host (macOS) prerequisites: Node.js ≥ 22, Lima 2.x, the SSD mounted.
 
 ```sh
-npm test
-npm run benchmark
-npm run demo
+# 1. VM state lives in an APFS image on the SSD (ExFAT cannot hold the VM's sockets)
+hdiutil attach -nobrowse .work/vm/lifeline-apfs.sparsebundle          # mounts /Volumes/LifelineVM
+export LIMA_HOME=/Volumes/LifelineVM/lima
+limactl start lifeline                                                  # first time: limactl start --name=lifeline runtime/vm/lifeline-lima.yaml
+# first time only, inside the VM: sudo apt-get install -y mininet openvswitch-switch rsync; Node 24 from nodejs.org
+
+# 2. Copy the source into the VM's native filesystem and start the server there
+limactl shell lifeline -- bash -lc 'rsync -a --delete --exclude .work --exclude artifacts /mnt/lifeline-src/ /workspace/Meta_Hackathon/ && cd /workspace/Meta_Hackathon && PORT=3311 node --env-file-if-exists=.env server.mjs'
 ```
 
-The tests exhaust all 36 mechanisms, all four goals, and all **1,260 ordered rule changes** between distinct mechanisms, including model-only systematic change detection, relearning, and a post-recovery motor task. HTTP tests exercise the actual isolated simulator, API validation, task verification, evidence export, and mutation behavior.
+Open **http://localhost:3311/lifeline** on the Mac (Lima forwards the port). Put `MODEL_API_KEY=...` in `.env` for the Meta-assisted controller; the key stays in the server process and never reaches the browser or the evidence files.
 
-The reproducible benchmark writes `artifacts/benchmark.json`. Active learning and random exploration share the same hypotheses and observation interface. Random exploration runs 20 seeds per mechanism with a 64-action identification budget. Report censored runs as such; a random run that reaches the budget did not necessarily identify its mechanism. Partial models may still support valid task plans.
+Demo: choose scenario `operator`, controller **LIFELINE (Meta-assisted)**, **Start live run**, then use **Judge fault** (cut r0-r3, then throttle r3-r4). Recorded runs replay from **Recorded run**. See the [demo script](docs/demo/lifeline-demo-script.md).
 
-`npm run demo` runs the complete discovery → verified task → hidden change → detected contradiction → relearning → verified task sequence against a genuinely randomized simulator process. It exports `artifacts/demo-evidence.json`, including actual predictions and outcomes. This command does not require a browser and uses the local planner only.
+## Verify
 
-## Project map
+```sh
+npm test                                                     # 240 Node tests (contracts, guard, executor, controllers, ledger, HTTP, ...)
+python3 -m unittest discover -s runtime/mininet/tests -p "test_*.py"
+# inside the VM, as root, for real OVS integration:
+sudo LIFELINE_INTEGRATION=1 python3 -m unittest discover -s runtime/mininet/tests -p test_integration.py
+node scripts/lifeline-replay.mjs --run <run bundle> --verify   # ledger, scores from raw receipts, contract decisions, linkage
+node --env-file-if-exists=.env scripts/lifeline-evaluate.mjs --protocol fixtures/lifeline/protocol-v1.json --suite pilot --backend mininet --out artifacts/lifeline/pilot-v1
+```
 
-| File | Responsibility |
-| --- | --- |
-| `src/device-worker.mjs` | Private randomized virtual mechanism |
-| `src/device.mjs` | Observation/action transport; optional future hardware bridge |
-| `src/domain.mjs` | Declared hypothesis family and observable state definitions |
-| `src/learner.mjs` | Hypothesis elimination, experiment selection, planning, verification |
-| `src/session.mjs` | Closed loop, task checks, recovery, evidence |
-| `src/meta.mjs` | Optional real Muse Spark experiment selection |
-| `server.mjs` | Local HTTP service and configuration |
-| `public/` | Browser-based virtual device and discovery lab |
-| `docs/competition.md` | Criteria, evidence plan, and honest submission boundaries |
+## Project documents
 
-## Next software milestones
+- [Living plan](docs/superpowers/plans/2026-10-31-lifeline-program.md) · [Design](docs/superpowers/specs/2026-10-31-lifeline-design.md) · [Evaluation protocol](docs/research/lifeline-evaluation-protocol.md) · [Run register](docs/trials/lifeline-run-register.md) · [Prior-work scan](docs/research/lifeline-prior-work-scan.md) · [Release note](docs/releases/lifeline-hackathon-release.md)
 
-1. Validate Muse Spark using a real API account and record latency, usage, decision quality, and failures.
-2. Add a rendered-image observation path and SAM 3.1 grounding; compare it with the symbolic observer.
-3. Broaden the mechanism family with longer sequences and partial observability, maintaining reproducible held-out evaluations.
-4. Add persistent session replay and a concise recorded demonstration.
+## Limits
 
-The current simulator is enough to develop and demonstrate the full symbolic learning/control/recovery loop without buying equipment. A software-only submission should describe the device as virtual throughout.
+Emulated packets on one topology, not radio links. One local operator; not a hosted service. Two repetitions per pilot case, so no uncertainty interval is claimed. Localizing silent loss by probing is established practice (007, NetBouncer), not a LIFELINE invention. No claim about lives saved, real emergency traffic or field deployment.
+
+## Legacy prototype
+
+The earlier **Blackbox Apprentice** device-learning demo still runs at `http://127.0.0.1:3210/` (`npm start`, no VM needed). Its notes are in [docs/competition.md](docs/competition.md). Its results are separate and are not LIFELINE results.

@@ -68,7 +68,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
 | Meta investigator | Working with live traces; no measured gain yet | [Meta run 0](../../trials/lifeline-meta-run-0.md) |
 | Comparative results | Pilot complete: meta did not beat adaptive (−1.35 pp) | [Pilot run 0](../../trials/lifeline-pilot-run-0.md) |
-| Live demo | Interface qualified; rehearsal pending | [Interface run 0](../../trials/lifeline-interface-run-0.md); Task 14 |
+| Live demo | Rehearsed; owner submission items open | [Release run 0](../../trials/lifeline-release-run-0.md) |
 | Novelty and field benefit | Hypotheses | Tasks 12 and 16–19 |
 
 ### Definition of a complete first release
@@ -493,17 +493,19 @@ Evidence: `docs/trials/lifeline-interface-run-0.md`, screenshots, and run IDs us
 
 **Dependencies:** G3, G4a, and Task 13. **Files:** Modify `README.md` and `docs/competition.md`; create `docs/demo/lifeline-demo-script.md` and `docs/releases/lifeline-hackathon-release.md`.
 
-- [ ] Rehearse three complete runs from a clean start: ordinary two-fault demonstration, an unexpected admitted fault choice, and provider interruption.
-- [ ] Explain the user problem, show messages flowing, inject the first failure, show the measured intervention, inject the second failure, then show the comparison and evidence export.
-- [ ] Retain a labeled replay and a prerecorded video using the same qualified commit. Show replay mode if used; never substitute it silently for live behavior.
+- [x] Rehearse three complete runs from a clean start: ordinary two-fault demonstration, an unexpected admitted fault choice, and provider interruption.
+- [x] Explain the user problem, show messages flowing, inject the first failure, show the measured intervention, inject the second failure, then show the comparison and evidence export.
+- [x] Retain a labeled replay and a prerecorded video using the same qualified commit. Show replay mode if used; never substitute it silently for live behavior.
 - [ ] Verify a fresh setup from the README on the actual demo host, including worker preflight, model configuration, start, stop, and cleanup.
-- [ ] Map each judging criterion to concrete evidence in the evaluation document. Keep the model's contribution visible and measured.
+- [x] Map each judging criterion to concrete evidence in the evaluation document. Keep the model's contribution visible and measured.
 - [ ] Check accepted-portal requirements for video length, required URLs, team information, and existing-work disclosure; record exact requirements before submitting. These details are not inferred from public marketing text.
 - [ ] Review eligibility and accepted event terms with the team representative as a separate submission dependency; do not treat a completed demo as eligibility confirmation.
-- [ ] Run relevant Node and Python tests, replay retained evidence, run `git diff --check`, and record the final code and protocol identities.
+- [x] Run relevant Node and Python tests, replay retained evidence, run `git diff --check`, and record the final code and protocol identities.
 - [ ] Qualify G5 only when all submitted claims and assets match the retained evidence.
 
 Evidence: `docs/trials/lifeline-release-run-0.md`. Completion of this task prepares the submission package; actual publication/submission follows the user's applicable authorization.
+
+**State (Nov 1):** `active`: package prepared and rehearsed ([release run 0](../../trials/lifeline-release-run-0.md), [release note](../../releases/lifeline-hackathon-release.md)). Open owner items: fresh-host README verification from scratch, portal requirements, eligibility, narrated video. G5 waits on these.
 
 ## 8. Longer-term program
 
