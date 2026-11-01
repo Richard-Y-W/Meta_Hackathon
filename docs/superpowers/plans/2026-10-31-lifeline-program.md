@@ -66,7 +66,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Real packet service metrics | Qualified for fixed policy | [Packet run 0](../../trials/lifeline-packet-run-0.md) |
 | Conventional network controller | Qualified (priority, adaptive) | [Baseline run 0](../../trials/lifeline-baseline-run-0.md) |
 | Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
-| Meta investigator | Not implemented | Tasks 8–10 |
+| Meta investigator | Working with live traces; no measured gain yet | [Meta run 0](../../trials/lifeline-meta-run-0.md) |
 | Comparative results | No LIFELINE runs | Tasks 11–12 |
 | Live demo | Not implemented | Tasks 13–14 |
 | Novelty and field benefit | Hypotheses | Tasks 12 and 16–19 |
@@ -386,13 +386,13 @@ Evidence: `docs/trials/lifeline-forecast-run-0.md`. Forecast agreement is not a 
 
 **Dependencies:** Task 8 and real provider qualification from Task 1. **Files:** Create `src/lifeline/meta-provider.mjs`, `src/lifeline/controllers/meta.mjs`, `test/lifeline/meta-provider.test.mjs`, and `fixtures/lifeline/development/provider-controls.json`.
 
-- [ ] Mock-test timeout, HTTP errors, malformed JSON, missing fields, invented evidence IDs, invalid units, unsupported actions, excess response size, and valid typed decisions. These tests qualify parsing only.
-- [ ] Send the model service objectives, current observations with age, recent action outcomes, model assumptions, competing explanations, and remaining budgets. Exclude hidden schedules and administrative fault truth.
-- [ ] Require a decision containing a diagnostic hypothesis, evidence references, a discriminating bounded probe or intervention, expected observable consequences, and an explicit stop/retain option.
-- [ ] Permit the model to propose new combinations within the action contract, rather than merely write a caption for a preselected action.
-- [ ] Validate all responses before changing beliefs or attempting actions. A proposed numeric update needs supporting measurement; the model cannot invent an observed capacity.
-- [ ] Record exact model/prompt versions, timing, response identifiers, usage, and failures. Show deterministic takeover explicitly when a provider is unavailable.
-- [ ] Retain a live trace where a real response changes which probe or intervention is attempted and the outcome is measured. If all choices match the baseline, report that honestly.
+- [x] Mock-test timeout, HTTP errors, malformed JSON, missing fields, invented evidence IDs, invalid units, unsupported actions, excess response size, and valid typed decisions. These tests qualify parsing only.
+- [x] Send the model service objectives, current observations with age, recent action outcomes, model assumptions, competing explanations, and remaining budgets. Exclude hidden schedules and administrative fault truth.
+- [x] Require a decision containing a diagnostic hypothesis, evidence references, a discriminating bounded probe or intervention, expected observable consequences, and an explicit stop/retain option.
+- [x] Permit the model to propose new combinations within the action contract, rather than merely write a caption for a preselected action.
+- [x] Validate all responses before changing beliefs or attempting actions. A proposed numeric update needs supporting measurement; the model cannot invent an observed capacity.
+- [x] Record exact model/prompt versions, timing, response identifiers, usage, and failures. Show deterministic takeover explicitly when a provider is unavailable.
+- [x] Retain a live trace where a real response changes which probe or intervention is attempted and the outcome is measured. If all choices match the baseline, report that honestly.
 
 ```sh
 node --test test/lifeline/meta-provider.test.mjs
@@ -400,6 +400,8 @@ node --env-file-if-exists=.env scripts/lifeline-run.mjs --scenario fixtures/life
 ```
 
 Evidence: `docs/trials/lifeline-meta-run-0.md`. Credentials and authorization headers never enter artifacts.
+
+**State (Nov 1):** `qualified` in [meta run 0](../../trials/lifeline-meta-run-0.md): live traces with typed decisions, probes and an intervention; model calls take 13–18 s; no improvement over the adaptive layer established yet.
 
 ### Task 10: Close the continuous-time recovery loop
 
