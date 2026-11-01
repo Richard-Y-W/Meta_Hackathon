@@ -67,7 +67,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Conventional network controller | Qualified (priority, adaptive) | [Baseline run 0](../../trials/lifeline-baseline-run-0.md) |
 | Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
 | Meta investigator | Working with live traces; no measured gain yet | [Meta run 0](../../trials/lifeline-meta-run-0.md) |
-| Comparative results | No LIFELINE runs | Tasks 11–12 |
+| Comparative results | Pilot complete: meta did not beat adaptive (−1.35 pp) | [Pilot run 0](../../trials/lifeline-pilot-run-0.md) |
 | Live demo | Not implemented | Tasks 13–14 |
 | Novelty and field benefit | Hypotheses | Tasks 12 and 16–19 |
 
@@ -434,11 +434,11 @@ Evidence: `docs/trials/lifeline-recovery-run-0.md` and a self-contained run bund
 
 - [x] Test paired schedules, randomized controller order, all-run denominators, interrupted runs, budget accounting, and scorer disagreement before collecting results.
 - [x] Record a current scan of closely related network diagnosis, traffic engineering, and LLM control systems before freezing comparator choices. The fuller reproduction study remains Task 16; a known closer baseline cannot be omitted merely because it was found late.
-- [ ] Freeze eight development cases, three controllers (`priority`, `adaptive`, `meta`), and two repetitions: 48 episodes. Use the same offered traffic and fault schedule for each paired case.
-- [ ] Run sequentially on the qualified host unless parallel isolation is independently demonstrated. Retain host load and reject infrastructure-invalid pairs under the predeclared rule.
-- [ ] Report every case, including no-fault and impossible-recovery controls, with deadline delivery, background throughput, recovery status, action counts, provider latency, and resource use.
-- [ ] Investigate a positive or negative result using retained traces. Do not tune on a case and continue calling that case held out.
-- [ ] Qualify G4a as preliminary evidence. A negative result is a valid completed comparison, but cannot qualify an improvement claim.
+- [x] Freeze eight development cases, three controllers (`priority`, `adaptive`, `meta`), and two repetitions: 48 episodes. Use the same offered traffic and fault schedule for each paired case.
+- [x] Run sequentially on the qualified host unless parallel isolation is independently demonstrated. Retain host load and reject infrastructure-invalid pairs under the predeclared rule.
+- [x] Report every case, including no-fault and impossible-recovery controls, with deadline delivery, background throughput, recovery status, action counts, provider latency, and resource use.
+- [x] Investigate a positive or negative result using retained traces. Do not tune on a case and continue calling that case held out.
+- [x] Qualify G4a as preliminary evidence. A negative result is a valid completed comparison, but cannot qualify an improvement claim.
 
 ```sh
 node --test test/lifeline/evaluation.test.mjs
@@ -447,7 +447,7 @@ node --env-file-if-exists=.env scripts/lifeline-evaluate.mjs --protocol fixtures
 
 Evidence: `docs/trials/lifeline-pilot-run-0.md`, full run index, and machine-readable comparison.
 
-**State (Nov 1, 07:20 UTC):** `active`. Protocol revision 1 frozen (`90bc5b6`); evaluation tests 8/8; [prior-work scan](../../research/lifeline-prior-work-scan.md) recorded; 48-episode pilot running on `69bf7c1` in the VM (`artifacts/lifeline/pilot-v1/`). Do not sync code into the VM workspace until it finishes.
+**State (Nov 1):** `qualified` (G4a, preliminary) in [pilot run 0](../../trials/lifeline-pilot-run-0.md): 48/48 first attempts valid after a disclosed tooling fix; meta − adaptive −1.35 pp over recoverable cases (worst −7.24 on p5); no improvement claim.
 
 ### Task 12: Freeze and evaluate generalization and contribution
 

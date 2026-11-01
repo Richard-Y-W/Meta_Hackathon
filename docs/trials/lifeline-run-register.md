@@ -8,19 +8,19 @@
 
 | Field | Current value |
 | --- | --- |
-| Current state | Tasks 1–10 qualified; G0–G3 qualified; pilot protocol frozen |
+| Current state | Tasks 1–11 qualified; G0–G4a qualified; pilot negative for AI gain |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | Pilot running (`artifacts/lifeline/pilot-v1/`, code `69bf7c1`); then live interface check (Task 13), pilot run note, Task 14 |
+| Next task | Task 13 live interface check, then Task 14 release package |
 | Minimum hackathon path | Tasks 1–11, then 13–14; research qualification is separately gated |
 | Source baseline | `d12459829cce71d65771c2a85236d46800bdfe1d`; work on branch `lifeline` |
 | Qualified LIFELINE gates | None |
 | LIFELINE packet runs | Task 1: 2 two-host; Task 4: 2 cascade (120 s), 1 partition, 4 short controls; all fixed policy |
 | LIFELINE live Meta runs | 3 complete development runs (cascade, gray failure ×2) and 1 interrupted |
-| LIFELINE comparative results | None |
+| LIFELINE comparative results | Pilot (48 episodes): meta − adaptive −1.35 pp over recoverable cases |
 | Platform | Lima `lifeline` VM (Ubuntu 24.04, Mininet 2.3.0, OVS 3.3.9); state on SSD-backed `.work/vm/lifeline-apfs.sparsebundle` mounted at `/Volumes/LifelineVM` |
 | Provider | `muse-spark-1.3` live: 4.7–8.1 s per call; 1,500-token cap truncates reasoning; 4,000 parsed 3/3 |
-| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md) |
+| Latest evidence | [Runtime run 0](lifeline-runtime-run-0.md), [contracts run 0](lifeline-contracts-run-0.md), [metrics run 0](lifeline-metrics-run-0.md), [packet run 0](lifeline-packet-run-0.md), [guard run 0](lifeline-guard-run-0.md), [execution run 0](lifeline-execution-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md) |
 | Owner decisions | Emergency communications selected; ambitious long-term scope retained; harder development cases approved (Nov 1) |
 
 ## Initial evidence record
@@ -43,6 +43,8 @@
 | E014 | 2026-11-01 | Forecast intervals covered 1,365/1,371 observed windows; 6 misses at an unannounced partition; 12% uninformative near capacity | G2 qualified; forecast is advisory and limits are recorded |
 | E015 | 2026-11-01 | SSD disconnect detached the VM image and killed a run; repository intact, guest journal recovered | Removable-storage risk: re-attach image, restart VM, record interrupted runs |
 | E016 | 2026-11-01 | Live investigator: correct diagnoses and discriminating probes (60% vs 0% loss), but 13–18 s per call and a wrong first hypothesis; deterministic layer recovered first | C2 prototype supported; any gain must come from the pilot |
+| E017 | 2026-11-01 | Pilot: 6 ties, p5 −7.24 pp and p6 −0.88 pp for meta vs adaptive; model calls 14–18 s, 8/39 timed out; the slower model replaced a fast conventional rule | No AI improvement; design should run the model in parallel with the rule |
+| E018 | 2026-11-01 | Replay checker misread guard-level rejections and guest tmpfs filled during reruns | Tooling fixed and reclassified; originals retained |
 
 The earlier repository review exercised the legacy device prototype. This planning pass inspected the source and reference plans; it does not rerun or extend those legacy performance claims.
 
@@ -51,10 +53,10 @@ The earlier repository review exercised the legacy device prototype. This planni
 | Gate | State | Evidence | Next decisive check |
 | --- | --- | --- | --- |
 | G0 Runtime and provider | Qualified | [Runtime run 0](lifeline-runtime-run-0.md) | Re-measure under the frozen Task 9 prompt |
-| G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md) | Repeat runs for variance before G4a |
-| G2 Bounded control | Qualified | [Execution run 0](lifeline-execution-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md) | Recheck with the Meta controller |
-| G3 AI prototype | Qualified | [Meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md) | Pilot comparison |
-| G4a Pilot comparison | Planned | No run | All 48 scheduled development episodes accounted for |
+| G1 Measurement and baseline | Qualified | [Packet run 0](lifeline-packet-run-0.md), [baseline run 0](lifeline-baseline-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md) | Repeat runs for variance before G4a |
+| G2 Bounded control | Qualified | [Execution run 0](lifeline-execution-run-0.md), [forecast run 0](lifeline-forecast-run-0.md), [meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md) | Recheck with the Meta controller |
+| G3 AI prototype | Qualified | [Meta run 0](lifeline-meta-run-0.md), [recovery run 0](lifeline-recovery-run-0.md), [pilot run 0](lifeline-pilot-run-0.md) | Pilot comparison |
+| G4a Pilot comparison | Qualified (negative) | [Pilot run 0](lifeline-pilot-run-0.md) | New protocol revision for a parallel-investigator design |
 | G4b Held-out qualification | Planned | No run | Frozen split, matched controllers, uncertainty and ablations |
 | G5 Hackathon release | Planned | No run | Rehearsal, evidence-consistent claims and complete assets |
 | G6 Research qualification | Planned | No run | Appropriate prior-work comparison and supported mechanism |
@@ -134,3 +136,4 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-11-01 | Task 8 forecast run 0: beliefs, forecast, calibration replay, integrated run | G2 qualified |
 | 2026-11-01 | Task 9 meta run 0: provider client, strict parser, investigator controller, live runs | AI-assisted prototype working; no measured gain |
 | 2026-11-01 | Task 10 recovery run 0: ledger, lifecycle, progress bounds, replay, crash cleanup | G3 qualified |
+| 2026-11-01 | Task 11 pilot run 0: 48 episodes, tooling fix and reclassification, trace investigation | G4a qualified; negative preliminary result |
