@@ -4,3 +4,4 @@ artifacts/
 *.log
 .work/
 __pycache__/
+._*
