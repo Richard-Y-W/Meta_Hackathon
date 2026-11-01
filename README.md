@@ -39,20 +39,33 @@ judge / benchmark faults ──► isolated Mininet network ◄── bounded ex
 
 **Storage rule:** all project files, environments, caches, VM disks and outputs stay on `/Volumes/PortableSSD/Meta_Hackathon` ([rule](docs/superpowers/plans/2026-10-31-lifeline-program.md#0-ssd-workspace-and-storage-rule)).
 
-Host (macOS) prerequisites: Node.js ≥ 22, Lima 2.x, the SSD mounted.
+Host (macOS, Apple silicon) prerequisites: Node.js ≥ 22, Lima 2.x, the SSD mounted. Verified on November 1, 2026 by building a second guest from scratch ([clean-room run](docs/trials/lifeline-infra-p00-run-0.md)): 180 s from `limactl start` to a provisioned guest, no manual corrections.
 
 ```sh
+cd /Volumes/PortableSSD/Meta_Hackathon
+python3 scripts/lifeline-preflight.py --storage-only --vm-backing .work/vm --out .work/tmp/preflight.json   # refuses an absent or off-SSD layout
+
 # 1. VM state lives in an APFS image on the SSD (ExFAT cannot hold the VM's sockets)
+hdiutil create -size 60g -type SPARSEBUNDLE -fs APFS -volname LifelineVM .work/vm/lifeline-apfs.sparsebundle   # first time only
 hdiutil attach -nobrowse .work/vm/lifeline-apfs.sparsebundle          # mounts /Volumes/LifelineVM
 export LIMA_HOME=/Volumes/LifelineVM/lima
-limactl start lifeline                                                  # first time: limactl start --name=lifeline runtime/vm/lifeline-lima.yaml
-# first time only, inside the VM: sudo apt-get install -y mininet openvswitch-switch rsync; Node 24 from nodejs.org
 
-# 2. Copy the source into the VM's native filesystem and start the server there
-limactl shell lifeline -- bash -lc 'rsync -a --delete --exclude .work --exclude artifacts /mnt/lifeline-src/ /workspace/Meta_Hackathon/ && cd /workspace/Meta_Hackathon && PORT=3311 node --env-file-if-exists=.env server.mjs'
+# 2. Guest image (once): Ubuntu 24.04 arm64 cloud image into .work/downloads, checked against Ubuntu's SHA256SUMS
+#    https://cloud-images.ubuntu.com/releases/noble/release/ubuntu-24.04-server-cloudimg-arm64.img
+
+# 3. Create and provision the guest. Packages are pinned in the definition: mininet 2.3.0-1.1,
+#    openvswitch 3.3.9-0ubuntu0.24.04.1, iperf3, rsync, Node v24.14.1 (nodejs.org, checksum verified)
+limactl start --tty=false --name=lifeline-clean runtime/vm/lifeline-cleanroom.yaml   # later: limactl start lifeline-clean
+
+# 4. Copy the source into the guest's native filesystem; test; start the server there
+limactl shell lifeline-clean -- bash -lc 'rsync -a --delete --exclude .work --exclude artifacts /mnt/lifeline-src/ /workspace/Meta_Hackathon/ && cd /workspace/Meta_Hackathon && node --test test/lifeline/*.test.mjs && PORT=3311 node --env-file-if-exists=.env server.mjs'
 ```
 
-Open **http://localhost:3311/lifeline** on the Mac (Lima forwards the port). Put `MODEL_API_KEY=...` in `.env` for the Meta-assisted controller; the key stays in the server process and never reaches the browser or the evidence files.
+The original demo guest `lifeline` (`runtime/vm/lifeline-lima.yaml`, provisioned by hand on October 31) also works, with the same commands and guest name `lifeline`.
+
+**Credentials are user-supplied inputs.** Create `.env` from `.env.example` and set `MODEL_API_KEY` yourself; it is git-ignored and is copied into the guest with the source. The key stays in the server process, and no artifact records it. Without it, the conventional controllers and replay work, and the Meta-assisted controller is refused as `provider_unavailable`.
+
+Open **http://localhost:3311/lifeline** on the Mac (Lima forwards the port).
 
 Demo: choose scenario `operator`, controller **LIFELINE (Meta-assisted)**, **Start live run**, then use **Judge fault** (cut r0-r3, then throttle r3-r4). Recorded runs replay from **Recorded run**. See the [demo script](docs/demo/lifeline-demo-script.md).
 

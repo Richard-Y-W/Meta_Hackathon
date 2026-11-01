@@ -11,7 +11,7 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P00: preserve V1 and rebuild setup; then P01–P05 integration/common foundation, followed by both power and water P06–P10. Owner submission items remain separate. |
+| Next task | P01: keep conventional recovery active during investigations; repair clocks and expiry. Then P02–P05, then P06–P10. Owner submission items remain separate. |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
 | Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. New Q1–Q9 gates unqualified. |
@@ -29,7 +29,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 
 | New phase | State | Next evidence |
 | --- | --- | --- |
-| P00–P05 foundation / Q1 | Planned | Clean setup, integration regression tests, common contracts/accounting |
+| P00–P05 foundation / Q1 | Active: P00 qualified ([P00 run 0](lifeline-infra-p00-run-0.md)) | P01 parallel investigation repair |
 | P06–P10 power and water / Q2 | Planned | Domain solver/control/forecast qualification |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
@@ -157,3 +157,9 @@ This checklist is a reusable workflow. It is not an outstanding implementation t
 | 2026-11-01 | Task 11 pilot run 0: 48 episodes, tooling fix and reclassification, trace investigation | G4a qualified; negative preliminary result |
 | 2026-11-01 | Task 13 interface run 0: replay and live operation, judge faults, completed live Meta run | Interface qualified |
 | 2026-11-01 | Task 14 release run 0: README, release note, three rehearsals, video, replay fix | Package prepared; G5 waits on owner items |
+
+## Program revision change history
+
+| Date | Change | Result |
+| --- | --- | --- |
+| 2026-11-01 | P00 run 0: evidence manifest, preflight capacity/cache/image checks, clean-room guest from pinned definition, README setup | P00 qualified |

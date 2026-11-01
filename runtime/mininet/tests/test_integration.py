@@ -59,6 +59,8 @@ class WorkerIntegration(unittest.TestCase):
         if self.proc.poll() is None:
             self.proc.terminate()
             self.proc.wait(10)
+        import shutil
+        shutil.rmtree(self.dir, ignore_errors=True)  # /run is RAM-backed: release this test's run directory
 
     def test_build_observe_fault_teardown_leaves_no_run_objects(self):
         orch = Client(self.path, self.run_id, 'orchestrator')

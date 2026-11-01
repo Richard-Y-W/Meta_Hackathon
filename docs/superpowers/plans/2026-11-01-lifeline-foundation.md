@@ -22,12 +22,12 @@ For each task, retain `artifacts/lifeline/infra/pNN-run-0/` with a manifest, com
 
 **Files:** Create `scripts/lifeline-release-manifest.mjs`, `runtime/vm/lifeline-cleanroom.yaml`, `docs/trials/lifeline-cleanroom-run-0.md`. Modify `README.md`, `scripts/lifeline-preflight.py`, `test/lifeline/preflight.test.mjs`. Retain the V1 archive and all original pilot outputs.
 
-- [ ] Record code, current dirty files, protocol and artifact hashes. Separate 48 retained first attempts from nine withdrawn reruns. Do not change `fixtures/lifeline/protocol-v1.json` or original run bundles.
-- [ ] RED: preflight must reject a missing SSD mount, internal cache/output path, escaping symlink, insufficient scratch, and a VM disk outside the SSD. Test these with controlled path fixtures, not by disconnecting the live SSD.
-- [ ] GREEN: report the physical repository, environments, caches, temporary roots, VM backing disks, free capacity and guest mapping. Capacity admission uses projected batch size plus a declared reserve.
-- [ ] Create a second SSD-backed guest from documented prerequisites and pinned packages. Keep the running demo guest intact. Record downloads, versions, setup time, and every manual correction.
-- [ ] In that fresh guest run unit tests, one short packet control, one guarded route update, and replay a retained bundle. Exercise start/stop/cleanup twice and confirm no orphaned interfaces/processes.
-- [ ] Revise README from the observed setup, including credentials as user-supplied inputs without recording their values.
+- [x] Record code, current dirty files, protocol and artifact hashes. Separate 48 retained first attempts from nine withdrawn reruns. Do not change `fixtures/lifeline/protocol-v1.json` or original run bundles.
+- [x] RED: preflight must reject a missing SSD mount, internal cache/output path, escaping symlink, insufficient scratch, and a VM disk outside the SSD. Test these with controlled path fixtures, not by disconnecting the live SSD.
+- [x] GREEN: report the physical repository, environments, caches, temporary roots, VM backing disks, free capacity and guest mapping. Capacity admission uses projected batch size plus a declared reserve.
+- [x] Create a second SSD-backed guest from documented prerequisites and pinned packages. Keep the running demo guest intact. Record downloads, versions, setup time, and every manual correction.
+- [x] In that fresh guest run unit tests, one short packet control, one guarded route update, and replay a retained bundle. Exercise start/stop/cleanup twice and confirm no orphaned interfaces/processes.
+- [x] Revise README from the observed setup, including credentials as user-supplied inputs without recording their values.
 
 **Commands:**
 
@@ -39,6 +39,8 @@ python3 -m unittest discover -s runtime/mininet/tests -p 'test_*.py'
 ```
 
 Inspect the preflight's actual CLI before recording a full invocation. Packet/root qualification follows the existing runtime run note inside the clean guest.
+
+**State (Nov 1):** `qualified` in [P00 run 0](../../trials/lifeline-infra-p00-run-0.md).
 
 **Gate:** An independently started environment runs and cleans up using the README. Existing test totals are historical until rerun. Missing provider credentials can qualify the local runtime half only; live-provider behavior remains separate.
 

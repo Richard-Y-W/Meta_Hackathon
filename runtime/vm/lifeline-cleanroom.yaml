@@ -1,0 +1,48 @@
+# LIFELINE clean-room runtime: a second guest built only from pinned, documented prerequisites.
+#   hdiutil attach -nobrowse .work/vm/lifeline-apfs.sparsebundle
+#   LIMA_HOME=/Volumes/LifelineVM/lima limactl start --tty=false --name=lifeline-clean runtime/vm/lifeline-cleanroom.yaml
+# All guest state lives on the SSD-backed APFS image; nothing mounts the home directory.
+minimumLimaVersion: "2.0.0"
+vmType: vz
+os: Linux
+arch: aarch64
+cpus: 2
+memory: 3GiB
+disk: 16GiB
+images:
+  - location: /Volumes/PortableSSD/Meta_Hackathon/.work/downloads/ubuntu-24.04-server-cloudimg-arm64.img
+    arch: aarch64
+    digest: sha256:50e24e1fb79e89116e939d90aa7738f7af48c442fa1bc2510131e0b39c50348e
+mountType: virtiofs
+mounts:
+  - location: /Volumes/PortableSSD/Meta_Hackathon
+    mountPoint: /mnt/lifeline-src
+    writable: false
+  - location: /Volumes/PortableSSD/Meta_Hackathon/artifacts/lifeline/cleanroom
+    mountPoint: /mnt/lifeline-artifacts
+    writable: true
+containerd:
+  system: false
+  user: false
+ssh:
+  loadDotSSHPubKeys: false
+  forwardAgent: false
+timezone: UTC
+provision:
+  - mode: system
+    script: |
+      #!/bin/bash
+      set -eux -o pipefail
+      export DEBIAN_FRONTEND=noninteractive
+      apt-get update -qq
+      apt-get install -y -qq mininet=2.3.0-1.1 openvswitch-switch=3.3.9-0ubuntu0.24.04.1 openvswitch-common=3.3.9-0ubuntu0.24.04.1 iperf3=3.16-1build2 rsync=3.2.7-1ubuntu1.5
+      if ! command -v node >/dev/null || [ "$(node --version)" != "v24.14.1" ]; then
+        cd /tmp
+        curl -fsSLO https://nodejs.org/dist/v24.14.1/SHASUMS256.txt
+        curl -fsSLO https://nodejs.org/dist/v24.14.1/node-v24.14.1-linux-arm64.tar.xz
+        grep " node-v24.14.1-linux-arm64.tar.xz$" SHASUMS256.txt | sha256sum -c
+        mkdir -p /opt/node && tar -xJf node-v24.14.1-linux-arm64.tar.xz -C /opt/node --strip-components=1
+        ln -sf /opt/node/bin/node /usr/local/bin/node
+        rm -f node-v24.14.1-linux-arm64.tar.xz SHASUMS256.txt
+      fi
+      mkdir -p /workspace && chown 501:1000 /workspace || chown 501 /workspace

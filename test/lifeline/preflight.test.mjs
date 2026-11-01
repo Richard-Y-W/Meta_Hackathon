@@ -200,3 +200,45 @@ test('provider: outputs are admitted only under artifacts/ or .work/ after resol
 test('storage: guest-role outputs must stay in the guest workspace repository', () => {
   assert.equal(admitOutputPath('/Users/Shared', '/Users/Shared/artifacts/x.json', { role: 'guest', workspace: '/workspace' }).code, 'storage_path_rejected');
 });
+
+// P00: caches, capacity admission and disk-image-backed VM storage.
+test('P00 storage: an explicit cache path on the internal drive is rejected', { skip: !onSsd }, () => {
+  const { status, report } = preflight(['--storage-only', '--cache', '/Users/Shared/lifeline-cache', '--out', join(SCRATCH, 'cache.json')]);
+  assert.equal(report.storage.code, 'storage_path_rejected');
+  assert.equal(report.storage.detail, 'cache_off_ssd');
+  assert.notEqual(status, 0);
+});
+
+test('P00 storage: a tool cache configured through the environment is checked too', { skip: !onSsd }, () => {
+  const run = spawnSync('python3', [SCRIPT, '--repo', REPO, '--storage-only', '--out', join(SCRATCH, 'env-cache.json')], {
+    encoding: 'utf8', env: { ...process.env, PLAYWRIGHT_BROWSERS_PATH: '/Users/Shared/ms-playwright' },
+  });
+  const report = JSON.parse(run.stdout);
+  assert.equal(report.storage.detail, 'cache_off_ssd');
+  assert.match(report.storage.path, /PLAYWRIGHT_BROWSERS_PATH/);
+});
+
+test('P00 storage: admission fails when free space cannot hold the projected batch plus reserve', { skip: !onSsd }, () => {
+  const { status, report } = preflight(['--storage-only', '--projected-bytes', String(10 ** 15), '--reserve-bytes', '1000000000', '--out', join(SCRATCH, 'cap.json')]);
+  assert.equal(report.storage.code, 'storage_insufficient');
+  assert.notEqual(status, 0);
+  const ok = preflight(['--storage-only', '--projected-bytes', '1000', '--reserve-bytes', '1000', '--out', join(SCRATCH, 'cap-ok.json')]);
+  assert.equal(ok.report.storage.code, 'ok');
+  assert.equal(ok.report.storage.capacity.requiredBytes, 2000);
+});
+
+test('P00 storage: a VM disk on a mounted image is admitted only when the image file lies on the SSD', { skip: !onSsd }, () => {
+  const images = fixture('hdiutil', { '/Volumes/LifelineVM': join(REPO, '.work/vm/lifeline-apfs.sparsebundle'), '/Volumes/Elsewhere': '/Users/Shared/disk.sparsebundle' });
+  const good = preflight(['--storage-only', '--disk-image-fixture', images, '--vm-backing', '/Volumes/LifelineVM/lima/lifeline/disk', '--out', join(SCRATCH, 'img-ok.json')]);
+  assert.equal(good.report.storage.code, 'ok', JSON.stringify(good.report.storage));
+  assert.equal(good.report.storage.vmBacking[0].image, join(REPO, '.work/vm/lifeline-apfs.sparsebundle'));
+  const bad = preflight(['--storage-only', '--disk-image-fixture', images, '--vm-backing', '/Volumes/Elsewhere/vm/disk', '--out', join(SCRATCH, 'img-bad.json')]);
+  assert.equal(bad.report.storage.code, 'storage_path_rejected');
+  assert.equal(bad.report.storage.detail, 'vm_backing_off_ssd');
+});
+
+test('P00 storage: the report names physical environment, cache and temporary roots with free capacity', { skip: !onSsd }, () => {
+  const { report } = preflight(['--storage-only', '--out', join(SCRATCH, 'roots.json')]);
+  for (const root of ['environments', 'cache', 'tmp', 'logs', 'vm']) assert.ok(report.storage.roots[root].startsWith(`${SSD}/`), root);
+  assert.ok(report.storage.capacity.freeBytes > 0);
+});

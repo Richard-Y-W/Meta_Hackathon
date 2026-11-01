@@ -30,12 +30,38 @@ def is_mount(path):
         return False
 
 
-def check_storage(role, ssd_root, repo, out, vm_backing, workspace):
+# Tool caches whose defaults land on the internal drive unless redirected; checked when configured.
+CACHE_ENV = ('PLAYWRIGHT_BROWSERS_PATH', 'PIP_CACHE_DIR')
+WORK_ROOTS = {'environments': '.work/environments', 'cache': '.work/cache', 'downloads': '.work/downloads', 'tmp': '.work/tmp',
+              'build': '.work/build', 'logs': '.work/logs', 'vm': '.work/vm', 'artifacts': 'artifacts/lifeline'}
+
+
+def mounted_images(fixture):
+    """Mount point -> backing image file, from hdiutil (macOS) or a test fixture."""
+    if fixture:
+        with open(fixture) as handle:
+            return json.load(handle)
+    import plistlib
+    try:
+        info = plistlib.loads(subprocess.run(['hdiutil', 'info', '-plist'], capture_output=True, timeout=10).stdout)
+    except Exception:
+        return {}
+    images = {}
+    for image in info.get('images', []):
+        for entity in image.get('system-entities', []):
+            if entity.get('mount-point'):
+                images[entity['mount-point']] = image.get('image-path')
+    return images
+
+
+def check_storage(role, ssd_root, repo, out, vm_backing, workspace, caches=(), projected=0, reserve=0, image_fixture=None):
     repo_real = os.path.realpath(repo)
     record = {'role': role, 'repo': repo_real, 'output': os.path.realpath(out)}
 
-    def fail(code, detail):
+    def fail(code, detail, path=None):
         record.update(code=code, detail=detail)
+        if path:
+            record['path'] = path
         return record
 
     if role == 'host':
@@ -44,17 +70,46 @@ def check_storage(role, ssd_root, repo, out, vm_backing, workspace):
             return fail('storage_unavailable', 'SSD root is not a mounted volume')
         if not within(repo_real, ssd_root):
             return fail('storage_path_rejected', 'repository does not resolve onto the SSD')
-        for path in vm_backing:
+        record['roots'] = {name: os.path.realpath(os.path.join(repo_real, rel)) for name, rel in WORK_ROOTS.items()}
+        for name, path in record['roots'].items():
             if not within(path, ssd_root):
-                return fail('storage_path_rejected', 'VM/container backing path resolves off the SSD: %s' % os.path.realpath(path))
-        record['vmBacking'] = [os.path.realpath(p) for p in vm_backing]
-        record['freeBytes'] = shutil.disk_usage(ssd_root).free
+                return fail('storage_path_rejected', 'work_root_off_ssd', '%s=%s' % (name, path))
+        configured = [(p, p) for p in caches] + [('%s=%s' % (k, os.environ[k]), os.environ[k]) for k in CACHE_ENV if os.environ.get(k)]
+        for label, path in configured:
+            if not within(path, ssd_root):
+                return fail('storage_path_rejected', 'cache_off_ssd', label)
+        record['caches'] = [os.path.realpath(p) for _, p in configured]
+        images = None
+        backing = []
+        for path in vm_backing:
+            real = os.path.realpath(path)
+            if within(real, ssd_root):
+                backing.append({'path': real, 'image': None})
+                continue
+            images = mounted_images(image_fixture) if images is None else images
+            mount = max((m for m in images if within(real, m)), key=len, default=None)
+            image = images.get(mount) if mount else None
+            if not image or not within(image, ssd_root):
+                return fail('storage_path_rejected', 'vm_backing_off_ssd', real)
+            backing.append({'path': real, 'mountPoint': mount, 'image': os.path.realpath(image)})
+        record['vmBacking'] = backing
+        free = shutil.disk_usage(ssd_root).free
+        record['freeBytes'] = free
+        record['capacity'] = {'freeBytes': free, 'projectedBytes': projected, 'reserveBytes': reserve, 'requiredBytes': projected + reserve}
+        if free < projected + reserve:
+            return fail('storage_insufficient', 'free space below projected batch plus reserve')
     else:
         # Inside the VM, the SSD is reached through the VM disk; the host report qualifies that backing.
         record['workspace'] = os.path.realpath(workspace)
         if not within(repo_real, workspace):
             return fail('storage_path_rejected', 'repository does not resolve into the guest workspace')
         record['freeBytes'] = shutil.disk_usage(repo_real).free
+        # Raw run logs are written to guest RAM-backed /run before they are copied into the bundle.
+        scratch = shutil.disk_usage('/run').free if os.path.isdir('/run') else None
+        record['capacity'] = {'freeBytes': record['freeBytes'], 'scratchFreeBytes': scratch, 'projectedBytes': projected,
+                              'reserveBytes': reserve, 'requiredBytes': projected + reserve}
+        if record['freeBytes'] < projected + reserve or (scratch is not None and scratch < projected + reserve):
+            return fail('storage_insufficient', 'workspace or /run scratch below projected batch plus reserve')
     if not any(within(out, os.path.join(repo_real, r)) for r in OUTPUT_ROOTS):
         return fail('storage_path_rejected', 'output resolves outside artifacts/ and .work/')
     record.update(code='ok', detail='admitted')
@@ -149,10 +204,15 @@ def main(argv):
     parser.add_argument('--vm-backing', action='append', default=[])
     parser.add_argument('--probe-fixture', default=None, help='test only: recorded probe values instead of live probes')
     parser.add_argument('--storage-only', action='store_true')
+    parser.add_argument('--cache', action='append', default=[], help='cache directory that must resolve onto the SSD')
+    parser.add_argument('--projected-bytes', type=int, default=0, help='estimated bytes the next batch will write')
+    parser.add_argument('--reserve-bytes', type=int, default=0, help='free space that must remain after the batch')
+    parser.add_argument('--disk-image-fixture', default=None, help='test only: JSON {mountPoint: imagePath} instead of hdiutil')
     args = parser.parse_args(argv)
 
     report = {'schema': SCHEMA, 'generatedAtUnix': round(time.time(), 3),
-              'storage': check_storage(args.role, args.ssd_root, args.repo, args.out, args.vm_backing, args.workspace)}
+              'storage': check_storage(args.role, args.ssd_root, args.repo, args.out, args.vm_backing, args.workspace,
+                                       args.cache, args.projected_bytes, args.reserve_bytes, args.disk_image_fixture)}
     if args.role == 'guest':
         report['hostMapping'] = args.host_mapping
     if report['storage']['code'] != 'ok':
