@@ -1,0 +1,234 @@
+{
+ "schemaVersion": "lifeline.forecast-controls.v1",
+ "note": "Forecast-only controls (no forecast-driven action). Communications backup exhaustion is represented by a site battery modeled as a plant storage unit (bess-1) discharging at a fixed load; it is not a communications-equipment model. Probabilities are ensemble fractions with declared members, not calibrated beliefs until scored here.",
+ "sources": {
+  "met": {
+   "kind": "external",
+   "types": [
+    "hazard_forecast"
+   ]
+  },
+  "scada": {
+   "kind": "telemetry",
+   "types": [
+    "alarm"
+   ]
+  }
+ },
+ "maxAgeUs": {
+  "hazard_forecast": 21600000000,
+  "alarm": 120000000
+ },
+ "water": {
+  "development": "water/development.json"
+ },
+ "power": {
+  "development": "power/development.json"
+ },
+ "scoring": {
+  "eventThreshold": 0.5,
+  "intervalNominal": 1.0,
+  "note": "the trend interval spans a three-member slope ensemble; nominal 1.0 means every actual time should fall inside it"
+ },
+ "cases": [
+  {
+   "caseId": "fw-tank-depletion",
+   "domain": "water",
+   "category": "threat",
+   "durationUs": 14400000000,
+   "issuePeriodUs": 300000000,
+   "horizonUs": 3600000000,
+   "faults": [
+    {
+     "faultId": "pu2-comms",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "faultId": "pu1",
+     "atUs": 1800000000,
+     "type": "pump_outage",
+     "assetId": "PU1"
+    }
+   ],
+   "inputs": [],
+   "forecaster": {
+    "kind": "trend",
+    "sensor": "lv-T1",
+    "threshold": 0.5,
+    "direction": "down"
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fw-false-alarm",
+   "domain": "water",
+   "category": "false_alarm",
+   "durationUs": 14400000000,
+   "issuePeriodUs": 300000000,
+   "horizonUs": 7200000000,
+   "faults": [],
+   "inputs": [
+    {
+     "type": "hazard_forecast",
+     "sourceId": "met",
+     "issuedAtUs": 0,
+     "hazard": "grid_outage",
+     "area": "pump-station",
+     "window": [
+      3600000000,
+      7200000000
+     ],
+     "probability": 0.6,
+     "events": [
+      {
+       "faultId": "hz-pu1",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU1"
+      },
+      {
+       "faultId": "hz-pu2",
+       "atUs": 3600000000,
+       "type": "pump_outage",
+       "assetId": "PU2"
+      }
+     ]
+    }
+   ],
+   "forecaster": {
+    "kind": "consequence",
+    "demandScales": [
+     0.8,
+     1.0,
+     1.25
+    ]
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fw-harmless-anomaly",
+   "domain": "water",
+   "category": "harmless_anomaly",
+   "durationUs": 14400000000,
+   "issuePeriodUs": 300000000,
+   "horizonUs": 3600000000,
+   "faults": [
+    {
+     "faultId": "spike",
+     "atUs": 1800000000,
+     "type": "sensor_offset",
+     "assetId": "pr-JH",
+     "scale": 0.5
+    }
+   ],
+   "inputs": [],
+   "forecaster": {
+    "kind": "trend",
+    "sensor": "lv-T1",
+    "threshold": 0.5,
+    "direction": "down"
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fw-remote-control-unavailable",
+   "domain": "water",
+   "category": "unsupported",
+   "durationUs": 3600000000,
+   "issuePeriodUs": 600000000,
+   "horizonUs": 3600000000,
+   "faults": [
+    {
+     "faultId": "pu2-comms",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    }
+   ],
+   "inputs": [],
+   "forecaster": {
+    "kind": "action_conditional",
+    "action": {
+     "type": "set_pump",
+     "params": {
+      "pumpId": "PU2",
+      "on": true
+     }
+    }
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fp-overload-progression",
+   "domain": "power",
+   "category": "threat",
+   "durationUs": 900000000,
+   "issuePeriodUs": 30000000,
+   "horizonUs": 300000000,
+   "powerCase": "p-gradual-overload",
+   "forecaster": {
+    "kind": "trend",
+    "sensor": "ld-line-2-3",
+    "threshold": 1.2,
+    "direction": "up",
+    "window": 4,
+    "consequenceDelayUs": 30000000,
+    "note": "loss follows the 1.2 crossing by the overcurrent delay (30 s), a relay setting known to the operator"
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fp-no-precursor",
+   "domain": "power",
+   "category": "no_precursor",
+   "durationUs": 900000000,
+   "issuePeriodUs": 30000000,
+   "horizonUs": 300000000,
+   "powerCase": "p-feeder-loss",
+   "forecaster": {
+    "kind": "trend",
+    "sensor": "ld-line-2-3",
+    "threshold": 1.2,
+    "direction": "up",
+    "window": 4,
+    "consequenceDelayUs": 30000000,
+    "note": "loss follows the 1.2 crossing by the overcurrent delay (30 s), a relay setting known to the operator"
+   },
+   "target": "essential_loss"
+  },
+  {
+   "caseId": "fp-backup-exhaustion",
+   "domain": "power",
+   "category": "threat",
+   "durationUs": 900000000,
+   "issuePeriodUs": 30000000,
+   "horizonUs": 600000000,
+   "powerCase": "p-no-fault",
+   "storage": {
+    "bess-1": {
+     "energyJ": 150000000
+    }
+   },
+   "commands": [
+    {
+     "atUs": 0,
+     "type": "set_storage_power",
+     "params": {
+      "storageId": "bess-1",
+      "dischargeW": 300000.0
+     }
+    }
+   ],
+   "forecaster": {
+    "kind": "trend",
+    "sensor": "e-bess-1",
+    "threshold": 0,
+    "direction": "down",
+    "window": 4
+   },
+   "target": "storage_exhaustion"
+  }
+ ]
+}

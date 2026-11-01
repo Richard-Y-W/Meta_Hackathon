@@ -96,15 +96,17 @@ This tank control checks accounting; the reference network separately checks hyd
 
 **Files:** Create `runtime/infra/water_control.py`, `runtime/infra/tests/test_water_control.py`, `fixtures/lifeline/infra/water/control-policy.json`, `fixtures/lifeline/infra/water/development.json`.
 
-- [ ] Define pump states/schedules and valve settings with pressure, storage, actuator, cycling and reserve constraints. Expose only supported parameters; an arbitrary numeric pump speed is not automatically valid.
-- [ ] RED: a plan that improves one node while violating another protected node's minimum service must be rejected or scored as a policy violation, never hidden by an average.
-- [ ] GREEN: implement threshold/local recovery and a horizon-based pump/storage baseline. Give it the same demand forecast, observation delays and action set as LIFELINE.
-- [ ] Enumerate feasible schedules for a tiny network to verify the baseline and independent scoring.
-- [ ] Build pump loss, gradual leak, unavailable backup, low storage, demand surge, stale pressure and unrecoverable source isolation cases. Separate unknown demand from an unobserved asset failure.
-- [ ] Measure per-node usable delivered volume, unmet demand, reserve trajectory, low-pressure duration, electricity consumption and switching cost.
-- [ ] Retain a case where preemptive scheduling helps, one where acting early wastes resources, and one where no action can avoid loss.
+- [x] Define pump states/schedules and valve settings with pressure, storage, actuator, cycling and reserve constraints. Expose only supported parameters; an arbitrary numeric pump speed is not automatically valid.
+- [x] RED: a plan that improves one node while violating another protected node's minimum service must be rejected or scored as a policy violation, never hidden by an average.
+- [x] GREEN: implement threshold/local recovery and a horizon-based pump/storage baseline. Give it the same demand forecast, observation delays and action set as LIFELINE.
+- [x] Enumerate feasible schedules for a tiny network to verify the baseline and independent scoring.
+- [x] Build pump loss, gradual leak, unavailable backup, low storage, demand surge, stale pressure and unrecoverable source isolation cases. Separate unknown demand from an unobserved asset failure.
+- [x] Measure per-node usable delivered volume, unmet demand, reserve trajectory, low-pressure duration, electricity consumption and switching cost.
+- [x] Retain a case where preemptive scheduling helps, one where acting early wastes resources, and one where no action can avoid loss.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_water_control.py`.
+
+**State (Nov 1):** `qualified` in [P09 runs 0–1](../../trials/lifeline-infra-p09-run-0.md): development cases only; preemptive-helps, early-action-wastes and no-action-avoids-loss cases retained.
 
 **Gate:** Water is a working controlled domain with a strong comparator, a measured benefit/cost tradeoff, and honest infeasibility handling.
 
@@ -114,18 +116,20 @@ This tank control checks accounting; the reference network separately checks hyd
 
 **Files:** Create `src/lifeline/kernel/forecast.mjs`, `src/lifeline/kernel/threat-inputs.mjs`, `test/lifeline/infra/forecast.test.mjs`, `test/lifeline/infra/threat-inputs.test.mjs`, `scripts/lifeline-infra-forecast-check.mjs`, `fixtures/lifeline/infra/forecast-controls.json`.
 
-- [ ] Define forecast records with origin observations, model/configuration version, prediction horizon, interval/probability semantics, assumptions and validity range.
-- [ ] RED: a forecast created after service loss cannot count as an advance warning. A forecast given hidden future fault data must fail the information-boundary test.
-- [ ] GREEN: implement baseline consequences for current policy and candidate interventions using admitted estimated state. Propagate parameter/observation uncertainty with declared scenarios or ensembles.
-- [ ] Admit timestamped alarms, maintenance records, operator reports and external hazard forecasts through provenance/age checks. Test contradictory reports and a forecast that does not materialize; no input may expose future injected faults.
-- [ ] Test power overload progression, tank depletion, communications backup exhaustion and unavailable remote control. Include false alarms, harmless anomalies and cases without an observable precursor.
-- [ ] Compare predictions to independent future observations; measure lead time, calibration, interval width, optimistic errors and missed threats. A permanently wide interval does not qualify usefulness.
-- [ ] Test degraded/missing telemetry and explicit `unsupported` forecasts. Validate before allowing a forecast to justify autonomous action.
-- [ ] Retain forecast-only and action-enabled experiments separately so acting on a warning does not erase the evidence needed to assess its prediction.
+- [x] Define forecast records with origin observations, model/configuration version, prediction horizon, interval/probability semantics, assumptions and validity range.
+- [x] RED: a forecast created after service loss cannot count as an advance warning. A forecast given hidden future fault data must fail the information-boundary test.
+- [x] GREEN: implement baseline consequences for current policy and candidate interventions using admitted estimated state. Propagate parameter/observation uncertainty with declared scenarios or ensembles.
+- [x] Admit timestamped alarms, maintenance records, operator reports and external hazard forecasts through provenance/age checks. Test contradictory reports and a forecast that does not materialize; no input may expose future injected faults.
+- [x] Test power overload progression, tank depletion, communications backup exhaustion and unavailable remote control. Include false alarms, harmless anomalies and cases without an observable precursor.
+- [x] Compare predictions to independent future observations; measure lead time, calibration, interval width, optimistic errors and missed threats. A permanently wide interval does not qualify usefulness.
+- [x] Test degraded/missing telemetry and explicit `unsupported` forecasts. Validate before allowing a forecast to justify autonomous action.
+- [x] Retain forecast-only and action-enabled experiments separately so acting on a warning does not erase the evidence needed to assess its prediction.
 
 **Run:** `node --test test/lifeline/infra/forecast.test.mjs test/lifeline/infra/threat-inputs.test.mjs`; then `node scripts/lifeline-infra-forecast-check.mjs --manifest fixtures/lifeline/infra/forecast-controls.json --out artifacts/lifeline/infra/forecast-run-0` after implementing that CLI.
 
-**Gate Q2:** Independently qualified power/water adapters and forecasts exist. B1 still requires the matched prevention experiment; accurate forecasting alone is not prevented service loss.
+**State (Nov 1):** `qualified` in [P10 runs 0–1](../../trials/lifeline-infra-p10-run-0.md): forecast-only controls; the power overload timing forecaster is not calibrated (coverage 0.40) and is recorded as such.
+
+**Gate Q2 (Nov 1): met** for adapters, controls and scored forecasts, with the overload-timing forecaster recorded as uncalibrated. **Gate Q2:** Independently qualified power/water adapters and forecasts exist. B1 still requires the matched prevention experiment; accurate forecasting alone is not prevented service loss.
 
 ## References and modeling decisions
 

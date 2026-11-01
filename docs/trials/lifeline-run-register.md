@@ -11,10 +11,10 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P09 water control and constrained preservation, then P10 forecasts (Q2). |
+| Next task | P11–P16 coupled town (Q3), per the coordination plan. |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
-| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1 met (Nov 1); Q2–Q9 unqualified. |
+| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1 and Q2 met (Nov 1); Q3–Q9 unqualified. |
 | LIFELINE packet runs | Runtime, packet, baseline, investigator, pilot and live-rehearsal evidence retained; see linked run notes. |
 | LIFELINE live Meta runs | Development/integration traces, 16 Meta pilot episodes, and live-rehearsal evidence; see meta/pilot/release notes. |
 | LIFELINE comparative results | V1: 48 first attempts; meta − adaptive −1.35 pp. v2 (repaired, 56 first attempts): meta − adaptive −0.003 pp (regression removed); meta − meta-disabled interval −0.003 to +0.015 pp (AI value not shown). Power P07: development baselines only. |
@@ -30,7 +30,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 | New phase | State | Next evidence |
 | --- | --- | --- |
 | P00–P05 foundation / Q1 | **Q1 met:** P00–P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [v2 run 0](lifeline-communications-v2-run-0.md), [P03](lifeline-infra-p03-run-0.md), [P04](lifeline-infra-p04-run-0.md), [P05](lifeline-infra-p05-run-0.md)) | — |
-| P06–P10 power and water / Q2 | Active: P06, P07, P08 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md), [P08](lifeline-infra-p08-run-0.md): EPANET/WNTR water adapter with replay restart and Net3 reference run) | P09 water control; P10 forecasts |
+| P06–P10 power and water / Q2 | **Q2 met:** P06–P10 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md), [P08](lifeline-infra-p08-run-0.md), [P09](lifeline-infra-p09-run-0.md), [P10](lifeline-infra-p10-run-0.md)); development baselines only, overload-timing forecaster uncalibrated | P11 coupled town |
 | P11–P16 coupled town / Q3 | Planned | Physical dependencies, joint baseline, measured demonstration |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |
