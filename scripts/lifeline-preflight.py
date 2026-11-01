@@ -54,7 +54,7 @@ def mounted_images(fixture):
     return images
 
 
-def check_storage(role, ssd_root, repo, out, vm_backing, workspace, caches=(), projected=0, reserve=0, image_fixture=None):
+def check_storage(role, ssd_root, repo, out, vm_backing, workspace, caches=(), projected=0, reserve=0, image_fixture=None, scratch_bytes=0, scratch_reserve=0):
     repo_real = os.path.realpath(repo)
     record = {'role': role, 'repo': repo_real, 'output': os.path.realpath(out)}
 
@@ -106,10 +106,13 @@ def check_storage(role, ssd_root, repo, out, vm_backing, workspace, caches=(), p
         record['freeBytes'] = shutil.disk_usage(repo_real).free
         # Raw run logs are written to guest RAM-backed /run before they are copied into the bundle.
         scratch = shutil.disk_usage('/run').free if os.path.isdir('/run') else None
-        record['capacity'] = {'freeBytes': record['freeBytes'], 'scratchFreeBytes': scratch, 'projectedBytes': projected,
-                              'reserveBytes': reserve, 'requiredBytes': projected + reserve}
-        if record['freeBytes'] < projected + reserve or (scratch is not None and scratch < projected + reserve):
-            return fail('storage_insufficient', 'workspace or /run scratch below projected batch plus reserve')
+        # The batch accumulates on the workspace disk; /run only holds one run's raw logs at a time.
+        record['capacity'] = {'freeBytes': record['freeBytes'], 'projectedBytes': projected, 'reserveBytes': reserve, 'requiredBytes': projected + reserve,
+                              'scratchFreeBytes': scratch, 'scratchRequiredBytes': scratch_bytes + scratch_reserve}
+        if record['freeBytes'] < projected + reserve:
+            return fail('storage_insufficient', 'workspace below projected batch plus reserve')
+        if scratch is not None and scratch < scratch_bytes + scratch_reserve:
+            return fail('storage_insufficient', '/run scratch below one run plus reserve')
     if not any(within(out, os.path.join(repo_real, r)) for r in OUTPUT_ROOTS):
         return fail('storage_path_rejected', 'output resolves outside artifacts/ and .work/')
     record.update(code='ok', detail='admitted')
@@ -207,12 +210,15 @@ def main(argv):
     parser.add_argument('--cache', action='append', default=[], help='cache directory that must resolve onto the SSD')
     parser.add_argument('--projected-bytes', type=int, default=0, help='estimated bytes the next batch will write')
     parser.add_argument('--reserve-bytes', type=int, default=0, help='free space that must remain after the batch')
+    parser.add_argument('--scratch-bytes', type=int, default=0, help='guest only: peak /run scratch one run needs (runs release it afterwards)')
+    parser.add_argument('--scratch-reserve-bytes', type=int, default=0, help='guest only: /run free space that must remain during a run')
     parser.add_argument('--disk-image-fixture', default=None, help='test only: JSON {mountPoint: imagePath} instead of hdiutil')
     args = parser.parse_args(argv)
 
     report = {'schema': SCHEMA, 'generatedAtUnix': round(time.time(), 3),
               'storage': check_storage(args.role, args.ssd_root, args.repo, args.out, args.vm_backing, args.workspace,
-                                       args.cache, args.projected_bytes, args.reserve_bytes, args.disk_image_fixture)}
+                                       args.cache, args.projected_bytes, args.reserve_bytes, args.disk_image_fixture,
+                                       args.scratch_bytes, args.scratch_reserve_bytes)}
     if args.role == 'guest':
         report['hostMapping'] = args.host_mapping
     if report['storage']['code'] != 'ok':
