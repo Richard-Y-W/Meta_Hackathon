@@ -68,7 +68,7 @@ Do not check a box for a stub, mocked packet result, proposed experiment, unrun 
 | Bounded network execution | Qualified (guard and executor) | [Guard run 0](../../trials/lifeline-guard-run-0.md), [execution run 0](../../trials/lifeline-execution-run-0.md) |
 | Meta investigator | Working with live traces; no measured gain yet | [Meta run 0](../../trials/lifeline-meta-run-0.md) |
 | Comparative results | Pilot complete: meta did not beat adaptive (−1.35 pp) | [Pilot run 0](../../trials/lifeline-pilot-run-0.md) |
-| Live demo | Not implemented | Tasks 13–14 |
+| Live demo | Interface qualified; rehearsal pending | [Interface run 0](../../trials/lifeline-interface-run-0.md); Task 14 |
 | Novelty and field benefit | Hypotheses | Tasks 12 and 16–19 |
 
 ### Definition of a complete first release
@@ -472,13 +472,13 @@ The holdout command must refuse an unfrozen protocol, reused tuning split, missi
 
 **Dependencies:** Tasks 4 and 10; meaningful comparison panels require Task 11. **Files:** Create `src/lifeline/http.mjs`, `public/lifeline.{html,js,css}`, and `test/lifeline/http.test.mjs`; modify `server.mjs` and `README.md`.
 
-- [ ] Test run isolation, one mutation at a time, stale run IDs, explicit start/stop, invalid fault controls, event resumption, provider-unavailable status, and export of failed runs.
-- [ ] Implement endpoints for run creation, status/events, admitted fault injection, stop, and evidence export. The browser cannot bypass proposal validation or reach the privileged worker.
-- [ ] Render actual topology state and measured service delivery from events. Label synthetic facility identities and emulator mode.
-- [ ] Show the intervention's evidence, expected outcome, actual outcome, and whether Meta or the conventional controller chose it.
-- [ ] Add live judge controls only for qualified fault types. Disable controls that would violate experiment isolation or corrupt a run.
-- [ ] Display live, retained comparison, and replay modes distinctly. Test stale displays after reconnect and stop; a disconnected worker cannot remain green.
-- [ ] Inspect desktop and narrow-screen layouts with actual traces; verify keyboard controls, readable status, and evidence export. Do not add unit tests for cosmetic spacing.
+- [x] Test run isolation, one mutation at a time, stale run IDs, explicit start/stop, invalid fault controls, event resumption, provider-unavailable status, and export of failed runs.
+- [x] Implement endpoints for run creation, status/events, admitted fault injection, stop, and evidence export. The browser cannot bypass proposal validation or reach the privileged worker.
+- [x] Render actual topology state and measured service delivery from events. Label synthetic facility identities and emulator mode.
+- [x] Show the intervention's evidence, expected outcome, actual outcome, and whether Meta or the conventional controller chose it.
+- [x] Add live judge controls only for qualified fault types. Disable controls that would violate experiment isolation or corrupt a run.
+- [x] Display live, retained comparison, and replay modes distinctly. Test stale displays after reconnect and stop; a disconnected worker cannot remain green.
+- [x] Inspect desktop and narrow-screen layouts with actual traces; verify keyboard controls, readable status, and evidence export. Do not add unit tests for cosmetic spacing.
 
 ```sh
 node --test test/lifeline/http.test.mjs
@@ -487,7 +487,7 @@ npm start
 
 Evidence: `docs/trials/lifeline-interface-run-0.md`, screenshots, and run IDs used in inspection.
 
-**State (Nov 1):** `active`. Endpoints and interface built (`16061da`), HTTP tests 8/8, replay mode inspected at desktop and narrow widths on `meta-run-0/gray-dev-2`. Live integration in the VM waits for the pilot.
+**State (Nov 1):** `qualified` in [interface run 0](../../trials/lifeline-interface-run-0.md): replay and live operation verified end to end, including a completed live Meta run with two judge faults (0.9545 on time).
 
 ### Task 14: Rehearse and package the hackathon result
 
