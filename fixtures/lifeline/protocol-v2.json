@@ -1,0 +1,131 @@
+{
+  "version": "ProtocolV1",
+  "protocolRevision": 2,
+  "suite": "pilot-v2",
+  "status": "frozen before any v2 run (including baselines)",
+  "frozenAt": "2026-11-01",
+  "frozenAtCommit": "2208c10",
+  "evidenceLevel": "exploratory development comparison; same topology and workload as V1",
+  "arms": [
+    {
+      "id": "adaptive",
+      "controller": "adaptive"
+    },
+    {
+      "id": "priority",
+      "controller": "priority"
+    },
+    {
+      "id": "meta",
+      "controller": "meta"
+    },
+    {
+      "id": "meta-disabled",
+      "controller": "meta",
+      "providerFault": "disabled"
+    }
+  ],
+  "pairs": [
+    [
+      "meta",
+      "adaptive"
+    ],
+    [
+      "meta",
+      "meta-disabled"
+    ],
+    [
+      "meta-disabled",
+      "adaptive"
+    ],
+    [
+      "adaptive",
+      "priority"
+    ]
+  ],
+  "repetitions": 2,
+  "episodeMs": 120000,
+  "orderSeed": 20261102,
+  "policy": {
+    "path": "fixtures/lifeline/policy-v1.json",
+    "sha256File": "7d62a65f5b13ca77ccb80b8ae26ea7159cc540c33380eb2ed691be17b22bf09c"
+  },
+  "provider": {
+    "promptVersion": "lifeline-investigator-v1",
+    "model": "muse-spark-1.3",
+    "reasoningEffort": "medium",
+    "maxOutputTokens": 6000,
+    "callTimeoutMs": 18000,
+    "decisionDeadlineMs": 30000,
+    "callsPerDecision": 2,
+    "modelCallsPerRun": 12
+  },
+  "cases": [
+    {
+      "caseId": "v2-a-no-fault",
+      "path": "fixtures/lifeline/v2/v2-a-no-fault.json",
+      "sha256": "4f3875f3efeb0ca0abc42c28e0f4e276d310be9fcbef6a3a784ce3454dd80684",
+      "recoverable": true,
+      "noFault": true
+    },
+    {
+      "caseId": "v2-b-gray-then-capacity",
+      "path": "fixtures/lifeline/v2/v2-b-gray-then-capacity.json",
+      "sha256": "a1093cb34e9cfc0611e573e766420fd8f4c93b81f93a61585f843691d18765b2",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "v2-c-outage-then-silent-loss",
+      "path": "fixtures/lifeline/v2/v2-c-outage-then-silent-loss.json",
+      "sha256": "1966dae2fe2473f8b61030c04da371df152948f96df8bf979579523e1f411ee2",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "v2-d-capacity-then-outage",
+      "path": "fixtures/lifeline/v2/v2-d-capacity-then-outage.json",
+      "sha256": "5f9f37bc9a747a30210d93f447556bd446b0ea13d484e65cfd416c41d6103afa",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "v2-e-stale-data",
+      "path": "fixtures/lifeline/v2/v2-e-stale-data.json",
+      "sha256": "451c49882c0280102ae54d2a6e8122b6c03d2427c40ab67f4d6705887d063380",
+      "recoverable": true,
+      "noFault": false
+    },
+    {
+      "caseId": "v2-f-unrecoverable",
+      "path": "fixtures/lifeline/v2/v2-f-unrecoverable.json",
+      "sha256": "c7b387994282adbd02df702dc01b6f1988d12e14d748a6523c024c7956c4fbea",
+      "recoverable": false,
+      "noFault": false
+    },
+    {
+      "caseId": "v2-g-timeout-control",
+      "path": "fixtures/lifeline/v2/v2-g-timeout-control.json",
+      "sha256": "35a21688249b296febc6cdc5839a530d2ad28d1e211ce488cd7d4da3a3892be8",
+      "recoverable": true,
+      "noFault": false,
+      "metaProviderFault": "timeout"
+    }
+  ],
+  "primaryOutcome": "receipt-scored on-time essential delivery over [first incident, 120 s); no-fault case [20 s, 120 s)",
+  "decisionRules": {
+    "repairRemovesRegression": "mean paired (meta - adaptive) over recoverable failure cases >= -0.5 pp and no case below -2 pp",
+    "aiAddsValue": "95% bootstrap interval over recoverable failure cases of (meta - meta-disabled) entirely above 0",
+    "precisionNote": "Five recoverable failure cases and two repetitions: intervals are wide; results are exploratory unless the interval excludes zero"
+  },
+  "infrastructureInvalidRule": "rerun the whole paired block once; retain every attempt",
+  "budgetEstimate": {
+    "episodes": 56,
+    "packetMinutes": 112,
+    "wallMinutesEstimate": 135,
+    "metaRealRuns": 12,
+    "modelCallsUpperBound": 144,
+    "outputTokensUpperBound": 864000,
+    "retainedDiskMB": 600
+  }
+}

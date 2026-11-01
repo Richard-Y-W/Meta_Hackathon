@@ -35,7 +35,7 @@ function args(argv) {
   const get = (name, fallback) => { const i = argv.indexOf(name); return i >= 0 ? argv[i + 1] : fallback; };
   return {
     scenario: get('--scenario'), controller: get('--controller', 'fixed'), backend: get('--backend', 'mininet'),
-    out: get('--out'), script: get('--script'), liveControl: get('--live-control'), policy: get('--policy', 'fixtures/lifeline/policy-v1.json'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
+    out: get('--out'), script: get('--script'), liveControl: get('--live-control'), providerFault: get('--provider-fault'), policy: get('--policy', 'fixtures/lifeline/policy-v1.json'), durationMs: get('--duration-ms') ? Number(get('--duration-ms')) : undefined,
     tag: get('--tag', `lf${randomBytes(1).toString('hex')}`),
   };
 }
@@ -110,11 +110,19 @@ async function main() {
         : opt.controller === 'adaptive' ? createAdaptiveController(inventory, policy)
           : opt.controller === 'meta' ? createMetaController(inventory, policy, {
             // The key stays in this process; each call is bounded by the investigation's remaining time and cancellable.
-            callModel: ({ prompt, timeoutMs, signal }) => callModel({ apiKey: process.env.MODEL_API_KEY, prompt, timeoutMs, signal }),
+            callModel: opt.providerFault === 'disabled'
+              ? async () => ({ code: 'provider_unavailable', reason: 'disabled_by_protocol', durationMs: 0 }) // model-removal arm: no request is sent
+              : opt.providerFault === 'timeout'
+                ? ({ timeoutMs, signal }) => new Promise(resolve => { // timeout control: every call runs to its bound
+                  const t = setTimeout(() => resolve({ code: 'provider_timeout', reason: 'timeout_by_protocol', durationMs: timeoutMs }), timeoutMs);
+                  signal?.addEventListener('abort', () => { clearTimeout(t); resolve({ code: 'provider_cancelled', reason: 'investigation_cancelled', durationMs: 0 }); });
+                })
+                : ({ prompt, timeoutMs, signal }) => callModel({ apiKey: process.env.MODEL_API_KEY, prompt, timeoutMs, signal }),
             chargeModelCall: () => budgets.charge('modelCalls', 1, 'meta investigation call'),
             now: () => nowMs(), // the episode's monotonic clock: completions and fallbacks are stamped when they happen
           }) : null;
-    if (opt.controller === 'meta') manifest.provider = { ...PROVIDER_CONFIG, model: process.env.META_MODEL || 'muse-spark-1.3', credentialPresent: Boolean(process.env.MODEL_API_KEY) };
+    if (opt.controller === 'meta') manifest.provider = { ...PROVIDER_CONFIG, model: process.env.META_MODEL || 'muse-spark-1.3', credentialPresent: Boolean(process.env.MODEL_API_KEY), fault: opt.providerFault ?? null };
+    if (opt.providerFault && !['disabled', 'timeout'].includes(opt.providerFault)) throw new Error(`unknown provider fault ${opt.providerFault}`);
     if (opt.script) manifest.script = { path: opt.script, sha256: sha256(resolve(opt.script)) };
     let latest = null;
     const history = [];
@@ -218,6 +226,7 @@ async function main() {
       return complete.split('\n').filter(Boolean).flatMap(l => { try { return [JSON.parse(l)]; } catch { return []; } });
     };
     let nextSample = startAtMs;
+    const lag = [], stepMs = [];
     while (nowMs() < endAt) {
       for (const command of readControl()) {
         if (command.kind === 'stop') { record('operator_stop', { atMs: nowMs() - startAtMs }); manifest.stoppedByOperatorAtMs = nowMs() - startAtMs; endAt = nowMs(); continue; }
@@ -239,6 +248,7 @@ async function main() {
         record('admin_fault', { fault: args, scheduledAtMs: due, appliedAtMs: result.appliedAtMs });
       }
       if (nowMs() >= nextSample) {
+        lag.push(nowMs() - nextSample); // how late the control loop ran relative to its schedule
         nextSample += SAMPLE_MS;
         try {
           const raw = await supervisor.request('telemetry', { intervalMs: SAMPLE_MS }, { timeoutMs: 2000 });
@@ -246,10 +256,14 @@ async function main() {
           if (admittedObs.ok) { lastSeq = raw.seq; observations.push(admittedObs.observation); history.push(admittedObs.observation); latest = admittedObs.observation; appendFileSync(join(out, 'controller-view.jsonl'), `${JSON.stringify(admittedObs.observation)}\n`); }
           else record('observation_rejected', { code: admittedObs.code });
         } catch (error) { record('telemetry_failed', { code: error.code, detail: error.detail }); }
+        const stepStart = nowMs();
         step();
+        stepMs.push(nowMs() - stepStart);
       }
       await sleep(Math.max(5, Math.min(50, nextSample - nowMs())));
     }
+    const pct = (v, q) => (v.length ? [...v].sort((x, y) => x - y)[Math.min(v.length - 1, Math.floor(q * v.length))] : null);
+    manifest.scheduling = { samples: lag.length, lagMs: { median: pct(lag, 0.5), p95: pct(lag, 0.95), max: lag.length ? Math.max(...lag) : null }, stepMs: { median: pct(stepMs, 0.5), p95: pct(stepMs, 0.95), max: stepMs.length ? Math.max(...stepMs) : null } };
     controller?.stop?.(); // cancel investigations: an end-of-run arrival must not act
     if (outstanding) await outstanding;
     await sleep(50);

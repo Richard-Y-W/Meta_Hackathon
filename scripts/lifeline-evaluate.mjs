@@ -3,10 +3,11 @@
 //     --suite pilot --backend mininet --out artifacts/lifeline/pilot-v1
 // Resumable: episodes already in index.jsonl are not rerun. Every attempt stays in the index.
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 import { appendFileSync, existsSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { buildSchedule, classifyRun, compare, verifyProtocol } from '../src/lifeline/evaluation.mjs';
+import { armsOf, auditIndex, buildSchedule, classifyRun, compare, verifyProtocol } from '../src/lifeline/evaluation.mjs';
 import { readEvents } from '../src/lifeline/ledger.mjs';
 import { admitOutputPath } from '../src/lifeline/storage.mjs';
 import { replayRun } from './lifeline-replay.mjs';
@@ -38,7 +39,7 @@ function runEpisode(e, attempt, out) {
   // Reruns get their own tags: no two consecutive runs share run-owned object names.
   const tag = attempt > 1 ? `lf${'wxyz'[attempt - 2]}${'abcdefghijklmnopqrstuvwxyz0123456789'[(e.order - 1) % 36]}` : e.tag;
   const started = Date.now();
-  const run = spawnSync(process.execPath, ['--env-file-if-exists=.env', join(REPO, 'scripts/lifeline-run.mjs'), '--scenario', e.path, '--controller', e.controller, '--backend', 'mininet', '--tag', tag, '--out', dir],
+  const run = spawnSync(process.execPath, ['--env-file-if-exists=.env', join(REPO, 'scripts/lifeline-run.mjs'), '--scenario', e.path, '--controller', e.controller, '--backend', 'mininet', '--tag', tag, '--out', dir, ...(e.providerFault ? ['--provider-fault', e.providerFault] : [])],
     { cwd: REPO, encoding: 'utf8', timeout: 420_000 });
   const manifest = existsSync(join(dir, 'manifest.json')) ? read(join(dir, 'manifest.json')) : null;
   const summary = existsSync(join(dir, 'summary.json')) ? read(join(dir, 'summary.json')) : null;
@@ -47,7 +48,8 @@ function runEpisode(e, attempt, out) {
   const verdict = classifyRun({ manifest, replay, summary });
   const p = summary?.results?.primary;
   return {
-    episodeId: e.episodeId, block: e.block, caseId: e.caseId, controller: e.controller, repetition: e.repetition, order: e.order, attempt,
+    episodeId: e.episodeId, block: e.block, caseId: e.caseId, arm: e.arm ?? e.controller, controller: e.controller, providerFault: e.providerFault ?? null, protocolRevision: PROTOCOL_REVISION, repetition: e.repetition, order: e.order, attempt,
+    scheduling: manifest?.scheduling ?? null,
     recoverable: e.recoverable, noFault: e.noFault, runId: manifest?.runId ?? null, dir, exitCode: run.status, wallSeconds: (Date.now() - started) / 1000,
     ...verdict, primary: p ? { offered: p.offered, onTime: p.onTime, late: p.late, lost: p.lost, deliveryRate: p.deliveryRate } : null,
     perFlow: p?.byFlow ? Object.fromEntries(Object.entries(p.byFlow).map(([f, v]) => [f, v.deliveryRate])) : null,
@@ -56,27 +58,30 @@ function runEpisode(e, attempt, out) {
   };
 }
 
-function markdown(c, rows) {
+function markdown(c, rows, arms, pairs) {
   const pct = v => (v === null || v === undefined ? '—' : (100 * v).toFixed(2));
   const pp = v => (v === null || v === undefined ? '—' : `${v >= 0 ? '+' : ''}${(100 * v).toFixed(2)}`);
-  const lines = ['# LIFELINE pilot comparison (exploratory, G4a)', '', `Episodes: ${c.episodes.total} attempted, ${c.episodes.valid} valid, ${c.episodes.infrastructureInvalid} infrastructure-invalid.`, '',
-    '| Case | Priority | Adaptive | Meta | Meta − adaptive (pp) | Meta − priority (pp) |', '| --- | --- | --- | --- | --- | --- |'];
-  for (const [id, k] of Object.entries(c.cases)) lines.push(`| ${id}${k.noFault ? ' (no fault)' : ''}${k.recoverable ? '' : ' (partition)'} | ${pct(k.mean.priority)} | ${pct(k.mean.adaptive)} | ${pct(k.mean.meta)} | ${pp(k.diff.metaMinusAdaptive)} | ${pp(k.diff.metaMinusPriority)} |`);
-  lines.push('', `Mean paired difference over recoverable failure cases (meta − adaptive): ${pp(c.summary.meanPairedDiffMetaMinusAdaptive)} pp; worst ${pp(c.summary.worstCaseDiffMetaMinusAdaptive)}, best ${pp(c.summary.bestCaseDiffMetaMinusAdaptive)}.`,
-    `No-fault regression (adaptive − meta): ${pp(c.summary.noFaultRegressionMetaVsAdaptive)} pp.`, '', c.summary.note, '', '| Controller | Runs | Model calls | Model failures | Model seconds | Output tokens | Interventions | Rejected | Probe bytes |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
+  const lines = [`# LIFELINE comparison (${c.protocol.revision > 1 ? `protocol revision ${c.protocol.revision}` : 'exploratory, G4a'})`, '', `Episodes: ${c.episodes.total} attempted, ${c.episodes.valid} valid, ${c.episodes.infrastructureInvalid} infrastructure-invalid.`, ''];
+  if (c.audit?.ok === false) lines.push(`**Index audit problems:** ${JSON.stringify(c.audit.problems)}`, '');
+  lines.push(`| Case | ${arms.join(' | ')} | ${pairs.map(([a, b]) => `${a} − ${b} (pp)`).join(' | ')} |`, `| --- | ${arms.map(() => '---').join(' | ')} | ${pairs.map(() => '---').join(' | ')} |`);
+  for (const [id, k] of Object.entries(c.cases)) lines.push(`| ${id}${k.noFault ? ' (no fault)' : ''}${k.recoverable ? '' : ' (unrecoverable)'} | ${arms.map(a => pct(k.mean[a])).join(' | ')} | ${pairs.map(([a, b]) => pp(k.diff[`${a}-${b}`])).join(' | ')} |`);
+  lines.push('', '| Pair (recoverable failure cases) | Cases | Mean (pp) | 95% bootstrap over cases (pp) | Worst | Best |', '| --- | --- | --- | --- | --- | --- |');
+  for (const [name, v] of Object.entries(c.summary.pairs ?? {})) lines.push(`| ${name} | ${v.cases} | ${pp(v.mean)} | ${v.ci95 ? `${pp(v.ci95[0])} to ${pp(v.ci95[1])}` : '—'} | ${pp(v.worst)} | ${pp(v.best)} |`);
+  lines.push('', c.summary.note, '', '| Arm | Runs | Model calls | Model failures | Model seconds | Output tokens | Interventions | Rejected | Probe bytes |', '| --- | --- | --- | --- | --- | --- | --- | --- | --- |');
   for (const [k, v] of Object.entries(c.cost)) lines.push(`| ${k} | ${v.runs} | ${v.modelCalls} | ${v.modelFailures} | ${v.modelSeconds.toFixed(1)} | ${v.outputTokens} | ${v.interventions} | ${v.rejected} | ${v.probeBytes} |`);
-  lines.push('', '## Every attempt', '', '| Order | Episode | Attempt | Status | On time | Run ID |', '| --- | --- | --- | --- | --- | --- |');
-  for (const r of rows) lines.push(`| ${r.order} | ${r.episodeId} | ${r.attempt} | ${r.status}${r.reason ? ` (${r.reason})` : ''}${r.superseded ? ', superseded' : ''} | ${pct(r.primary?.deliveryRate)} | ${r.runId ?? '—'} |`);
+  lines.push('', '## Every attempt', '', '| Order | Episode | Attempt | Status | On time | Scheduling lag p95 (ms) | Run ID |', '| --- | --- | --- | --- | --- | --- | --- |');
+  for (const r of rows) lines.push(`| ${r.order} | ${r.episodeId} | ${r.attempt} | ${r.status}${r.reason ? ` (${r.reason})` : ''}${r.superseded ? ', superseded' : ''} | ${pct(r.primary?.deliveryRate)} | ${r.scheduling?.lagMs?.p95?.toFixed?.(1) ?? '—'} | ${r.runId ?? '—'} |`);
   return lines.join('\n') + '\n';
 }
 
 const protocolPath = resolve(arg('--protocol'));
 const protocol = read(protocolPath);
+const PROTOCOL_REVISION = protocol.protocolRevision;
 const out = resolve(arg('--out'));
 if (arg('--suite') !== protocol.suite) throw new Error(`suite ${arg('--suite')} is not the frozen ${protocol.suite} suite`);
 const verified = verifyProtocol(protocol, p => readFileSync(resolve(REPO, p)));
 if (!verified.ok) { console.log(JSON.stringify(verified)); process.exit(2); }
-if (protocol.controllers.includes('meta') && !process.env.MODEL_API_KEY) { console.log(JSON.stringify({ ok: false, code: 'provider_unavailable', detail: 'credential_missing' })); process.exit(2); }
+if (armsOf(protocol).some(a => a.controller === 'meta' && !a.providerFault) && !process.env.MODEL_API_KEY) { console.log(JSON.stringify({ ok: false, code: 'provider_unavailable', detail: 'credential_missing' })); process.exit(2); }
 const admitted = admitOutputPath(REPO, out, { role: process.platform === 'linux' ? 'guest' : 'host' });
 if (!admitted.ok) { console.log(JSON.stringify(admitted)); process.exit(2); }
 mkdirSync(out, { recursive: true });
@@ -126,9 +131,11 @@ const forCompare = rows.map(r => {
   if (r.attempt === 1 && needsRerun.has(r.block) && rows.some(x => x.block === r.block && x.attempt > 1)) return { ...current, superseded: true, status: statusOf(r) === 'valid' ? 'superseded' : statusOf(r) };
   return current;
 });
-const comparison = { version: 'lifeline.pilot-comparison.v1', protocol: { path: arg('--protocol'), revision: protocol.protocolRevision, frozenAtCommit: protocol.frozenAtCommit },
+const comparison = { version: 'lifeline.pilot-comparison.v1', protocol: { path: arg('--protocol'), revision: protocol.protocolRevision, frozenAtCommit: protocol.frozenAtCommit, sha256: createHash('sha256').update(readFileSync(protocolPath)).digest('hex') },
   reclassification: Object.keys(reclassified).length ? { applied: true, changed: rows.filter(r => r.attempt === 1 && reclassified[r.episodeId] && reclassified[r.episodeId].status !== r.status).map(r => ({ episodeId: r.episodeId, before: r.reason, after: reclassified[r.episodeId].status })), withdrawnAttempts: forCompare.filter(r => r.status === 'withdrawn').length } : { applied: false },
-  ...compare(forCompare.map(r => (r.status === 'withdrawn' ? { ...r, status: 'withdrawn' } : r))) };
+  audit: protocol.protocolRevision > 1 ? auditIndex(protocol, schedule, rows) : { ok: null, note: 'V1 index predates arm identities' },
+  ...compare(forCompare.map(r => (r.status === 'withdrawn' ? { ...r, status: 'withdrawn' } : r)), protocol.arms ? { arms: protocol.arms.map(a => a.id), pairs: protocol.pairs } : {}) };
 writeFileSync(join(out, 'comparison.json'), JSON.stringify(comparison, null, 2) + '\n');
-writeFileSync(join(out, 'comparison.md'), markdown(comparison, forCompare));
+const armIds = armsOf(protocol).map(a => a.id);
+writeFileSync(join(out, 'comparison.md'), markdown(comparison, forCompare, armIds, protocol.pairs ?? [['meta', 'adaptive'], ['meta', 'priority'], ['adaptive', 'priority']]));
 console.log(JSON.stringify({ done: true, episodes: comparison.episodes, summary: comparison.summary }));

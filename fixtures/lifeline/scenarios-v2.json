@@ -1,0 +1,63 @@
+{
+  "version": "ScenariosV2",
+  "note": "Fresh cases written before any v2 run, including baseline runs. Same topology and workload as V1: a development comparison, not a held-out topology test.",
+  "cases": [
+    {
+      "caseId": "v2-a-no-fault",
+      "path": "fixtures/lifeline/v2/v2-a-no-fault.json",
+      "sha256": "4f3875f3efeb0ca0abc42c28e0f4e276d310be9fcbef6a3a784ce3454dd80684",
+      "recoverable": true,
+      "noFault": true,
+      "note": "Control: no fault."
+    },
+    {
+      "caseId": "v2-b-gray-then-capacity",
+      "path": "fixtures/lifeline/v2/v2-b-gray-then-capacity.json",
+      "sha256": "a1093cb34e9cfc0611e573e766420fd8f4c93b81f93a61585f843691d18765b2",
+      "recoverable": true,
+      "noFault": false,
+      "note": "Gray failure: r2 and r3 stop reporting at 18 s; r2-r3 loses 40% from 20 s; r1-r4 to 3 Mbit/s at 65 s."
+    },
+    {
+      "caseId": "v2-c-outage-then-silent-loss",
+      "path": "fixtures/lifeline/v2/v2-c-outage-then-silent-loss.json",
+      "sha256": "1966dae2fe2473f8b61030c04da371df152948f96df8bf979579523e1f411ee2",
+      "recoverable": true,
+      "noFault": false,
+      "note": "r0-r3 down at 20 s; r1 and r4 stop reporting at 63 s; r1-r4 loses 30% from 65 s."
+    },
+    {
+      "caseId": "v2-d-capacity-then-outage",
+      "path": "fixtures/lifeline/v2/v2-d-capacity-then-outage.json",
+      "sha256": "5f9f37bc9a747a30210d93f447556bd446b0ea13d484e65cfd416c41d6103afa",
+      "recoverable": true,
+      "noFault": false,
+      "note": "r0-r3 to 2 Mbit/s with the link up at 20 s; r1-r2 down at 65 s."
+    },
+    {
+      "caseId": "v2-e-stale-data",
+      "path": "fixtures/lifeline/v2/v2-e-stale-data.json",
+      "sha256": "451c49882c0280102ae54d2a6e8122b6c03d2427c40ab67f4d6705887d063380",
+      "recoverable": true,
+      "noFault": false,
+      "note": "Stale-data control: r4-r5 to 3 Mbit/s at 20 s; telemetry unavailable 64-72 s; r0-r3 down at 65 s."
+    },
+    {
+      "caseId": "v2-f-unrecoverable",
+      "path": "fixtures/lifeline/v2/v2-f-unrecoverable.json",
+      "sha256": "c7b387994282adbd02df702dc01b6f1988d12e14d748a6523c024c7956c4fbea",
+      "recoverable": false,
+      "noFault": false,
+      "note": "Unrecoverable control: r1-r4 down at 20 s; r0-r3, r2-r3 and r3-r4 down at 65 s (clinic unreachable)."
+    },
+    {
+      "caseId": "v2-g-timeout-control",
+      "path": "fixtures/lifeline/v2/v2-g-timeout-control.json",
+      "sha256": "35a21688249b296febc6cdc5839a530d2ad28d1e211ce488cd7d4da3a3892be8",
+      "recoverable": true,
+      "noFault": false,
+      "metaProviderFault": "timeout",
+      "note": "Timeout control: the faults of v2-c; the meta arm's provider calls all run to their timeout."
+    }
+  ]
+}
