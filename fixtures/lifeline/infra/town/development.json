@@ -1,0 +1,110 @@
+{
+ "schemaVersion": "lifeline.town-development.v1",
+ "townId": "town-dev-v1",
+ "note": "Development town for P11: CIGRE MV power (P07 development spec plus two pump-station loads), the P09 town water network, and a modeled communications profile. Adjustable; not held-out evidence.",
+ "power": {
+  "development": "../power/development.json",
+  "extraLoads": [
+   {
+    "id": "load-pump-1",
+    "bus": "bus-7",
+    "pW": 0,
+    "qVar": 0
+   },
+   {
+    "id": "load-pump-2",
+    "bus": "bus-14",
+    "pW": 0,
+    "qVar": 0
+   }
+  ]
+ },
+ "water": {
+  "development": "../water/development.json"
+ },
+ "dependencies": "dependencies.json",
+ "couplingStepUs": 60000000,
+ "maxCouplingIterations": 6,
+ "couplingToleranceW": 1.0,
+ "clock": {
+  "mode": "accelerated_modeled",
+  "acceleration": 60,
+  "communications": "modeled"
+ },
+ "localStation": {
+  "periodUs": 300000000,
+  "levelSensor": "lv-T1",
+  "pumpOnBelowM": 2.0,
+  "pumpOffAboveM": 4.5,
+  "duty": [
+   "PU1",
+   "PU2"
+  ]
+ },
+ "cases": [
+  {
+   "caseId": "t-no-fault",
+   "durationUs": 14400000000,
+   "faults": []
+  },
+  {
+   "caseId": "t-feeder-loss-backup-out",
+   "durationUs": 14400000000,
+   "note": "developing secondary loss: bus 7 dead stops PU1; PU2 is out for maintenance; the tank drains toward the hospital's water",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8",
+     "hazard": "storm-1"
+    }
+   ]
+  },
+  {
+   "caseId": "t-common-cause-storm",
+   "durationUs": 14400000000,
+   "note": "one hazard fails a feeder line and the substation router directly; neither is a cascade of the other",
+   "faults": [
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8",
+     "hazard": "storm-1"
+    },
+    {
+     "domain": "communications",
+     "faultId": "storm-rt-sub",
+     "atUs": 1800000000,
+     "type": "router_fail",
+     "assetId": "rt-sub",
+     "hazard": "storm-1"
+    }
+   ]
+  },
+  {
+   "caseId": "t-comms-only",
+   "durationUs": 7200000000,
+   "note": "pump-station router fails with power intact: telemetry is lost, the physical system keeps running",
+   "faults": [
+    {
+     "domain": "communications",
+     "faultId": "rt-pump-fail",
+     "atUs": 1800000000,
+     "type": "router_fail",
+     "assetId": "rt-pump"
+    }
+   ]
+  }
+ ]
+}

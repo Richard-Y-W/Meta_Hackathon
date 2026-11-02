@@ -97,6 +97,8 @@ def build_network(spec):
                 index['lines']['line:%d' % i] = int(i)
         for sid, cfg in spec.get('storageState', {}).items():
             net.storage.at[index['storage'][sid], 'p_mw'] = 0.0
+        for load in spec.get('extraLoads', []):  # declared additions (e.g. coupled pump stations), after the provenance check
+            index['loads'][load['id']] = int(pp.create_load(net, index['buses'][load['bus']], p_mw=load['pW'] / W_PER_MW, q_mvar=load['qVar'] / W_PER_MW, name=load['id']))
         return net, index
     net = pp.create_empty_network(sn_mva=spec.get('baseMva', 1.0), f_hz=spec['frequencyHz'])
     index = {kind: {} for kind in TABLES}
@@ -253,8 +255,11 @@ class PowerPlant:
             net.ext_grid.at[idx['sources'][sid], 'in_service'] = up
         for gid, up in st['generators'].items():
             net.gen.at[idx['generators'][gid], 'in_service'] = up
+        coupled = st.get('coupledLoads', {})
         for lid, load in st['loads'].items():
             i, (p, q) = idx['loads'][lid], self.nominal[lid]
+            if lid in coupled:  # set by a declared coupling edge (W, var), not by a demand schedule
+                p, q = coupled[lid]['pW'] / W_PER_MW, coupled[lid]['qVar'] / W_PER_MW
             net.load.at[i, 'in_service'] = load['connected']
             net.load.at[i, 'p_mw'] = p * load['scale'] * scale
             net.load.at[i, 'q_mvar'] = q * load['scale'] * scale
@@ -488,9 +493,25 @@ class PowerPlant:
                 upcoming = due if upcoming is None else min(upcoming, due)
         return upcoming
 
+    def set_coupled_load(self, load_id, p_w, q_var):
+        """Electrical demand of a coupled asset (e.g. a pump), from its declared coupling equation."""
+        if load_id not in self.state['loads']:
+            raise Rejected('unknown_asset', load_id)
+        current = self.state.setdefault('coupledLoads', {}).get(load_id)
+        if current != {'pW': p_w, 'qVar': q_var}:
+            self.state['coupledLoads'][load_id] = {'pW': float(p_w), 'qVar': float(q_var)}
+            self.dirty = True
+
+    def bus_energized(self, bus_id):
+        self._ensure_solved()
+        if not self._usable():
+            return None  # unknown: no solution
+        return self.solution['busVmPu'][bus_id] > 0
+
     def _record(self, usable):
         st = self.state
-        demand = {lid: self.nominal[lid][0] * W_PER_MW * load['scale'] for lid, load in st['loads'].items()}
+        coupled = st.get('coupledLoads', {})
+        demand = {lid: (coupled[lid]['pW'] if lid in coupled else self.nominal[lid][0] * W_PER_MW) * load['scale'] for lid, load in st['loads'].items()}
         st['ledger'].append({
             'atUs': st['nowUs'], 'status': self.solve_status['status'], 'demand': demand,
             'loads': {lid: (self.solution['loadsW'][lid] if usable else None) for lid in st['loads']},

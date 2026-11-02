@@ -1,0 +1,258 @@
+{
+ "schemaVersion": "lifeline.town-dependencies.v1",
+ "note": "Declared dependency edges of the development town. Each edge can be disabled for ablation. Parameters are scenario engineering assumptions; evidence names the qualification that supports the model on each side of the edge.",
+ "edges": [
+  {
+   "id": "power-to-pump-PU1",
+   "kind": "physical_supply",
+   "source": {
+    "domain": "power",
+    "asset": "bus-7"
+   },
+   "destination": {
+    "domain": "water",
+    "asset": "PU1"
+   },
+   "mechanism": "the pump runs only while its supply bus is energized; on restoration it restarts after restartDelayUs if still commanded on",
+   "units": "state",
+   "delayUs": 0,
+   "restartDelayUs": 120000000,
+   "resolution": "one coupling step",
+   "uncertainty": "deterministic",
+   "evidence": [
+    "P06 bus energization",
+    "P08 pump status"
+   ],
+   "fallback": "pump stops; backup pump if available"
+  },
+  {
+   "id": "power-to-pump-PU2",
+   "kind": "physical_supply",
+   "source": {
+    "domain": "power",
+    "asset": "bus-14"
+   },
+   "destination": {
+    "domain": "water",
+    "asset": "PU2"
+   },
+   "mechanism": "as PU1, from feeder 2",
+   "units": "state",
+   "delayUs": 0,
+   "restartDelayUs": 120000000,
+   "resolution": "one coupling step",
+   "uncertainty": "deterministic",
+   "evidence": [
+    "P06",
+    "P08"
+   ],
+   "fallback": "none"
+  },
+  {
+   "id": "pump-to-load-PU1",
+   "kind": "physical_load",
+   "source": {
+    "domain": "water",
+    "asset": "PU1"
+   },
+   "destination": {
+    "domain": "power",
+    "asset": "load-pump-1"
+   },
+   "mechanism": "P = rho * g * Q * H / efficiency; Q and H from the hydraulic solution; Q <= 0 or H <= 0 gives 0 W (no generation)",
+   "units": "W",
+   "rhoKgM3": 1000.0,
+   "gMs2": 9.80665,
+   "efficiency": 0.75,
+   "powerFactor": 0.9,
+   "uncertainty": "efficiency +/- 0.05 not propagated in P11",
+   "evidence": [
+    "P08 pump flow and head",
+    "P06 load response"
+   ],
+   "fallback": "none"
+  },
+  {
+   "id": "pump-to-load-PU2",
+   "kind": "physical_load",
+   "source": {
+    "domain": "water",
+    "asset": "PU2"
+   },
+   "destination": {
+    "domain": "power",
+    "asset": "load-pump-2"
+   },
+   "mechanism": "as PU1",
+   "units": "W",
+   "rhoKgM3": 1000.0,
+   "gMs2": 9.80665,
+   "efficiency": 0.75,
+   "powerFactor": 0.9,
+   "uncertainty": "as PU1",
+   "evidence": [
+    "P08",
+    "P06"
+   ],
+   "fallback": "none"
+  },
+  {
+   "id": "power-to-comms-rt-pump",
+   "kind": "physical_supply",
+   "source": {
+    "domain": "power",
+    "asset": "bus-7"
+   },
+   "destination": {
+    "domain": "communications",
+    "asset": "rt-pump"
+   },
+   "mechanism": "router on mains while the bus is energized, otherwise on battery until exhausted; recharges on mains",
+   "units": "J",
+   "battery": {
+    "capacityJ": 720000,
+    "drawW": 200,
+    "chargeW": 400
+   },
+   "uncertainty": "deterministic draw",
+   "evidence": [
+    "declared equipment assumption"
+   ],
+   "fallback": "site telemetry and remote control lost; local control continues"
+  },
+  {
+   "id": "power-to-comms-rt-sub",
+   "kind": "physical_supply",
+   "source": {
+    "domain": "power",
+    "asset": "bus-14"
+   },
+   "destination": {
+    "domain": "communications",
+    "asset": "rt-sub"
+   },
+   "mechanism": "as rt-pump",
+   "units": "J",
+   "battery": {
+    "capacityJ": 2880000,
+    "drawW": 200,
+    "chargeW": 400
+   },
+   "uncertainty": "deterministic draw",
+   "evidence": [
+    "declared equipment assumption"
+   ],
+   "fallback": "substation telemetry and switching lost"
+  },
+  {
+   "id": "comms-to-control-pump-station",
+   "kind": "control_path",
+   "source": {
+    "domain": "communications",
+    "asset": "rt-pump"
+   },
+   "destination": {
+    "domain": "water",
+    "asset": "pump-station"
+   },
+   "mechanism": "remote telemetry from and commands to the pump station need rt-pump up; commands take latencyUs one way",
+   "units": "state",
+   "latencyUs": 200000,
+   "uncertainty": "modeled latency, not packet-measured in P11",
+   "evidence": [
+    "modeled communications profile"
+   ],
+   "fallback": "commands unconfirmed; local station control continues"
+  },
+  {
+   "id": "comms-to-control-substation",
+   "kind": "control_path",
+   "source": {
+    "domain": "communications",
+    "asset": "rt-sub"
+   },
+   "destination": {
+    "domain": "power",
+    "asset": "substation"
+   },
+   "mechanism": "remote telemetry from and switching commands to the substation need rt-sub up",
+   "units": "state",
+   "latencyUs": 200000,
+   "uncertainty": "modeled latency",
+   "evidence": [
+    "modeled communications profile"
+   ],
+   "fallback": "switching unconfirmed; protection continues"
+  },
+  {
+   "id": "irrelevant-power-to-comms-rt-spare",
+   "kind": "physical_supply",
+   "source": {
+    "domain": "power",
+    "asset": "bus-12"
+   },
+   "destination": {
+    "domain": "communications",
+    "asset": "rt-spare"
+   },
+   "mechanism": "spare router on no control path (ablation control: reversing or removing it must change nothing)",
+   "units": "J",
+   "battery": {
+    "capacityJ": 720000,
+    "drawW": 200,
+    "chargeW": 400
+   },
+   "uncertainty": "deterministic",
+   "evidence": [
+    "control edge"
+   ],
+   "fallback": "none"
+  }
+ ],
+ "sites": {
+  "pump-station": {
+   "router": "rt-pump",
+   "water": [
+    "lv-T1",
+    "fl-PU1",
+    "fl-PU2",
+    "st-PU1",
+    "st-PU2",
+    "st-PZ",
+    "st-PF",
+    "pr-JR"
+   ],
+   "actuators": {
+    "water": [
+     "PU1",
+     "PU2",
+     "PZ",
+     "PF"
+    ]
+   }
+  },
+  "hospital": {
+   "router": null,
+   "water": [
+    "pr-JH",
+    "pr-JF"
+   ],
+   "note": "hospital pressures reach the control center over the hospital's own link (always up in P11)"
+  },
+  "substation": {
+   "router": "rt-sub",
+   "power": "*",
+   "actuators": {
+    "power": [
+     "sw-S1",
+     "sw-S2",
+     "sw-S3"
+    ]
+   }
+  }
+ },
+ "controlCenter": {
+  "router": "rt-cc",
+  "note": "independent UPS; always up in P11"
+ }
+}

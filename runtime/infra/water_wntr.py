@@ -333,7 +333,13 @@ class WaterPlant:
         leaks = {node: (0.0 if node not in reachable else coeff * max(en.ENgetnodevalue(s.node[node], EN.PRESSURE), 0.0) ** exponent)
                  for node, coeff in sorted(self.state['emitter'].items())}
         links = {name: {'flowM3s': en.ENgetlinkvalue(s.link[name], EN.FLOW) / LPS, 'open': self._status(name)} for name in net.wn.link_name_list}
-        pumps = {name: {'powerW': en.ENgetlinkvalue(s.link[name], EN.ENERGY) * 1000.0 if self._status(name) else 0.0} for name in net.wn.pump_name_list}
+        pumps = {}
+        for name in net.wn.pump_name_list:
+            on = self._status(name)
+            a, b = net.edges[name]
+            pumps[name] = {'powerW': en.ENgetlinkvalue(s.link[name], EN.ENERGY) * 1000.0 if on else 0.0,  # EPANET's own figure (its efficiency)
+                           'flowM3s': en.ENgetlinkvalue(s.link[name], EN.FLOW) / LPS if on else 0.0,
+                           'headGainM': en.ENgetnodevalue(s.node[b], EN.HEAD) - en.ENgetnodevalue(s.node[a], EN.HEAD) if on else 0.0}
         sample = {'atUs': t * S, 'status': 'solved', 'nodes': nodes, 'tanks': tanks, 'links': links, 'pumps': pumps, 'leaks': leaks}
         ledger = self.state['ledger']
         if ledger and ledger[-1]['atUs'] == sample['atUs']:
@@ -373,6 +379,20 @@ class WaterPlant:
         self._record(self.session.t)
         st['revision'] += 1
         return {'kind': 'link_status', 'assetId': asset, 'value': value, 'revision': st['revision']}
+
+    def set_physical(self, link, open_, source='coupling'):
+        """A physical status change caused by another domain (e.g. a pump losing its electrical supply).
+        Not a controller action: no revision precondition, but it is a configuration change."""
+        if link not in self.net.wn.link_name_list:
+            raise Rejected('unknown_asset', link)
+        if self.session.t is None:
+            self._visit(self.session.run())
+        change = {'op': 'link_status', 'link': link, 'open': bool(open_)}
+        self.state['history'].append({'atUs': self.state['nowUs'], 'source': source, 'changes': [change]})
+        self.session.apply(change, self.net)
+        self.session.run()
+        self._record(self.session.t)
+        self.state['revision'] += 1
 
     # ---- controller-facing views --------------------------------------------------------------------
     def _sensor_value(self, sensor):

@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. These tasks are planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11 is qualified (Nov 1); P12–P16 are planned.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -14,14 +14,14 @@
 
 **Files:** Create `runtime/infra/coupling.py`, `runtime/infra/clock.py`, `runtime/infra/worker.py`, `runtime/infra/tests/test_coupling.py`, `test_clock.py`, `fixtures/lifeline/infra/town/dependencies.json`, `fixtures/lifeline/infra/town/development.json`. Extend `src/lifeline/kernel/services.mjs`.
 
-- [ ] Declare every edge's mechanism, units, delays, uncertainty and evidence: power-to-pump, pump-to-electrical-load, power-to-communications, communications-to-remote-control, facility reserves and shared backup resources.
-- [ ] RED: a pump cannot deliver hydraulic work indefinitely without electrical supply; battery-supported communications must continue until reserve exhaustion; losing telemetry must not falsely report physical failure.
-- [ ] GREEN: implement coupled updates with explicit iteration/step tolerances. Preserve water/energy balances and account for all sources, sinks, losses and shared allocations.
-- [ ] Implement real-time hybrid and accelerated modeled modes as distinct profiles. Charge decision/solver/action latency using the frozen clock mapping.
-- [ ] Test a 15-second provider delay at 60×: the decision becomes available no earlier than 900 simulated seconds later. Test zero hidden pauses and continued local control.
-- [ ] Remove individual edges, lengthen reserves, reverse an irrelevant edge, and add a common-cause hazard. Verify the cascade follows the equations, not a scripted incident label.
-- [ ] Test step-size sensitivity, solver-order sensitivity, checkpoint/restore, out-of-order telemetry, command loss and nonconvergence. Distinguish emulator infrastructure failure from action-caused infeasibility.
-- [ ] Retain a no-intervention coupled trace with a developing secondary service loss and an intervention trace that changes that path.
+- [x] Declare every edge's mechanism, units, delays, uncertainty and evidence: power-to-pump, pump-to-electrical-load, power-to-communications, communications-to-remote-control, facility reserves and shared backup resources.
+- [x] RED: a pump cannot deliver hydraulic work indefinitely without electrical supply; battery-supported communications must continue until reserve exhaustion; losing telemetry must not falsely report physical failure.
+- [x] GREEN: implement coupled updates with explicit iteration/step tolerances. Preserve water/energy balances and account for all sources, sinks, losses and shared allocations.
+- [~] Implement real-time hybrid and accelerated modeled modes as distinct profiles. *(Profiles and charged latency done; the town has run only in accelerated modeled mode.)* Charge decision/solver/action latency using the frozen clock mapping.
+- [x] Test a 15-second provider delay at 60×: the decision becomes available no earlier than 900 simulated seconds later. Test zero hidden pauses and continued local control.
+- [x] Remove individual edges, lengthen reserves, reverse an irrelevant edge, and add a common-cause hazard. Verify the cascade follows the equations, not a scripted incident label.
+- [~] Test step-size sensitivity, solver-order sensitivity, checkpoint/restore, out-of-order telemetry, command loss and nonconvergence. *(All except acknowledgement loss after delivery, which is not modeled.)* Distinguish emulator infrastructure failure from action-caused infeasibility.
+- [x] Retain a no-intervention coupled trace with a developing secondary service loss and an intervention trace that changes that path.
 
 **Analytic controls:**
 
@@ -33,6 +33,8 @@ self.assertTrue(local_protection_remained_enabled)
 ```
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_coupling.py` and the same command with `test_clock.py`.
+
+**State (Nov 1):** `qualified` with open items in [P11 run 0](../../trials/lifeline-infra-p11-run-0.md).
 
 **Gate:** At least two independently qualified causal edges produce measurable cross-domain effects; the three-domain town has no label-driven service failures.
 
