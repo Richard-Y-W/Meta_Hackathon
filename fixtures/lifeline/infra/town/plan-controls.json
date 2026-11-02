@@ -1,0 +1,167 @@
+{
+ "schemaVersion": "lifeline.plan-controls.v1",
+ "note": "P12 planner controls on the development town. The storm also disables both tie switches, so the portable generator is the remedy. Restoration ETA scenarios are declared assumptions (a crew estimate), not the hidden schedule.",
+ "catalog": {
+  "switches": [
+   "sw-S1",
+   "sw-S3"
+  ],
+  "generators": [
+   {
+    "id": "gen-portable",
+    "site": "pump-station",
+    "setupUs": 600000000
+   }
+  ]
+ },
+ "decisionAtUs": 1860000000,
+ "horizonUs": 14400000000,
+ "gridUs": 60000000,
+ "scenarios": [
+  {
+   "label": "eta-nominal",
+   "assume": [
+    {
+     "domain": "power",
+     "faultId": "eta",
+     "atUs": 10800000000,
+     "type": "line_restore",
+     "assetId": "line-3-8"
+    }
+   ]
+  },
+  {
+   "label": "eta-late-30min",
+   "assume": [
+    {
+     "domain": "power",
+     "faultId": "eta-late",
+     "atUs": 12600000000,
+     "type": "line_restore",
+     "assetId": "line-3-8"
+    }
+   ]
+  }
+ ],
+ "budget": {
+  "maxCandidates": 12,
+  "wallMs": 600000
+ },
+ "cases": [
+  {
+   "caseId": "pc-high-storage",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s1",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S1"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s3",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    }
+   ],
+   "tankInitialLevels": {
+    "T1": 3.0
+   }
+  },
+  {
+   "caseId": "pc-lower-storage",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s1",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S1"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s3",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    }
+   ],
+   "tankInitialLevels": {
+    "T1": 1.0
+   }
+  },
+  {
+   "caseId": "pc-second-fault",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s1",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S1"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s3",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    },
+    {
+     "domain": "power",
+     "faultId": "second-2-3",
+     "atUs": 3600000000,
+     "type": "line_trip",
+     "assetId": "line-2-3"
+    }
+   ],
+   "tankInitialLevels": {
+    "T1": 3.0
+   }
+  }
+ ]
+}

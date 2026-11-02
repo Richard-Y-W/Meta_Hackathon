@@ -41,9 +41,9 @@ ACTIONS = {
     'set_load_connected': {'loadId': 'id', 'connected': 'bool'},
     'set_storage_power': {'storageId': 'id', 'dischargeW': 'W'},
 }
-FAULTS = {'line_trip': 'lines', 'source_loss': 'sources', 'generator_unavailable': 'generators', 'load_change': 'loads',
+FAULTS = {'line_trip': 'lines', 'line_restore': 'lines', 'source_loss': 'sources', 'generator_unavailable': 'generators', 'load_change': 'loads',
           'actuator_unavailable': 'switches', 'sensor_freeze': 'sensors', 'sensor_offset': 'sensors'}
-WORLD_FAULTS = ('line_trip', 'source_loss', 'generator_unavailable', 'load_change', 'actuator_unavailable')  # a forecast may assume these
+WORLD_FAULTS = ('line_trip', 'line_restore', 'source_loss', 'generator_unavailable', 'load_change', 'actuator_unavailable')  # a forecast may assume these
 TABLES = {'buses': 'bus', 'lines': 'line', 'switches': 'switch', 'loads': 'load', 'sources': 'ext_grid', 'generators': 'gen', 'storage': 'storage'}
 
 
@@ -378,6 +378,9 @@ class PowerPlant:
                 st['loads'][fault['assetId']]['scale'] = float(fault['scale'])
             elif fault['type'] == 'actuator_unavailable':
                 st['unavailableActuators'] = sorted(set(st['unavailableActuators']) | {fault['assetId']})
+            elif fault['type'] == 'line_restore':  # repair completed (e.g. a crew ETA in a forecast)
+                st['lines'][fault['assetId']] = True
+                st['revision'] += 1
             elif kind == 'sensors':
                 # Observation faults change what is reported, never the plant or its revision.
                 self._ensure_solved()

@@ -106,5 +106,25 @@
     }
    ]
   }
- ]
+ ],
+ "resources": {
+  "gen-portable": {
+   "kind": "generator",
+   "capacityW": 25000,
+   "fuelJ": 120000000,
+   "setupUs": 600000000,
+   "fuelPerElectricalJ": 3.0,
+   "serves": {
+    "pump-station": {
+     "pumps": [
+      "PU1"
+     ],
+     "routers": [
+      "rt-pump"
+     ]
+    }
+   },
+   "note": "one trailer generator (25 kW; 120 MJ of fuel at 3 J per electrical J, i.e. 40 MJ electrical); 10 min to dispatch and connect; scenario assumptions"
+  }
+ }
 }

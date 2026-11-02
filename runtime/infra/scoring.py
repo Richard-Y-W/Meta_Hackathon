@@ -6,6 +6,9 @@ unit x seconds. A missing sample makes the run capture-incomplete; it is neither
 """
 
 
+import bisect
+
+
 def _rate_at(demand, t):
     for seg in demand:
         if seg['fromUs'] <= t < seg['toUs']:
@@ -13,14 +16,30 @@ def _rate_at(demand, t):
     return 0.0
 
 
-def _sample_at(supply, t):
-    current = None
-    for s in sorted(supply, key=lambda x: x['atUs']):
-        if s['atUs'] <= t:
-            current = s
-        else:
-            break
-    return current
+class _Supply:
+    """Supply samples sorted once by time; the latest sample at or before t, by binary search."""
+
+    def __init__(self, supply):
+        self.samples = sorted(supply, key=lambda x: x['atUs'])
+        self.times = [s['atUs'] for s in self.samples]
+
+    def at(self, t):
+        i = bisect.bisect_right(self.times, t)
+        return self.samples[i - 1] if i else None
+
+
+class _Demand:
+    """Demand segments indexed by start time; the segment covering t, or zero demand."""
+
+    def __init__(self, demand):
+        self.segments = sorted(demand, key=lambda x: x['fromUs'])
+        self.starts = [d['fromUs'] for d in self.segments]
+
+    def at(self, t):
+        i = bisect.bisect_right(self.starts, t)
+        if i and self.segments[i - 1]['fromUs'] <= t < self.segments[i - 1]['toUs']:
+            return float(self.segments[i - 1]['value'])
+        return 0.0
 
 
 def score_service(case):
@@ -31,14 +50,15 @@ def score_service(case):
         edges.update(t for t in (seg['fromUs'], seg['toUs']) if lo < t < hi)
     edges.update(s['atUs'] for s in case['supply'] if lo < s['atUs'] < hi)
     edges = sorted(edges)
+    supply_index, demand_index = _Supply(case['supply']), _Demand(case['demand'])
     demanded = served = missing = 0.0
     for start, end in zip(edges, edges[1:]):
         seconds = (end - start) / 1e6
-        rate = _rate_at(case['demand'], start)
+        rate = demand_index.at(start)
         if rate == 0:
             continue
         demanded += rate * seconds
-        sample = _sample_at(case['supply'], start)
+        sample = supply_index.at(start)
         if sample is None or sample.get('value') is None or (quality and sample.get('qualityValue') is None):
             missing += rate * seconds
             continue

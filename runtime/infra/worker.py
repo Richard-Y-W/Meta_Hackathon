@@ -35,6 +35,8 @@ def handlers():
         bundle = load_town()
         cases = {c['caseId']: c for c in bundle['town']['cases']}
         faults = args.get('faults') if 'faults' in args else cases[args['caseId']]['faults']
+        if 'tankInitialLevels' in args:  # declared case parameter: starting storage
+            bundle['water']['tankInitialLevels'] = args['tankInitialLevels']
         session['bundle'] = bundle
         session['town'] = Town(copy.deepcopy(bundle), faults=faults, disabled_edges=args.get('disabledEdges', []))
         return {'atUs': 0, 'townId': bundle['town']['townId'], 'clock': session['town'].clock.manifest()}
@@ -52,8 +54,23 @@ def handlers():
         session['town'] = Town.from_checkpoint(copy.deepcopy(session['bundle']), record)
         return {'atUs': session['town'].state['nowUs'], 'hash': record['hash']}
 
+    def admitted_model(args):
+        record = town().admitted_model()
+        key = 'model-%d' % (len(session.setdefault('models', {})) + 1)
+        session['models'][key] = record
+        return {'modelId': key, 'hash': record['hash'], 'atUs': town().state['nowUs']}
+
+    def preview(args):
+        record = session.get('models', {}).get(args.get('modelId'))
+        if record is None:
+            raise Rejected('unknown_model', str(args.get('modelId')))
+        return town().preview(args['plan'], record, assume=args.get('assume', []))
+
     return {
         'hello': lambda a: {'domainId': 'town', 'protocol': 1},
+        'admitted_model': admitted_model, 'preview': preview,
+        'state': lambda a: {'nowUs': town().state['nowUs'], 'stationMode': town().state['stationMode'], 'resources': town().state['resources'],
+                            'revisions': {'power': town().power.revision, 'water': town().water.revision}, 'worldRevision': town().world_revision()},
         'initialize': initialize,
         'advance': lambda a: town().advance(a['toUs']),
         'observe': lambda a: town().observe(),

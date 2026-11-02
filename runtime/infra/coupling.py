@@ -45,7 +45,7 @@ def load_town(path=os.path.join(FIX, 'town/development.json')):
 
 
 class Town:
-    def __init__(self, bundle, faults=(), disabled_edges=(), coupling_step_us=None, state=None, order='supply_first'):
+    def __init__(self, bundle, faults=(), disabled_edges=(), coupling_step_us=None, state=None, order='supply_first', admitted=False):
         self.bundle = bundle
         self.cfg = bundle['town']
         self.edges = {e['id']: e for e in bundle['dependencies']['edges']}
@@ -61,8 +61,14 @@ class Town:
             raise Rejected('invalid_coupling_step', 'the coupling step must be a multiple of the hydraulic step')
         if state is not None:
             self.state = state
-            self.power = PowerPlant.from_checkpoint(state.pop('powerCheckpoint'))
-            self.water = WaterPlant.from_checkpoint(state.pop('waterCheckpoint'))
+            if admitted:  # admitted plant models are forked through their own previews' rules
+                self.power = PowerPlant(None, state=checkpoints.unseal(state.pop('powerCheckpoint')))
+                self.water = WaterPlant(None, state=checkpoints.unseal(state.pop('waterCheckpoint')))
+            else:
+                self.power = PowerPlant.from_checkpoint(state.pop('powerCheckpoint'))
+                self.water = WaterPlant.from_checkpoint(state.pop('waterCheckpoint'))
+            self.state.setdefault('resources', {rid: {'allocatedTo': None, 'readyAtUs': None, 'fuelJ': float(r['fuelJ']), 'tripped': False, 'exhaustedAtUs': None}
+                                                for rid, r in self.cfg.get('resources', {}).items()})
             return
         by = {'power': [], 'water': [], 'communications': []}
         for f in faults:
@@ -78,7 +84,9 @@ class Town:
                         for e in self.edges.values() if e['kind'] == 'physical_supply' and e['destination']['domain'] == 'communications'},
             'commsFaults': sorted(by['communications'], key=lambda f: (f['atUs'], f['faultId'])),
             'hazards': {f['faultId']: f.get('hazard') for f in faults if f.get('hazard')},
-            'telemetry': {}, 'outOfOrderDropped': 0, 'commands': [], 'events': [], 'trace': [], 'lastLocalUs': None,
+            'stationMode': 'auto', 'telemetry': {}, 'outOfOrderDropped': 0, 'commands': [], 'events': [], 'trace': [], 'lastLocalUs': None,
+            'resources': {rid: {'allocatedTo': None, 'readyAtUs': None, 'fuelJ': float(r['fuelJ']), 'tripped': False, 'exhaustedAtUs': None}
+                          for rid, r in self.cfg.get('resources', {}).items()},
         }
         for p, on in self.state['commanded'].items():
             self.state['physical'][p] = on
@@ -86,6 +94,55 @@ class Town:
         self.water.advance(0)
         self._couple(0)
         self._record(0, 0)
+
+    # ---- shared resources (portable generator) --------------------------------------------------------
+    def generator_for(self, kind, asset, now):
+        """The allocated, connected, fuelled generator serving this pump or router, if any."""
+        for rid, cfg in self.cfg.get('resources', {}).items():
+            r = self.state['resources'].get(rid)
+            if r is None or r['allocatedTo'] is None or r['tripped'] or r['fuelJ'] <= 0 or r['readyAtUs'] > now:
+                continue
+            if asset in cfg['serves'].get(r['allocatedTo'], {}).get(kind, []):
+                return rid
+        return None
+
+    def _generator_load_w(self, rid, now):
+        cfg, total = self.cfg['resources'][rid], 0.0
+        site = cfg['serves'][self.state['resources'][rid]['allocatedTo']]
+        for pump in site.get('pumps', []):
+            edge = next((e for e in self._supply_edges('water') if e['destination']['asset'] == pump), None)
+            on_mains = edge is not None and self.enabled(edge['id']) and self.power.bus_energized(edge['source']['asset'])
+            if not on_mains and self.state['physical'].get(pump):
+                load_edge = next(e for e in self.edges.values() if e['kind'] == 'physical_load' and e['source']['asset'] == pump)
+                total += self.power.state.get('coupledLoads', {}).get(load_edge['destination']['asset'], {}).get('pW', 0.0)
+        for router in site.get('routers', []):
+            r = self.state['routers'].get(router)
+            if r is not None and not r['onMains']:
+                total += next(e for e in self._supply_edges('communications') if e['destination']['asset'] == router)['battery']['drawW']
+        return total
+
+    def _resources(self, start, end):
+        for rid, r in self.state['resources'].items():
+            if r['allocatedTo'] is None or r['tripped'] or r['readyAtUs'] > start or r['fuelJ'] <= 0:
+                continue
+            draw = self._generator_load_w(rid, start) * self.cfg['resources'][rid]['fuelPerElectricalJ']
+            before = r['fuelJ']
+            r['fuelJ'] = max(0.0, before - draw * (end - start) / 1e6)
+            if before > 0 and r['fuelJ'] == 0:
+                r['exhaustedAtUs'] = start + int(round(before / draw * S)) if draw else start
+                self.state['events'].append({'atUs': r['exhaustedAtUs'], 'type': 'generator_fuel_exhausted', 'assetId': rid})
+
+    def _check_generators(self, now):
+        changed = False
+        for rid, r in self.state['resources'].items():
+            if r['allocatedTo'] is None or r['tripped'] or r['readyAtUs'] > now:
+                continue
+            load = self._generator_load_w(rid, now)
+            if load > self.cfg['resources'][rid]['capacityW']:
+                r['tripped'] = True
+                self.state['events'].append({'atUs': now, 'type': 'generator_overload', 'assetId': rid, 'loadW': load})
+                changed = True
+        return changed
 
     # ---- edges -----------------------------------------------------------------------------------------
     def enabled(self, edge_id):
@@ -118,6 +175,7 @@ class Town:
             changed |= self._supply(now)
             if self.order == 'supply_first':
                 changed |= self._loads()
+            changed |= self._check_generators(now)
             if not changed:
                 return iterations
         st['events'].append({'atUs': now, 'type': 'coupling_not_converged', 'iterations': iterations})
@@ -129,6 +187,8 @@ class Town:
             for e in self._supply_edges('water'):
                 pump, bus = e['destination']['asset'], e['source']['asset']
                 energized = True if not self.enabled(e['id']) else self.power.bus_energized(bus)
+                if energized is False and self.generator_for('pumps', pump, now):
+                    energized = True  # supplied by the allocated portable generator
                 if energized is None:
                     # No electrical solution: keep the previous supply state, flagged, and attribute it: a
                     # controller command at this instant makes it action-caused, otherwise a model result.
@@ -179,7 +239,7 @@ class Town:
             st['events'].append({'atUs': f['atUs'], 'type': f['type'], 'assetId': f['assetId'], 'hazard': st['hazards'].get(f['faultId'])})
         for e in self._supply_edges('communications'):
             r = st['routers'][e['destination']['asset']]
-            mains = True if not self.enabled(e['id']) else bool(self.power.bus_energized(e['source']['asset']))
+            mains = True if not self.enabled(e['id']) else bool(self.power.bus_energized(e['source']['asset'])) or bool(self.generator_for('routers', e['destination']['asset'], start))
             r['onMains'] = mains
             b = e['battery']
             if mains:
@@ -211,6 +271,12 @@ class Town:
             return  # fixed schedule (multiples of the period), independent of the coupling step
         st['lastLocalUs'] = now
         level = self.water.ledger_tail()['tanks']['T1']['levelM']  # hardwired local level transmitter
+        if st.get('stationMode', 'auto') == 'paused':  # a permitted remote demand shift: duty pumps held off
+            for p in cfg['duty']:
+                if st['commanded'][p]:
+                    st['commanded'][p] = False
+                    st['events'].append({'atUs': now, 'type': 'local_command', 'assetId': p, 'on': False, 'reason': 'station_paused'})
+            return
         duty = next((p for p in cfg['duty'] if p not in self.water.state['unavailable'] and st['powered'].get(p, True)), None)
         for p in cfg['duty']:
             if p != duty and st['commanded'][p]:
@@ -234,6 +300,7 @@ class Town:
             t = self.state['nowUs']
             end = t + self.step_us
             self._comms(t, end)
+            self._resources(t, end)
             self.power.advance(end)
             self.water.advance(end)
             self.state['nowUs'] = end
@@ -295,8 +362,10 @@ class Town:
         """Remote command over the site's control path. Without a path it is not delivered and has no
         effect: status `unconfirmed`. Delivered commands are applied after the declared latency."""
         now = self.state['nowUs']
+        if domain == 'resource':
+            return self._resource_command(action, now)
         if domain == 'water':
-            site, asset = 'pump-station', action['params'].get('pumpId') or action['params'].get('linkId')
+            site, asset = 'pump-station', action['params'].get('pumpId') or action['params'].get('linkId') or 'pump-station'
         else:
             site, asset = 'substation', action['params'].get('switchId')
         record = {'atUs': now, 'domain': domain, 'action': action, 'site': site}
@@ -308,6 +377,13 @@ class Town:
         try:
             if domain == 'power':
                 effect = self.power.change(action, base_revision)
+            elif action['type'] == 'set_station_mode':
+                if action['params'].get('mode') not in ('auto', 'paused'):
+                    raise Rejected('invalid_parameters', str(action['params'].get('mode')))
+                self.state['stationMode'] = action['params']['mode']
+                self.state['lastLocalUs'] = None
+                effect = {'assetId': 'pump-station', 'mode': self.state['stationMode']}
+                self._local_station(now - now % self.cfg['localStation']['periodUs']) if now % self.cfg['localStation']['periodUs'] == 0 else None
             elif action['type'] == 'set_pump':
                 if asset in self.water.state['unavailable']:
                     raise Rejected('actuator_unavailable', asset)
@@ -323,6 +399,95 @@ class Town:
         self.state['commands'].append(record)
         self._couple(now)
         return record
+
+    def _resource_command(self, action, now):
+        """Field dispatch of a shared resource (a crew, not SCADA): no control path needed; it takes the
+        declared setup time and one resource cannot be allocated twice."""
+        record = {'atUs': now, 'domain': 'resource', 'action': action, 'site': 'field'}
+        rid = action['params'].get('resourceId')
+        r, cfg = self.state['resources'].get(rid), self.cfg.get('resources', {}).get(rid)
+        if r is None:
+            record.update(status='rejected', reason='unknown_resource')
+        elif action['type'] == 'allocate_generator':
+            site = action['params'].get('site')
+            if site not in cfg['serves']:
+                record.update(status='rejected', reason='unknown_site')
+            elif r['allocatedTo'] is not None:
+                record.update(status='rejected', reason='resource_allocated', detail=r['allocatedTo'])
+            else:
+                r.update(allocatedTo=site, readyAtUs=now + cfg['setupUs'], tripped=False)
+                record.update(status='delivered', effectAtUs=r['readyAtUs'])
+                self.state['events'].append({'atUs': now, 'type': 'generator_dispatched', 'assetId': rid, 'site': site, 'readyAtUs': r['readyAtUs']})
+        elif action['type'] == 'release_generator':
+            r.update(allocatedTo=None, readyAtUs=None)
+            record.update(status='delivered', effectAtUs=now)
+        else:
+            record.update(status='rejected', reason='unknown_action')
+        self.state['commands'].append(record)
+        self._couple(now)
+        return record
+
+    def world_revision(self):
+        """Count of outside events so far (injected faults in any domain, communications faults, protection
+        trips). A plan's own effects and the couplings it predicts do not change it."""
+        comms = sum(1 for e in self.state['events'] if e['type'] in ('router_fail', 'link_down'))
+        trips = sum(1 for e in self.power.state['events'] if e['type'] == 'protection_trip')
+        return len(self.power.state['appliedFaults']) + len(self.water.state['appliedFaults']) + comms + trips
+
+    # ---- admitted model and previews ------------------------------------------------------------------
+    def admitted_model(self):
+        """What a controller may fork: both plants' admitted models and the town state without pending
+        hidden communications faults or hazard labels."""
+        town = copy.deepcopy(self.state)
+        town.update(commsFaults=[], hazards={}, trace=town['trace'][-1:], kind='admitted')
+        return checkpoints.seal({'town': town, 'power': self.power.admitted_model(), 'water': self.water.admitted_model()})
+
+    @classmethod
+    def from_admitted(cls, bundle, record, assume=()):
+        model = checkpoints.unseal(record)
+        town = model['town']
+        if town.get('kind') != 'admitted':
+            raise Rejected('model_not_admitted')
+        state = dict(town, powerCheckpoint=model['power'], waterCheckpoint=model['water'])
+        t = cls(bundle, disabled_edges=town['disabled'], coupling_step_us=town['stepUs'], state=state, admitted=True)
+        by = {'power': [], 'water': [], 'communications': []}
+        for f in assume:
+            by[f['domain']].append({k: v for k, v in f.items() if k not in ('domain', 'hazard')})
+        for f in by['power']:
+            t.power._check_fault(f)
+        t.power.state['faults'] = sorted(by['power'], key=lambda f: (f['atUs'], f['faultId']))
+        for f in by['water']:
+            t.water._check_fault(f)
+        t.water.state['faults'] = sorted(by['water'], key=lambda f: (f['atUs'], f['faultId']))
+        t.state['commsFaults'] = sorted(by['communications'], key=lambda f: (f['atUs'], f['faultId']))
+        if not t.water.state['ledger']:  # the admitted model carries no ledger: sample the forked state at its start
+            t.water._record(t.water.session.t if t.water.session.t is not None else t.water.session.run())
+        return t
+
+    def preview(self, plan, model_record, assume=()):
+        """Simulate a timed multi-domain plan on a fork of the admitted model. Each step is applied at its
+        time (on the coupling grid); results report service outcomes, resource use and step receipts."""
+        fork = Town.from_admitted(self.bundle, model_record, assume)
+        start = fork.state['nowUs']
+        receipts = []
+        for step in sorted(plan.get('steps', []), key=lambda x: (x['atUs'], x.get('order', 0))):
+            if step['atUs'] < start or step['atUs'] % fork.step_us:
+                raise Rejected('invalid_plan', 'step %s is off the coupling grid or in the past' % step.get('id'))
+            fork.advance(step['atUs'])
+            revision = fork.power.revision if step['domain'] == 'power' else fork.water.revision
+            r = fork.command(step['domain'], step['action'], revision)
+            receipts.append({'id': step.get('id'), 'atUs': step['atUs'], 'status': r['status'], 'reason': r.get('reason')})
+        end = start + plan['horizonUs']
+        fork.advance(end)
+        power = fork.power.service_summary(from_us=start)
+        water = fork.water.service_summary(from_us=start)
+        trace = [r for r in fork.state['trace'] if r['atUs'] >= start]
+        return {'kind': 'preview', 'horizonUs': plan['horizonUs'], 'receipts': receipts,
+                'waterEssentialUnmetM3': water['essentialUnmetM3'], 'powerEssentialUnservedJ': power['essentialUnservedJ'],
+                'minTankLevelM': min(r['tankLevelM'] for r in trace), 'endTankLevelM': trace[-1]['tankLevelM'],
+                'fuelUsedJ': {rid: model_fuel - fork.state['resources'][rid]['fuelJ'] for rid, model_fuel in ((rid, checkpoints.unseal(model_record)['town']['resources'][rid]['fuelJ']) for rid in fork.state['resources'])},
+                'events': [e for e in fork.state['events'] if e['atUs'] >= start and e['type'] in ('generator_overload', 'generator_fuel_exhausted', 'supply_lost', 'supply_restored', 'router_battery_exhausted', 'coupling_unresolved', 'coupling_not_converged')],
+                'constraintSeconds': fork.power.service_summary(from_us=start)['constraintEventSeconds']}
 
     # ---- restart --------------------------------------------------------------------------------------
     def checkpoint(self):

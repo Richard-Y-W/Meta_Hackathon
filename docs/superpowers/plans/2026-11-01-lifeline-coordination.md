@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11 is qualified (Nov 1); P12–P16 are planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P12 are qualified (Nov 1); P13–P16 are planned.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -42,15 +42,17 @@ self.assertTrue(local_protection_remained_enabled)
 
 **Files:** Extend `src/lifeline/kernel/plans.mjs`, `coordinator.mjs`, `forecast.mjs`. Create `src/lifeline/kernel/planner.mjs`, `test/lifeline/infra/planner.test.mjs`, `fixtures/lifeline/infra/town/plan-controls.json`.
 
-- [ ] Define an action DAG with preconditions, duration, resources, intermediate constraints, cancellation points and effect checks. Include retain-policy and probe-only candidates.
-- [ ] RED: reject double allocation of a generator, restoring a pump before its supply is available, a late command, and a plan with individually feasible but jointly infeasible actions.
-- [ ] GREEN: enumerate bounded plan templates, simulate candidates from admitted estimated state, and rank by frozen service policy, constraint outcomes, cost and uncertainty.
-- [ ] Test a beneficial cross-domain tradeoff: temporarily shift permitted pump demand using measured storage to preserve an electrical reserve, then restore pumping before its service constraint is breached.
-- [ ] Test the opposite case where low storage makes that action harmful. The planner must choose differently from observed state rather than the scenario name.
-- [ ] Inject a second fault between actions. Expire the remainder, read actual state and replan without inventing atomic rollback.
-- [ ] Bound candidate count, horizon, solver work and wall time. A search overrun returns the best admitted plan or retains policy; it cannot monopolize the fast controller.
+- [x] Define an action DAG with preconditions, duration, resources, intermediate constraints, cancellation points and effect checks. Include retain-policy and probe-only candidates.
+- [x] RED: reject double allocation of a generator, restoring a pump before its supply is available, a late command, and a plan with individually feasible but jointly infeasible actions.
+- [x] GREEN: enumerate bounded plan templates, simulate candidates from admitted estimated state, and rank by frozen service policy, constraint outcomes, cost and uncertainty.
+- [x] Test a beneficial cross-domain tradeoff: temporarily shift permitted pump demand using measured storage to preserve an electrical reserve, then restore pumping before its service constraint is breached.
+- [x] Test the opposite case where low storage makes that action harmful. The planner must choose differently from observed state rather than the scenario name.
+- [x] Inject a second fault between actions. Expire the remainder, read actual state and replan without inventing atomic rollback.
+- [x] Bound candidate count, horizon, solver work and wall time. A search overrun returns the best admitted plan or retains policy; it cannot monopolize the fast controller.
 
 **Run:** `node --test test/lifeline/infra/planner.test.mjs test/lifeline/infra/plans.test.mjs`.
+
+**State (Nov 1):** `qualified` in [P12 runs 0–1](../../trials/lifeline-infra-p12-run-0.md); `planner.mjs` holds timed execution (coordinator/forecast not extended).
 
 **Gate:** Candidate outcomes, costs and transitions are independently checkable; cross-domain plans are valid beyond per-domain feasibility.
 
