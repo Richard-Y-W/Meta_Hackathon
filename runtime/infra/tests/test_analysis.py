@@ -7,7 +7,7 @@ import unittest
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from analysis import WEIGHTS, accounting, classify, cluster_bootstrap, critical_groups, paired, service_score  # noqa: E402
+from analysis import WEIGHTS, accounting, ablation_contrasts, classify, cluster_bootstrap, critical_groups, paired, service_score  # noqa: E402
 
 MJ = 1e6
 
@@ -138,6 +138,21 @@ class CriticalGroups(unittest.TestCase):
         self.assertFalse(b['groups']['JH']['pass'])
         self.assertTrue(b['groups']['power']['pass'])
         self.assertFalse(b['pass'])
+
+
+class Ablation(unittest.TestCase):
+    def test_contrasts_have_the_declared_sign_and_cross_batch_ones_are_labeled(self):
+        protocol = {'contrasts': {}, 'cases': [{'caseId': 'a'}, {'caseId': 'b'}], 'inference': {}}
+        base = {'a': 'f1', 'b': 'f2'}
+        rows = [row('a', 'f1', 'hybrid', truth()), row('a', 'f1', 'meta-latency-matched', truth(jh=10)),
+                row('b', 'f2', 'hybrid', truth()), row('b', 'f2', 'meta-latency-matched', truth())]
+        base_rows = [row('a', 'f1', 'meta-complete', truth(jh=10)), row('b', 'f2', 'meta-complete', truth()), row('a', 'f1', 'hybrid', truth()), row('b', 'f2', 'hybrid', truth())]
+        c = ablation_contrasts(rows, base_rows, base, reps=200, seed=1)
+        self.assertAlmostEqual(c['latency']['estimate'], -0.1 / 3.2 / 2)  # latency-matched minus hybrid: worse
+        self.assertAlmostEqual(c['modelContent']['estimate'], 0.0)         # meta-complete equals latency alone
+        self.assertTrue(c['modelContent']['crossBatch'])
+        self.assertFalse(c['latency']['crossBatch'])
+        self.assertAlmostEqual(c['runToRun']['estimate'], 0.0)
 
 
 class Accounting(unittest.TestCase):

@@ -167,7 +167,39 @@ def analyze(protocol, rows):
     return out
 
 
+# P19 attribution contrasts: (name, method, comparator, method from the base batch?, comparator from the base batch?)
+CONTRASTS = [('latency', 'meta-latency-matched', 'hybrid', False, False), ('modelContent', 'meta-complete', 'meta-latency-matched', True, False),
+             ('narration', 'meta-narrator', 'meta-latency-matched', False, False), ('forecast', 'hybrid', 'hybrid-no-forecast', False, False),
+             ('coordination', 'hybrid', 'independent', False, False), ('cadence', 'meta-fixed-cadence', 'meta-complete', False, True),
+             ('runToRun', 'hybrid', 'hybrid', False, True)]
+
+
+def ablation_contrasts(rows, base_rows, family, reps=5000, seed=20261103):
+    """Paired S contrasts on the ablation groups. Base-batch controllers are renamed so a contrast can pair
+    a controller with its own earlier run (run-to-run variation)."""
+    ids = {r['caseId'] for r in rows}
+    tagged = [dict(r, family=family[r['caseId']]) for r in rows] + [dict(r, controller='base:' + r['controller'], family=family[r['caseId']]) for r in base_rows if r['caseId'] in ids]
+    out = {}
+    for name, m, c, m_base, c_base in CONTRASTS:
+        p = paired(tagged, ('base:' if m_base else '') + m, ('base:' if c_base else '') + c)
+        if not p['pairs']:
+            out[name] = {'method': m, 'comparator': c, 'missing': p['missing'], 'estimate': None}
+            continue
+        b = cluster_bootstrap(p['pairs'], reps, seed)
+        out[name] = {'method': m, 'comparator': c, 'crossBatch': m_base != c_base, 'groups': len(p['pairs']), 'missing': p['missing'],
+                     'estimate': b['estimate'], 'low': b['low'], 'high': b['high'], 'serviceChange': p['serviceRegression'],
+                     'pairs': [{'caseId': x['caseId'], 'diff': x['diff']} for x in p['pairs']]}
+    return out
+
+
 if __name__ == '__main__':
     protocol = json.load(open(sys.argv[1]))
     rows = json.load(open(sys.argv[2]))['rows']
-    json.dump(analyze(protocol, rows), sys.stdout, indent=1)
+    if protocol.get('basedOn'):  # P19: analysis.py ABLATION_PROTOCOL ABLATION_ROWS BASE_PROTOCOL BASE_ROWS
+        base = json.load(open(sys.argv[3]))
+        family = {c['caseId']: c['family'] for c in base['cases']}
+        b = base['inference']['bootstrap']
+        json.dump({'schema': 'lifeline.ablation-analysis.v1', 'protocolId': protocol['protocolId'], 'contrasts': ablation_contrasts(rows, json.load(open(sys.argv[4]))['rows'], family, b['reps'], b['seed']),
+                   'accounting': accounting(rows, [c['caseId'] for c in protocol['cases']], sorted(protocol['variants']))}, sys.stdout, indent=1)
+    else:
+        json.dump(analyze(protocol, rows), sys.stdout, indent=1)

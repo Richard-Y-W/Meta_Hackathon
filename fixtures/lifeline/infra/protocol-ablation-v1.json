@@ -1,0 +1,83 @@
+{
+ "schemaVersion": "lifeline.research-protocol.v1",
+ "protocolId": "ablation-v1",
+ "status": "frozen",
+ "purpose": "P19 attribution: which mechanism caused the service differences observed in research-v1 (P18): coordination, forecast use, the Meta model content, or the latency of asking it.",
+ "basedOn": {
+  "protocolId": "research-v1",
+  "path": "fixtures/lifeline/infra/protocol-research-v1.json",
+  "suiteSha256": "0069cd54f78729d25fa935405b02bf8514aafdd81ef27d68c0e0d9b54c88a6df"
+ },
+ "population": {
+  "rule": "research-v1 groups where any P18 controller had a nonzero weighted service deficit (the groups with a difference to explain). Chosen from P18 outcomes of all controllers, before any ablation outcome.",
+  "groups": 8
+ },
+ "matchedDelayMs": 22435,
+ "matchedDelayBasis": "median duration of the 16 successful P18 Meta calls (15.1-27.4 s)",
+ "variants": {
+  "hybrid": "model off: rules in parallel with the rolling-horizon planner (rerun in this batch; also measures run-to-run variation against P18)",
+  "independent": "no coupling: independent domain rules (rerun in this batch)",
+  "hybrid-no-forecast": "hybrid with the advisory withheld: isolates forecast use (the B1 mechanism)",
+  "meta-narrator": "live model called by the same gate, answer not used for planning: interface/latency without content",
+  "meta-latency-matched": "same gate and planner as meta-complete; the call is a wait of the measured median provider duration and returns no content: latency alone",
+  "meta-fixed-cadence": "live model at every decision up to the call budget instead of the opportunity-bounded gate"
+ },
+ "notApplicable": {
+  "no-active-probe": "the town catalog has no probe action; the probe-only template has no steps",
+  "fixed-model / no-memory": "the model store is written but never read by plan ranking: identical to meta-complete by construction",
+  "equal-computation conventional": "the rolling planner already evaluates every template (10 per decision, budget 20)",
+  "adaptive-estimation baseline": "the rolling planner plans on forks of the admitted estimated state; no separate parameter-identification baseline exists (limitation)"
+ },
+ "contrasts": {
+  "latency": "meta-latency-matched minus hybrid (same batch)",
+  "modelContent": "research-v1 meta-complete minus meta-latency-matched (cross-batch; read with the hybrid run-to-run variation)",
+  "narration": "meta-narrator minus meta-latency-matched",
+  "forecast": "hybrid minus hybrid-no-forecast",
+  "coordination": "hybrid minus independent",
+  "cadence": "meta-fixed-cadence minus research-v1 meta-complete (cross-batch)",
+  "runToRun": "hybrid (this batch) minus research-v1 hybrid"
+ },
+ "inference": "paired S differences per group with the research-v1 family-cluster bootstrap; 8 groups: descriptive attribution, not a new claim test",
+ "order": {
+  "seed": 20261105,
+  "rule": "variant order randomized within each group"
+ },
+ "budget": {
+  "metaCallsMax": 96,
+  "metaOutputTokensMax": 576000,
+  "wallHoursEstimate": 2.6
+ },
+ "invalidRun": "Only an evaluator/worker crash with retained evidence is infrastructure-invalid; the whole group is rerun once for all controllers and the original attempts are kept. Provider timeouts, invalid model output, refused actions and unrecovered service are method outcomes.",
+ "stopRule": "fixed batch of all groups; no early stopping; if resources run out the study is marked incomplete and the partial batch reported",
+ "cases": [
+  {
+   "caseId": "rv1-02-B-developing-threat"
+  },
+  {
+   "caseId": "rv1-03-B-abrupt"
+  },
+  {
+   "caseId": "rv1-04-B-compound"
+  },
+  {
+   "caseId": "rv1-05-B-delayed-dependency"
+  },
+  {
+   "caseId": "rv1-06-B-partial-observation"
+  },
+  {
+   "caseId": "rv1-08-B-impossible-recovery"
+  },
+  {
+   "caseId": "rv1-11-C-delayed-dependency"
+  },
+  {
+   "caseId": "rv1-15-C-common-cause"
+  }
+ ],
+ "freeze": {
+  "frozenAtUnixMs": 1793741624547,
+  "frozenAtCommit": "55a3ccf9313836ff31a3d8c9645e4647cdb1c7d3",
+  "suiteSha256": "af90b540abb3f0959d2dde0bb20d716939730b05605cdb7679c7d8171cc147de"
+ }
+}

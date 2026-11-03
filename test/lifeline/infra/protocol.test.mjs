@@ -94,3 +94,12 @@ test('the frozen suite: no overlap, no duplicates, commitments match, suite hash
     }
   }
 });
+
+const ABLATION = join(ROOT, 'fixtures/lifeline/infra/protocol-ablation-v1.json');
+test('the frozen ablation protocol is immutable, bound to research-v1 and drawn from its groups', { skip: existsSync(ABLATION) ? false : 'not frozen' }, () => {
+  const a = JSON.parse(readFileSync(ABLATION, 'utf8')), base = JSON.parse(readFileSync(PUBLIC, 'utf8'));
+  assert.equal(suiteHash(a), a.freeze.suiteSha256);
+  assert.equal(a.basedOn.suiteSha256, base.freeze.suiteSha256);
+  for (const c of a.cases) assert.ok(base.cases.some(b => b.caseId === c.caseId), c.caseId);
+  assert.ok(a.matchedDelayMs > 0 && Object.keys(a.variants).includes('meta-latency-matched'));
+});

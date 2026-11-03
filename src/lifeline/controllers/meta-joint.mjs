@@ -172,7 +172,7 @@ export function buildPrompt({ nowUs, obs, state, advisory, candidates, deadline,
 // The model-assisted planning layer. Modes: 'off' (the conventional rolling optimizer), 'narrator' (the
 // model is called, its answer is logged and has no effect), 'investigator' (validated assumptions enter
 // the ranking scenarios), 'complete' (also its plan enters the candidate pool).
-export function metaPlanner(policy, { mode, callModel, providerCapS = 18, actuationUs = 600 * S, marginUs = 300 * S, maxCalls = Infinity }) {
+export function metaPlanner(policy, { mode, callModel, providerCapS = 18, actuationUs = 600 * S, marginUs = 300 * S, maxCalls = Infinity, cadence = 'opportunity' }) {
   let spent = 0;
   const budget = { remaining: () => maxCalls - spent, spend: () => { spent++; } };
   const store = createModelStore();
@@ -194,9 +194,12 @@ export function metaPlanner(policy, { mode, callModel, providerCapS = 18, actuat
         const deadline = investigationDeadline({ nowUs, firstLossUs: retain.firstEssentialLossUs, actuationUs, marginUs, acceleration: obs.clock.acceleration, providerCapS });
         record = { atUs: nowUs, deadline, mode };
         calls.push(record);
-        if ((state.worldRevision === 0 && !advisory) || retain.firstEssentialLossUs === null) record.skipped = 'no_incident_or_predicted_loss';
+        // P19 ablation: a fixed cadence calls at every decision (up to the call budget) with the provider cap,
+        // instead of only when an incident predicts loss and the remaining opportunity allows a call.
+        if (cadence === 'fixed') { deadline.wallS = providerCapS; deadline.basis = 'fixed cadence: provider cap'; }
+        if (cadence !== 'fixed' && ((state.worldRevision === 0 && !advisory) || retain.firstEssentialLossUs === null)) record.skipped = 'no_incident_or_predicted_loss';
         else if (budget.remaining() <= 0) record.skipped = 'call_budget_exhausted';
-        else if (deadline.wallS < 3) record.skipped = 'no_opportunity';
+        else if (cadence !== 'fixed' && deadline.wallS < 3) record.skipped = 'no_opportunity';
         else {
           const prompt = buildPrompt({ nowUs, obs, state, advisory, candidates, deadline, receipts: (await town.receipts(12)).receipts });
           budget.spend();
