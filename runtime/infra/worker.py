@@ -68,11 +68,14 @@ def handlers():
 
     return {
         'hello': lambda a: {'domainId': 'town', 'protocol': 1},
+        'receipts': lambda a: {'receipts': [{'atUs': c['atUs'], 'domain': c['domain'], 'action': c['action'], 'status': c['status'], 'reason': c.get('reason')}
+                                            for c in town().state['commands'][-int(a.get('last', 12)):]]},  # this system's own command receipts
         'capabilities': lambda a: {'commands': list(CAPABILITIES), 'switches': sorted(town().power.state['switches']), 'pumps': list(town().water.net.pumps),
                                    'links': list(town().water.net.links), 'resources': sorted(town().state['resources'])},
         'admitted_model': admitted_model, 'preview': preview,
         'state': lambda a: {'nowUs': town().state['nowUs'], 'stationMode': town().state['stationMode'], 'resources': town().state['resources'],
-                            'revisions': {'power': town().power.revision, 'water': town().water.revision}, 'worldRevision': town().world_revision()},
+                            'revisions': {'power': town().power.revision, 'water': town().water.revision}, 'worldRevision': town().world_revision(),
+                            'closedLinks': sorted(l for l in town().water.net.links if not town().water.ledger_tail()['links'][l]['open'])},
         'initialize': initialize,
         'advance': lambda a: town().advance(a['toUs']),
         'observe': lambda a: town().observe(),

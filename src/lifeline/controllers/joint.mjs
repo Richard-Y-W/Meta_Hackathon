@@ -12,7 +12,7 @@ import { spawnTownWorker } from '../domains/town.mjs';
 const S = 1_000_000;
 const RES = { 'gen-portable': {} };
 export const CATALOG = {
-  switches: ['sw-S1', 'sw-S2', 'sw-S3'], pumps: ['PU1', 'PU2'], links: ['PF', 'PZ'], resources: ['gen-portable'], generators: [{ id: 'gen-portable', site: 'pump-station', setupUs: 600 * S }],
+  switches: ['sw-S1', 'sw-S2', 'sw-S3'], pumps: ['PU1', 'PU2'], links: ['PF', 'PZ'], sheddableLinks: ['PZ'], resources: ['gen-portable'], generators: [{ id: 'gen-portable', site: 'pump-station', setupUs: 600 * S }],
   stationModes: ['auto', 'paused'], capabilities: ['set_switch', 'allocate_generator', 'release_generator', 'set_station_mode', 'set_pump', 'set_link'],
 };
 
@@ -85,7 +85,7 @@ export function rolling(policy, { oracleFaults = null } = {}) {
         candidates: templates({ nowUs, catalog: CATALOG, state }),
         validate: p => validateTimedPlan(p, { nowUs, gridUs: policy.gridUs, resources: RES, allocated }),
         evaluate: p => evaluatePlan(p, { preview: (pl, a) => town.preview(pl, modelId, a), horizonUs: policy.durationUs - nowUs, scenarios }),
-        budget: { maxCandidates: 12, wallMs: 600_000 },
+        budget: { maxCandidates: 20, wallMs: 600_000 },
       });
       return { ...r.best.plan, search: { evaluated: r.evaluated, overrun: r.overrun, elapsedMs: r.elapsedMs }, replaceFuture: true };
     },
@@ -139,7 +139,8 @@ export async function runTownEpisode({ root, policy, c, controller, advisory = n
         const started = wallClock();
         const plan = await L.ctrl.decide({ town, nowUs, obs: await town.observe(), advisory: visible });
         const wallSeconds = (wallClock() - started) / 1000;
-        const chargedUs = Math.ceil(wallSeconds * clock.acceleration * S / policy.gridUs) * policy.gridUs;
+        // The oracle is a ceiling: perfect information and instant decisions (no latency charged).
+        const chargedUs = L.ctrl.oracle ? 0 : Math.ceil(wallSeconds * clock.acceleration * S / policy.gridUs) * policy.gridUs;
         const availableUs = nowUs + chargedUs;
         L.busyUntil = availableUs;
         if (plan.redecideAtUs !== undefined) L.nextDecision = Math.min(L.nextDecision, Math.max(plan.redecideAtUs, availableUs));
@@ -152,6 +153,7 @@ export async function runTownEpisode({ root, policy, c, controller, advisory = n
     const state = await town.state();
     return { caseId: c.caseId, controller: controller.name, label: controller.label, oracle: Boolean(controller.oracle),
       waterEssentialUnmetM3: truth.water.essentialUnmetM3, powerEssentialUnservedJ: truth.power.essentialUnservedJ,
+      waterNonessentialUnmetM3: Object.entries(truth.water.byNode ?? {}).filter(([n]) => !['JH', 'JF'].includes(n)).reduce((a, [, v]) => a + (v.deficitM3 ?? 0), 0),
       fuelUsedJ: 120e6 - state.resources['gen-portable'].fuelJ, commands: log.filter(x => x.status), decisions: log.filter(x => x.decision),
       chargedDecisionUs: log.filter(x => x.decision).reduce((x, y) => x + y.chargedUs, 0), clock };
   } finally { await town.close(); }

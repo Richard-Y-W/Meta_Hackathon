@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P13 are qualified (Nov 1–2); P14–P16 are planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P14 are qualified (Nov 1–2); P15–P16 are planned.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -78,16 +78,18 @@ self.assertTrue(local_protection_remained_enabled)
 
 **Files:** Create `src/lifeline/controllers/meta-joint.mjs`, `src/lifeline/kernel/model-store.mjs`, `test/lifeline/infra/meta-joint.test.mjs`, `model-store.test.mjs`, `fixtures/lifeline/infra/meta-prompt-v1.txt`. Reuse provider transport and P01 time budgets.
 
-- [ ] RED: invalid evidence IDs, unsupported actions, invented units, hidden-state fields and expired responses cannot reach execution.
-- [ ] GREEN: request competing explanations, a discriminating test or observation, candidate plans, predicted service effects and explicit falsifiers. Feed only the admitted evidence packet and capability catalog.
-- [ ] Maintain structured parameter/dependency hypotheses with evidence, versioning, contradiction checks and expiry. Read an unknown value as unknown.
-- [ ] Bound investigation by the remaining opportunity for an effective intervention: conservative loss time minus current time, actuation duration and uncertainty margin. Test an early useful probe, a late correct diagnosis and a probe whose cost exceeds its decision benefit. Log the deadline calculation and re-evaluate it when state changes.
-- [ ] Evaluate Meta and conventional candidates through the same planner/guard; preserve conventional control while the model works.
-- [ ] Test a correct but late diagnosis, confidently wrong explanation, contradictory new evidence, missing sensor, two overlapping incidents and provider interruption.
-- [ ] Retain at least one live Meta decision that changes a probe or admitted action. An explanation generated after a predetermined action does not qualify participation.
-- [ ] Compare model-off, model-as-narrator, model-as-investigator and complete Meta control on development cases; use these to debug contribution, not to select favorable held-out results.
+- [x] RED: invalid evidence IDs, unsupported actions, invented units, hidden-state fields and expired responses cannot reach execution.
+- [x] GREEN: request competing explanations, a discriminating test or observation, candidate plans, predicted service effects and explicit falsifiers. Feed only the admitted evidence packet and capability catalog.
+- [x] Maintain structured parameter/dependency hypotheses with evidence, versioning, contradiction checks and expiry. Read an unknown value as unknown.
+- [x] Bound investigation by the remaining opportunity for an effective intervention: conservative loss time minus current time, actuation duration and uncertainty margin. Test an early useful probe, a late correct diagnosis and a probe whose cost exceeds its decision benefit. Log the deadline calculation and re-evaluate it when state changes.
+- [x] Evaluate Meta and conventional candidates through the same planner/guard; preserve conventional control while the model works.
+- [x] Test a correct but late diagnosis, confidently wrong explanation, contradictory new evidence, missing sensor, two overlapping incidents and provider interruption.
+- [x] Retain at least one live Meta decision that changes a probe or admitted action. An explanation generated after a predetermined action does not qualify participation.
+- [x] Compare model-off, model-as-narrator, model-as-investigator and complete Meta control on development cases; use these to debug contribution, not to select favorable held-out results.
 
 **Run:** `node --test test/lifeline/infra/meta-joint.test.mjs test/lifeline/infra/model-store.test.mjs`.
+
+**State (Nov 2):** `qualified` in [P14 runs 0–5](../../trials/lifeline-infra-p14-run-0.md): one live model decision changed an admitted action (run 4); against comparator revision 2 the model added latency, not value.
 
 **Gate:** Live evidence ties model output to a real decision and measured consequence; added performance remains a separate empirical question.
 

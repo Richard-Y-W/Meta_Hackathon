@@ -50,7 +50,7 @@ test('RED: individually feasible steps that are jointly infeasible are refused',
 test('bounded search returns the best admitted plan on overrun, or retains policy', async () => {
   let t = 0;
   const clock = () => t;
-  const evaluate = async plan => { t += 100; return { plan, key: [plan.score, 0, 0, 0, 0, 0], runs: [] }; };
+  const evaluate = async plan => { t += 100; return { plan, key: [plan.score, 0, 0, 0, 0, 0, 0], runs: [] }; };
   const candidates = [RETAIN, ...[5, 1, 3, 0.5].map((score, i) => ({ planId: `p${i}`, score, steps: [] }))].map((p, i) => ({ ...p, score: p.score ?? 9 }));
   const r = await searchPlans({ candidates, validate: () => ({ ok: true }), evaluate, budget: { maxCandidates: 10, wallMs: 250 }, clock });
   assert.equal(r.overrun, true);
@@ -89,8 +89,8 @@ test('cross-domain tradeoff: with high storage the planner uses storage to prese
   const byId = Object.fromEntries(r.ranking.map(x => [x.plan.planId, x]));
   assert.match(r.best.plan.planId, /^generator-pause/);
   assert.equal(r.best.worst.outcome.waterEssentialUnmetM3, 0);
-  assert.deepEqual(r.best.key.slice(0, 4), byId.generator.key.slice(0, 4)); // equal in the worst (late-restoration) scenario
-  assert.ok(r.best.key[4] < byId.generator.key[4], 'less generator fuel on average over the declared restoration scenarios');
+  assert.deepEqual(r.best.key.slice(0, 5), byId.generator.key.slice(0, 5)); // equal in the worst (late-restoration) scenario
+  assert.ok(r.best.key[5] < byId.generator.key[5], 'less generator fuel on average over the declared restoration scenarios');
   assert.ok(byId['retain-policy'].key[0] > 0, 'doing nothing loses essential water');
 });
 
@@ -122,4 +122,14 @@ test('a second fault between actions expires the remainder; state is read and th
   const retain = r.replanned.ranking.find(x => x.plan.planId === 'retain-policy');
   assert.ok(r.replanned.best.key[0] < retain.key[0]);
   assert.ok(!r.replanned.ranking.some(x => x.plan.steps.some(s => s.action.type === 'allocate_generator')), 'the allocated generator is not allocated again');
+});
+
+test('the scenario-subset key equals the ranking key on all scenarios and drops an added scenario exactly (P14 run 5 regression)', async () => {
+  const { scenarioKey } = await import('../../../src/lifeline/kernel/planner.mjs');
+  const o = (water, nonessential, fuel) => ({ waterEssentialUnmetM3: water, powerEssentialUnservedJ: 0, waterNonessentialUnmetM3: nonessential, constraintSeconds: 0, fuelUsedJ: { g: fuel } });
+  const plan = { steps: [{ cost: 1 }] };
+  const runs = [{ scenario: 'a', outcome: o(0, 5, 10) }, { scenario: 'b', outcome: o(0, 9, 20) }, { scenario: 'model', outcome: o(3, 0, 0) }];
+  const all = await evaluatePlan(plan, { preview: async (_, assume) => runs.find(r => r.scenario === assume)?.outcome, horizonUs: 1, scenarios: runs.map(r => ({ label: r.scenario, assume: r.scenario })) });
+  assert.deepEqual(scenarioKey(plan, runs).key, all.key);
+  assert.deepEqual(scenarioKey(plan, runs, ['a', 'b']).key, [0, 0, 9, 0, 20, 15, 1]); // non-essential term included
 });

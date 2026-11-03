@@ -492,7 +492,10 @@ class Town:
         trace = [r for r in fork.state['trace'] if r['atUs'] >= start]
         return {'kind': 'preview', 'horizonUs': plan['horizonUs'], 'receipts': receipts,
                 'waterEssentialUnmetM3': water['essentialUnmetM3'], 'powerEssentialUnservedJ': power['essentialUnservedJ'],
+                'waterNonessentialUnmetM3': sum(v['deficitM3'] or 0.0 for n, v in water['byNode'].items() if n not in fork.water.essential),
                 'minTankLevelM': min(r['tankLevelM'] for r in trace), 'endTankLevelM': trace[-1]['tankLevelM'],
+                'firstEssentialLossUs': next((r['atUs'] for r in trace if (r['hospitalWaterFraction'] is not None and r['hospitalWaterFraction'] < 0.99)
+                                              or (r['essentialPowerFraction'] is not None and r['essentialPowerFraction'] < 0.99)), None),
                 'fuelUsedJ': {rid: model_fuel - fork.state['resources'][rid]['fuelJ'] for rid, model_fuel in ((rid, checkpoints.unseal(model_record)['town']['resources'][rid]['fuelJ']) for rid in fork.state['resources'])},
                 'events': [e for e in fork.state['events'] if e['atUs'] >= start and e['type'] in ('generator_overload', 'generator_fuel_exhausted', 'supply_lost', 'supply_restored', 'router_battery_exhausted', 'coupling_unresolved', 'coupling_not_converged')],
                 'constraintSeconds': fork.power.service_summary(from_us=start)['constraintEventSeconds']}

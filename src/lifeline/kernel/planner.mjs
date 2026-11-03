@@ -8,8 +8,10 @@ import { validateTimedPlan } from './plans.mjs';
 const S = 1_000_000;
 export const RETAIN = { planId: 'retain-policy', steps: [], template: 'retain' };
 
+// Service policy (revision 2, P14): essential water, essential power, non-essential water, constraint time,
+// reserve (fuel), cost. Revision 1 (P12-P13) had no non-essential term, so shedding a zone was free.
 export function rankKey(outcome, plan) {
-  return [round(outcome.waterEssentialUnmetM3, 1e-3), round(outcome.powerEssentialUnservedJ, 1e3), outcome.constraintSeconds ?? 0,
+  return [round(outcome.waterEssentialUnmetM3, 1e-3), round(outcome.powerEssentialUnservedJ, 1e3), round(outcome.waterNonessentialUnmetM3 ?? 0, 1e-3), outcome.constraintSeconds ?? 0,
     Object.values(outcome.fuelUsedJ ?? {}).reduce((a, b) => a + b, 0), (plan.steps ?? []).reduce((a, s) => a + (s.cost ?? 0), 0)];
 }
 const round = (v, q) => (v === null || v === undefined ? Infinity : Math.round(v / q) * q);
@@ -27,6 +29,12 @@ export function templates({ nowUs, catalog, state = {}, pauses = [3600 * S, 7200
   for (const sw of catalog.switches ?? []) {
     out.push({ planId: `close-${sw}`, template: 'switch', steps: [{ id: 'close', domain: 'power', action: { type: 'set_switch', params: { switchId: sw, closed: true } }, atUs: nowUs, cost: 1 }] });
   }
+  // Conserve storage for essential consumers by shedding a non-essential zone (the residential valve), now or
+  // in an hour; a closed zone gets a restore candidate. Added in P14 after a model proposal exposed the gap.
+  for (const zone of catalog.sheddableLinks ?? []) {
+    if (state.closedLinks?.includes(zone)) out.push({ planId: `restore-${zone}`, template: 'restore_zone', steps: [{ id: 'restore', domain: 'water', action: { type: 'set_link', params: { linkId: zone, open: true } }, atUs: nowUs, cost: 0.5 }] });
+    else for (const d of [0, 3600 * S]) out.push({ planId: `shed-${zone}${d ? `-in-${d / S}s` : ''}`, template: 'shed_zone', steps: [{ id: 'shed', domain: 'water', action: { type: 'set_link', params: { linkId: zone, open: false } }, atUs: nowUs + d, cost: 0.5 }] });
+  }
   if (state.stationMode === 'paused') {
     out.push({ planId: 'resume-station', template: 'restore_setting', steps: [resume(nowUs)] });
     for (const d of [1800 * S, 3600 * S]) out.push({ planId: `resume-station-in-${d / S}s`, template: 'restore_setting', steps: [resume(nowUs + d)] });
@@ -42,15 +50,22 @@ export function templates({ nowUs, catalog, state = {}, pauses = [3600 * S, 7200
 }
 
 // Simulate a plan under every scenario; its ranking outcome is the worst scenario by the policy order.
+// Robust order: the worst scenario decides service and reserve; among plans equal there, the mean reserve
+// use over the scenarios breaks the tie before action cost. `labels` restricts the scenarios (used to ask
+// what the ranking would have been without a scenario the model added).
+export function scenarioKey(plan, runs, labels = null) {
+  const use = labels ? runs.filter(r => labels.includes(r.scenario)) : runs;
+  const worst = use.reduce((w, r) => (w === null || compare(rankKey(r.outcome, plan), rankKey(w.outcome, plan)) > 0 ? r : w), null);
+  const meanFuel = use.reduce((a, r) => a + Object.values(r.outcome.fuelUsedJ ?? {}).reduce((x, y) => x + y, 0), 0) / use.length;
+  const k = rankKey(worst.outcome, plan);
+  return { worst, key: [k[0], k[1], k[2], k[3], k[4], meanFuel, k[5]] };
+}
+
 export async function evaluatePlan(plan, { preview, horizonUs, scenarios }) {
   const runs = [];
   for (const s of scenarios) runs.push({ scenario: s.label, outcome: await preview({ steps: plan.steps, horizonUs }, s.assume ?? []) });
-  const worst = runs.reduce((w, r) => (w === null || compare(rankKey(r.outcome, plan), rankKey(w.outcome, plan)) > 0 ? r : w), null);
-  // Robust order: the worst scenario decides service and reserve; among plans equal there, the mean reserve
-  // use over the declared scenarios breaks the tie before action cost.
-  const meanFuel = runs.reduce((a, r) => a + Object.values(r.outcome.fuelUsedJ ?? {}).reduce((x, y) => x + y, 0), 0) / runs.length;
-  const k = rankKey(worst.outcome, plan);
-  return { plan, runs, worst, key: [k[0], k[1], k[2], k[3], meanFuel, k[4]] };
+  const { worst, key } = scenarioKey(plan, runs);
+  return { plan, runs, worst, key };
 }
 
 // Steps that are each feasible alone but fail together (e.g. two loads that overload one generator).

@@ -1,6 +1,6 @@
 # LIFELINE Infra P13 Runs 0–7 — Strong coordinated conventional comparator
 
-**Date:** November 1–2, 2026. **Task:** P13. **State:** qualified. The locked comparator is **`hybrid`**: the coordinated rules running in parallel with the rolling-horizon joint optimizer. Development cases only.
+**Date:** November 1–2, 2026. **Task:** P13. **State:** qualified. The locked comparator is **`hybrid`** (revision 2 since P14): the coordinated rules running in parallel with the rolling-horizon joint optimizer. Development cases only.
 
 | Item | Value |
 | --- | --- |
@@ -60,6 +60,26 @@ Decision latency: rules ~0 s (charged one 60 s step); the optimizer 7.6–12.3 s
 - The comparator's catalog equals everything the town accepts: commands, switches, pumps, links and resources.
 - Its first decision on high storage closes the same tie (S2) as exhaustive search over 48 schedules (no tie or one of three ties × dispatch now / in 1 h / never × two 1 h station-mode slots), which serves all essential water.
 - The Python perfect-information search covers generator × station mode only, not ties. It confirms that more capabilities are never worse and that the no-fault optimum takes no action, but it is not the full ceiling; the Node oracle is.
+
+## Comparator revision 2 (P14, runs 8–9)
+
+P14 run 4 showed the comparator could not shed a non-essential zone: no template used the residential valve, and the service policy ignored non-essential water. Revision 2 adds:
+
+- non-essential water to the ranking, after essential power and before fuel;
+- shed-now, shed-in-1h and restore templates for the residential valve PZ;
+- a 20-candidate cap.
+
+It also makes the oracle latency-free (a ceiling: perfect information and instant decisions). Run 8 was aborted by a worker request timeout (the client limit is now 10 min); run 9 is the revision-2 reference:
+
+| Case | hybrid rev 2: essential water m3 / essential power MJ | oracle |
+| --- | --- | --- |
+| no fault | 0 / 0 | 0 / 0 |
+| high storage | 0 / 273 | 0 / 0 |
+| lower storage | 0 / 195 | 0 / 0 |
+| second fault | **0** / 9,612 (rev 1: 5.40 / 9,729) | 0 / 0 |
+| all ties available | 0 / 117 | 0 / 0 |
+
+In the second-fault case revision 2 sheds the residential zone late and restores it, so the comparator now serves all essential water there. Revision 2 is the comparator for P14 onward.
 
 ## Limits
 
