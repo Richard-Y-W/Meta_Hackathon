@@ -127,6 +127,10 @@ export function investigationDeadline({ nowUs, firstLossUs, actuationUs, marginU
 
 // Declared asset information (what an operator's single-line diagram and service register say): admissible
 // knowledge, the same the conventional templates were designed with. No fault or evaluator data.
+export function assetRegister(layout = { pumpStationBus: 'bus-7', backupPumpBus: 'bus-14' }) {
+  const n = b => b.replace('bus-', 'bus ');
+  return ASSET_REGISTER.map(([id, text]) => [id, text.replace('supplied from bus 7 or', `supplied from ${n(layout.pumpStationBus)} or`).replace('supplied from bus 14', `supplied from ${n(layout.backupPumpBus)}`)]);
+}
 export const ASSET_REGISTER = [
   ['asset:JH', 'water consumer JH is the hospital: essential'], ['asset:JF', 'water consumer JF is the fire station: essential'],
   ['asset:JR', 'water consumer JR is a residential zone: non-essential'], ['asset:PZ', 'link PZ is the valve feeding the residential zone JR'],
@@ -139,7 +143,7 @@ export const ASSET_REGISTER = [
 
 function packet({ obs, state, advisory, receipts = [] }) {
   const lines = [], ids = new Set(), sensors = new Set();
-  for (const [id, text] of ASSET_REGISTER) { ids.add(id); lines.push(`${id}: ${text}`); }
+  for (const [id, text] of assetRegister(state.layout)) { ids.add(id); lines.push(`${id}: ${text}`); }
   for (const r of obs.readings) {
     if (r.value === null) continue;
     const id = `obs:${r.sensorId}`;

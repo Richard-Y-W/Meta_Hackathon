@@ -17,7 +17,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from coupling import CAPABILITIES, Town, load_town  # noqa: E402
+from coupling import CAPABILITIES, LAYOUT_DEFAULT, Town, apply_layout, load_town  # noqa: E402
 from protocol import Rejected, serve  # noqa: E402
 
 S = 1000000
@@ -37,6 +37,7 @@ def handlers():
         faults = args.get('faults') if 'faults' in args else cases[args['caseId']]['faults']
         if 'tankInitialLevels' in args:  # declared case parameter: starting storage
             bundle['water']['tankInitialLevels'] = args['tankInitialLevels']
+        apply_layout(bundle, args.get('layout'))  # declared case parameter: dependency layout
         session['bundle'] = bundle
         session['town'] = Town(copy.deepcopy(bundle), faults=faults, disabled_edges=args.get('disabledEdges', []))
         return {'atUs': 0, 'townId': bundle['town']['townId'], 'clock': session['town'].clock.manifest()}
@@ -101,6 +102,7 @@ def handlers():
         'admitted_model': admitted_model, 'preview': preview,
         'state': lambda a: {'nowUs': town().state['nowUs'], 'stationMode': town().state['stationMode'], 'resources': town().state['resources'],
                             'revisions': {'power': town().power.revision, 'water': town().water.revision}, 'worldRevision': town().world_revision(),
+                            'layout': town().bundle.get('layout', LAYOUT_DEFAULT),
                             'closedLinks': sorted(l for l in town().water.net.links if not town().water.ledger_tail()['links'][l]['open'])},
         'initialize': initialize,
         'advance': lambda a: town().advance(a['toUs']),

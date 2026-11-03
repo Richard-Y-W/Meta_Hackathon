@@ -16,7 +16,7 @@ except ImportError:
     HAVE = False
 
 if HAVE:
-    from coupling import Town, load_town
+    from coupling import Town, apply_layout, load_town
 
 S = 1000000
 TRIP = {'domain': 'power', 'faultId': 'trip-3-8', 'atUs': 1800 * S, 'type': 'line_trip', 'assetId': 'line-3-8'}
@@ -71,6 +71,17 @@ class Coupling(unittest.TestCase):
         free = self.town([TRIP, PU2_OUT], disabled_edges=['power-to-pump-PU1'])
         free.advance(4 * 3600 * S)
         self.assertEqual(free.truth()['water']['essentialUnmetM3'], 0)
+
+    def test_a_held_out_layout_moves_the_dependencies_in_the_physics(self):
+        # P17: line-8-9 de-energizes buses 9-11. Layout B puts the pump station on bus 10, layout A on bus 7.
+        trip = dict(TRIP, faultId='trip-8-9', assetId='line-8-9')
+        moved = Town(apply_layout(copy.deepcopy(self.bundle), {'pumpStationBus': 'bus-10', 'backupPumpBus': 'bus-13', 'substationRouterBus': 'bus-13'}), faults=[trip, PU2_OUT])
+        moved.advance(2400 * S)
+        self.assertFalse(moved.state['powered']['PU1'])
+        self.assertEqual(moved.power.state['coupledLoads']['load-pump-1']['pW'], 0)
+        base = self.town([trip, PU2_OUT])
+        base.advance(2400 * S)
+        self.assertTrue(base.state['powered']['PU1'])
 
     def test_battery_supported_comms_continue_until_reserve_exhaustion(self):
         t = self.town([TRIP])

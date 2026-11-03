@@ -26,7 +26,8 @@ export function independent(policy) {
     name: 'independent', label: 'independent domain control',
     async decide({ nowUs, obs }) {
       const steps = [];
-      const dead = ['power:v-bus-7', 'power:v-bus-9'].some(id => fresh(obs, id) === 0);
+      // Any monitored bus de-energized (layout-independent: the rule does not know which bus feeds what).
+      const dead = obs.readings.some(r => /^power:v-bus-/.test(r.sensorId) && fresh(obs, r.sensorId) === 0);
       deadSince = dead ? deadSince ?? nowUs : null;
       let redecideAtUs;
       if (dead && nowUs - deadSince >= policy.independent.tieDelayUs && tried < policy.independent.ties.length) {
@@ -57,11 +58,14 @@ export function priority(policy) {
       if (!shifted && allocating && advisory && level !== null) {
         const p = policy.priority;
         const enduranceUs = ((level - p.minLevelM) * p.tankAreaM2 / p.drawM3s) * S;
-        const latestEta = Math.max(...advisory.etaScenarios.map(s => s.assume[0].atUs));
+        // Restoration ETAs are the line_restore events of the advisory scenarios (a threat advisory's first
+        // event is the threat itself, not a restoration).
+        const etas = advisory.etaScenarios.flatMap(s => s.assume.filter(a => a.type === 'line_restore').map(a => a.atUs));
+        const latestEta = etas.length ? Math.max(...etas) : Infinity;
         // Shift only if storage alone outlasts the latest declared ETA with margin; resume at the first ETA.
-        if (nowUs + enduranceUs - p.enduranceMarginUs >= latestEta) {
+        if (etas.length && nowUs + enduranceUs - p.enduranceMarginUs >= latestEta) {
           shifted = true;
-          const resumeAt = Math.min(...advisory.etaScenarios.map(s => s.assume[0].atUs));
+          const resumeAt = Math.min(...etas);
           plan.steps.push(step('pause', 'water', { type: 'set_station_mode', params: { mode: 'paused' } }, nowUs, { order: 1 }));
           plan.steps.push(step('resume', 'water', { type: 'set_station_mode', params: { mode: 'auto' } }, resumeAt - (resumeAt % policy.gridUs)));
         }
@@ -109,7 +113,7 @@ export async function runTownEpisode({ root, policy, c, controller, advisory = n
   const town = makeTown();
   const log = [];
   try {
-    await town.initialize({ caseId: 't-no-fault', faults: c.faults, tankInitialLevels: c.tankInitialLevels });
+    await town.initialize({ caseId: 't-no-fault', faults: c.faults, tankInitialLevels: c.tankInitialLevels, ...(c.layout ? { layout: c.layout } : {}) });
     const clock = (await town.observe()).clock;
     const layers = (controller.layers ?? [controller]).map(ctrl => ({ ctrl, future: [], nextDecision: 0, busyUntil: 0 }));
     let world = (await town.state()).worldRevision;

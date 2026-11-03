@@ -45,6 +45,27 @@ def load_town(path=os.path.join(FIX, 'town/development.json')):
     return {'town': town, 'power': power, 'water': water, 'dependencies': deps}
 
 
+LAYOUT_DEFAULT = {'pumpStationBus': 'bus-7', 'backupPumpBus': 'bus-14', 'substationRouterBus': 'bus-14'}
+
+
+def apply_layout(bundle, layout):
+    """A dependency layout: which buses supply the pump station (PU1, its load and its router), the backup
+    pump PU2 and the substation router. Development cases use the default; held-out cases move them."""
+    layout = dict(LAYOUT_DEFAULT, **(layout or {}))
+    station, backup, sub = layout['pumpStationBus'], layout['backupPumpBus'], layout['substationRouterBus']
+    for e in bundle['dependencies']['edges']:
+        if e['id'] in ('power-to-pump-PU1', 'power-to-comms-rt-pump'):
+            e['source']['asset'] = station
+        elif e['id'] == 'power-to-pump-PU2':
+            e['source']['asset'] = backup
+        elif e['id'] == 'power-to-comms-rt-sub':
+            e['source']['asset'] = sub
+    for load in bundle['power']['extraLoads']:
+        load['bus'] = station if load['id'] == 'load-pump-1' else backup
+    bundle['layout'] = layout
+    return bundle
+
+
 class Town:
     def __init__(self, bundle, faults=(), disabled_edges=(), coupling_step_us=None, state=None, order='supply_first', admitted=False):
         self.bundle = bundle
