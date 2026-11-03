@@ -87,7 +87,9 @@ export function rolling(policy, { oracleFaults = null } = {}) {
         evaluate: p => evaluatePlan(p, { preview: (pl, a) => town.preview(pl, modelId, a), horizonUs: policy.durationUs - nowUs, scenarios }),
         budget: { maxCandidates: 20, wallMs: 600_000 },
       });
-      return { ...r.best.plan, search: { evaluated: r.evaluated, overrun: r.overrun, elapsedMs: r.elapsedMs }, replaceFuture: true };
+      const w = r.best.worst?.outcome;
+      return { ...r.best.plan, search: { evaluated: r.evaluated, overrun: r.overrun, elapsedMs: r.elapsedMs }, replaceFuture: true,
+        predicted: w ? { scenario: r.best.worst.scenario, waterEssentialUnmetM3: w.waterEssentialUnmetM3, powerEssentialUnservedJ: w.powerEssentialUnservedJ, horizonUs: policy.durationUs - nowUs } : null };
     },
   };
 }

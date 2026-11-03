@@ -66,8 +66,34 @@ def handlers():
             raise Rejected('unknown_model', str(args.get('modelId')))
         return town().preview(args['plan'], record, assume=args.get('assume', []))
 
+    JUDGE = {'line_trip': 'power', 'actuator_unavailable': 'water', 'router_fail': 'communications', 'sensor_freeze': None}
+
+    def inject(args):
+        """A judge fault, admitted for the next coupling step. The request and effect times are recorded."""
+        t = town()
+        fault = dict(args['fault'])
+        kind = fault.get('type')
+        if kind not in JUDGE:
+            raise Rejected('fault_not_admitted', str(kind))
+        domain = JUDGE[kind] or ('power' if fault.get('assetId', '') in [x['id'] for x in t.power.spec['sensors']] else 'water')
+        now = t.state['nowUs']
+        session['judge'] = session.get('judge', 0) + 1
+        record = {'faultId': 'judge-%d' % session['judge'], 'atUs': now + t.step_us, 'type': kind, 'assetId': fault.get('assetId')}
+        if domain == 'communications':
+            if record['assetId'] not in t.state['routers']:
+                raise Rejected('unknown_asset', str(record['assetId']))
+            t.state['commsFaults'] = sorted(t.state['commsFaults'] + [record], key=lambda f: (f['atUs'], f['faultId']))
+        else:
+            plant = t.power if domain == 'power' else t.water
+            plant._check_fault(record)
+            plant.state['faults'] = sorted(plant.state['faults'] + [record], key=lambda f: (f['atUs'], f['faultId']))
+        event = {'atUs': now, 'type': 'judge_fault', 'fault': record, 'domain': domain, 'requestedAtUs': now, 'effectAtUs': record['atUs']}
+        t.state['events'].append(event)
+        return event
+
     return {
         'hello': lambda a: {'domainId': 'town', 'protocol': 1},
+        'inject': inject,
         'receipts': lambda a: {'receipts': [{'atUs': c['atUs'], 'domain': c['domain'], 'action': c['action'], 'status': c['status'], 'reason': c.get('reason')}
                                             for c in town().state['commands'][-int(a.get('last', 12)):]]},  # this system's own command receipts
         'capabilities': lambda a: {'commands': list(CAPABILITIES), 'switches': sorted(town().power.state['switches']), 'pumps': list(town().water.net.pumps),

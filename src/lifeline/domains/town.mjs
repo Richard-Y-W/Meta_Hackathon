@@ -15,6 +15,8 @@ export function spawnTownWorker({ root, python = join(root, '.work/environments/
     observe: () => call('observe'),
     capabilities: () => call('capabilities'),
     receipts: (last = 12) => call('receipts', { last }),
+    inject: fault => call('inject', { fault }),
+    trace: () => call('trace'),
     state: () => call('state'),
     command: (domain, action, baseRevision) => call('command', { domain, action, baseRevision }),
     admittedModel: () => call('admitted_model'),

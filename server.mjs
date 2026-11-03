@@ -6,6 +6,7 @@ import { resolve } from 'node:path';
 import { SimulatedDevice, BridgeDevice } from './src/device.mjs';
 import { Session } from './src/session.mjs';
 import { createLifelineHandler } from './src/lifeline/http.mjs';
+import { createTownHandler } from './src/lifeline/infra-http.mjs';
 
 export async function createApp() {
   const kind = process.env.DEVICE_BRIDGE_URL ? 'hardware bridge' : 'simulation';
@@ -17,6 +18,7 @@ export async function createApp() {
   const files = {
     '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
     '/lifeline': ['lifeline.html', 'text/html'], '/lifeline.js': ['lifeline.js', 'text/javascript'], '/lifeline.css': ['lifeline.css', 'text/css'],
+    '/lifeline/town': ['lifeline-town.html', 'text/html'], '/lifeline-town.js': ['lifeline-town.js', 'text/javascript'], '/lifeline-town.css': ['lifeline-town.css', 'text/css'],
   };
   const repo = fileURLToPath(new URL('.', import.meta.url));
   const artifactsRoot = resolve(repo, process.env.LIFELINE_ARTIFACTS ?? 'artifacts/lifeline');
@@ -25,6 +27,8 @@ export async function createApp() {
     repo, artifactsRoot, liveRoot: resolve(repo, 'artifacts/lifeline/live'), credentialPresent: Boolean(process.env.MODEL_API_KEY),
     spawnRun: args => spawn(process.execPath, ['--env-file-if-exists=.env', resolve(repo, 'scripts/lifeline-run.mjs'), ...args], { cwd: repo, stdio: 'ignore' }),
   });
+  // Coupled-town view (P15): one live session on the town worker; the existing /lifeline demo is unchanged.
+  const town = createTownHandler({ repo });
   const server = http.createServer(async (req, res) => {
     res.setHeader('Cache-Control', 'no-store');
     res.setHeader('X-Content-Type-Options', 'nosniff');
@@ -35,6 +39,7 @@ export async function createApp() {
       const host = req.headers.host ?? '';
       if (!/^(localhost|127\.0\.0\.1)(:\d+)?$/.test(host)) return send(403, { error: 'Local access only' });
       if (await lifeline(req, res)) return;
+      if (await town(req, res)) return;
       if (req.method === 'GET' && files[path]) {
         const [file, type] = files[path];
         res.writeHead(200, { 'Content-Type': `${type}; charset=utf-8` });

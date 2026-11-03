@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LIFELINE town</title>
+  <link rel="stylesheet" href="/lifeline-town.css">
+</head>
+<body>
+  <header>
+    <h1>LIFELINE town</h1>
+    <p id="mode" class="badge">loading…</p>
+    <p class="badge" id="state" role="status" aria-live="polite">idle</p>
+  </header>
+  <section class="controls" aria-label="Run controls">
+    <label>Case <select id="case"></select></label>
+    <label>Controller <select id="controller"></select></label>
+    <button id="start" type="button">Start</button>
+    <button id="stop" type="button" disabled>Stop</button>
+    <a id="export" href="#" aria-disabled="true" class="disabled">Export evidence</a>
+    <span id="clock" class="muted"></span>
+  </section>
+  <section class="controls" aria-label="Judge faults">
+    <strong>Judge fault</strong>
+    <label>Type <select id="fault-type"></select></label>
+    <label>Asset <select id="fault-asset"></select></label>
+    <button id="inject" type="button" disabled>Inject</button>
+    <span id="fault-note" class="muted" aria-live="polite"></span>
+  </section>
+  <main>
+    <section aria-labelledby="h-services">
+      <h2 id="h-services">What is threatened: essential services and reserves</h2>
+      <p class="muted">Strips are independent measurements from the plants' service ledgers, not controller statements.</p>
+      <div id="services"></div>
+    </section>
+    <section aria-labelledby="h-assets">
+      <h2 id="h-assets">Assets and dependencies</h2>
+      <div id="assets"></div>
+    </section>
+    <section aria-labelledby="h-timeline">
+      <h2 id="h-timeline">Evidence, forecasts and actions</h2>
+      <p class="muted">Predicted effects come from the planner's worst declared scenario; observed effects are the measured strips.</p>
+      <ol id="timeline" reversed></ol>
+    </section>
+  </main>
+  <details id="inspect">
+    <summary>Inspection: backend details</summary>
+    <pre id="raw"></pre>
+  </details>
+  <script src="/lifeline-town.js" type="module"></script>
+</body>
+</html>

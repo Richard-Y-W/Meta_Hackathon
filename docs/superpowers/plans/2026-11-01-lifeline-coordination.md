@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P14 are qualified (Nov 1–2); P15–P16 are planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P15 are qualified (Nov 1–3); P16 is planned.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -97,15 +97,17 @@ self.assertTrue(local_protection_remained_enabled)
 
 **Files:** Create `public/lifeline-town.html`, `public/lifeline-town.js`, `public/lifeline-town.css`, `src/lifeline/infra-http.mjs`, `test/lifeline/infra/http.test.mjs`. Modify `server.mjs` to add the new route while preserving the existing `/lifeline` demo.
 
-- [ ] RED: stale run IDs, reconnects, a dead worker, partial action and operator stop must have accurate visible states.
-- [ ] Implement three linked views: critical service delivery/reserves; physical assets/dependencies; evidence/forecast/action timeline. Show predicted and observed effects separately.
-- [ ] Provide admitted judge faults for line/feeder loss, pump unavailability, link degradation and missing telemetry. Each command records request and actual effect time.
-- [ ] Show live/replay/modeled mode, time scale, provider state, baseline comparison, intervention cost, constraints and uncertainty.
-- [ ] Tie essential-service strips to independent measurements, not controller commentary. Export the run manifest, receipts, forecasts and score.
-- [ ] Exercise keyboard controls, readable contrast, narrow layouts, reconnection and evidence export in the browser. Capture actual states; cosmetic spacing does not need unit tests.
-- [ ] Keep simulator/backend details in an inspection panel. The main view answers what is threatened, what action is proposed, and what happened.
+- [x] RED: stale run IDs, reconnects, a dead worker, partial action and operator stop must have accurate visible states.
+- [x] Implement three linked views: critical service delivery/reserves; physical assets/dependencies; evidence/forecast/action timeline. Show predicted and observed effects separately.
+- [x] Provide admitted judge faults for line/feeder loss, pump unavailability, link degradation and missing telemetry. Each command records request and actual effect time.
+- [x] Show live/replay/modeled mode, time scale, provider state, baseline comparison, intervention cost, constraints and uncertainty.
+- [x] Tie essential-service strips to independent measurements, not controller commentary. Export the run manifest, receipts, forecasts and score.
+- [x] Exercise keyboard controls, readable contrast, narrow layouts, reconnection and evidence export in the browser. Capture actual states; cosmetic spacing does not need unit tests.
+- [x] Keep simulator/backend details in an inspection panel. The main view answers what is threatened, what action is proposed, and what happened.
 
 **Run:** `node --test test/lifeline/infra/http.test.mjs`; then browser verification against the qualified local town route.
+
+**State (Nov 3):** `qualified` in [P15 run 0](../../trials/lifeline-infra-p15-run-0.md): `/lifeline/town`, 13/13 browser checks.
 
 **Gate:** A viewer can distinguish measured preservation, predicted risk and unsupported state without reading source code.
 
