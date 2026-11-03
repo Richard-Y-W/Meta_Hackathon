@@ -81,7 +81,7 @@ export function hiddenTruthLeaks(text, privateCase, nowUs) {
 }
 
 export const commitment = privateCase => canonicalRecord(privateCase).sha256;
-export const suiteHash = protocol => canonicalRecord({ ...protocol, freeze: undefined }).sha256;
+export const suiteHash = ({ freeze, ...protocol }) => canonicalRecord(protocol).sha256;
 
 // Selection after outcomes: no outcome artifact may mention a held-out case before the freeze time.
 export function selectedAfterOutcomes(protocol, artifactsRoot) {

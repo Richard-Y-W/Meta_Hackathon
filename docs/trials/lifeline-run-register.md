@@ -32,7 +32,8 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 | P00–P05 foundation / Q1 | **Q1 met:** P00–P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [v2 run 0](lifeline-communications-v2-run-0.md), [P03](lifeline-infra-p03-run-0.md), [P04](lifeline-infra-p04-run-0.md), [P05](lifeline-infra-p05-run-0.md)) | — |
 | P06–P10 power and water / Q2 | **Q2 met:** P06–P10 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md), [P08](lifeline-infra-p08-run-0.md), [P09](lifeline-infra-p09-run-0.md), [P10](lifeline-infra-p10-run-0.md)); development baselines only, overload-timing forecaster uncalibrated | P11 coupled town |
 | P11–P16 coupled town / Q3 | **Q3 met:** P11–P16 qualified ([P11](lifeline-infra-p11-run-0.md)–[P15](lifeline-infra-p15-run-0.md), [town release](../releases/lifeline-town-release.md)); coordination removes essential water loss at a cost; Meta adds no value | — |
-| P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
+| P17 held-out suite | **Qualified:** [run 0](lifeline-infra-p17-run-0.md); research-v1 frozen (16 groups, layouts B/C, 10 families) before any outcome; leakage checks shown by mutation | P18 |
+| P17–P22 research / Q4 | In progress: P17 qualified | P18 frozen comparison, then mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |
 | P26–P30 operational progression / Q6–Q8 | Planned | Operator, lab and site-specific evidence |
 | P31 reproducible release / Q9 | Planned | Independent rebuild and claim audit |

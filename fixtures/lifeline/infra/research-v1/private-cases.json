@@ -1,0 +1,1075 @@
+{
+ "schemaVersion": "lifeline.research-private.v1",
+ "protocolId": "research-v1",
+ "note": "Evaluator-private: fault schedules and advisories. Controllers receive only admitted observations and advisories at their issue time.",
+ "cases": [
+  {
+   "caseId": "rv1-01-B-stable",
+   "family": "stable",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-1",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    }
+   ],
+   "advisory": null,
+   "tankInitialLevels": {
+    "T1": 1.42
+   }
+  },
+  {
+   "caseId": "rv1-02-B-developing-threat",
+   "family": "developing-threat",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-2",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-3",
+     "atUs": 3780000000,
+     "type": "line_trip",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-4",
+     "atUs": 12420000000,
+     "type": "line_restore",
+     "assetId": "line-8-9"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1080000000,
+    "source": "weather service and crew estimate",
+    "etaScenarios": [
+     {
+      "label": "threat-nominal-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 3780000000,
+        "type": "line_trip",
+        "assetId": "line-8-9"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 12420000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "threat-late-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 3780000000,
+        "type": "line_trip",
+        "assetId": "line-8-9"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 14220000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.89
+   }
+  },
+  {
+   "caseId": "rv1-03-B-abrupt",
+   "family": "abrupt",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-5",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-6",
+     "atUs": 1920000000,
+     "type": "line_trip",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-7",
+     "atUs": 12300000000,
+     "type": "line_restore",
+     "assetId": "line-8-9"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1980000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 12300000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 14100000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.46
+   }
+  },
+  {
+   "caseId": "rv1-04-B-compound",
+   "family": "compound",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-8",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-9",
+     "atUs": 2160000000,
+     "type": "line_trip",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-10",
+     "atUs": 10920000000,
+     "type": "line_restore",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-11",
+     "atUs": 3960000000,
+     "type": "line_trip",
+     "assetId": "line-2-3"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 2220000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 10920000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 12720000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 3.3
+   }
+  },
+  {
+   "caseId": "rv1-05-B-delayed-dependency",
+   "family": "delayed-dependency",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-12",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-13",
+     "atUs": 1500000000,
+     "type": "line_trip",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-14",
+     "atUs": 10260000000,
+     "type": "line_restore",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-15",
+     "atUs": 1500000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1560000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 10260000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 12060000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 1.71
+   }
+  },
+  {
+   "caseId": "rv1-06-B-partial-observation",
+   "family": "partial-observation",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-16",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-17",
+     "atUs": 1680000000,
+     "type": "line_trip",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-18",
+     "atUs": 11700000000,
+     "type": "line_restore",
+     "assetId": "line-8-9"
+    },
+    {
+     "domain": "water",
+     "faultId": "rv1-19",
+     "atUs": 1560000000,
+     "type": "sensor_freeze",
+     "assetId": "lv-T1"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-20",
+     "atUs": 1560000000,
+     "type": "sensor_freeze",
+     "assetId": "v-bus-10"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1740000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 11700000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 13500000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.5
+   }
+  },
+  {
+   "caseId": "rv1-07-B-false-alarm",
+   "family": "false-alarm",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-21",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1500000000,
+    "source": "weather service and crew estimate",
+    "etaScenarios": [
+     {
+      "label": "threat-nominal-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 4200000000,
+        "type": "line_trip",
+        "assetId": "line-8-9"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 13200000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     },
+     {
+      "label": "threat-late-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 4200000000,
+        "type": "line_trip",
+        "assetId": "line-8-9"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 15000000000,
+        "type": "line_restore",
+        "assetId": "line-8-9"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.87
+   }
+  },
+  {
+   "caseId": "rv1-08-B-impossible-recovery",
+   "family": "impossible-recovery",
+   "layoutId": "B",
+   "layout": {
+    "pumpStationBus": "bus-10",
+    "backupPumpBus": "bus-13",
+    "substationRouterBus": "bus-13"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-22",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-23",
+     "atUs": 2040000000,
+     "type": "source_loss",
+     "assetId": "grid-hv"
+    }
+   ],
+   "advisory": null,
+   "tankInitialLevels": {
+    "T1": 1.53
+   }
+  },
+  {
+   "caseId": "rv1-09-C-abrupt",
+   "family": "abrupt",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-24",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-25",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-4-5"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-26",
+     "atUs": 11460000000,
+     "type": "line_restore",
+     "assetId": "line-4-5"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1860000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 11460000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 13260000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.44
+   }
+  },
+  {
+   "caseId": "rv1-10-C-compound",
+   "family": "compound",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-27",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-28",
+     "atUs": 1740000000,
+     "type": "line_trip",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-29",
+     "atUs": 9540000000,
+     "type": "line_restore",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-30",
+     "atUs": 2580000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S2"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1800000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 9540000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 11340000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.83
+   }
+  },
+  {
+   "caseId": "rv1-11-C-delayed-dependency",
+   "family": "delayed-dependency",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-31",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-32",
+     "atUs": 2100000000,
+     "type": "line_trip",
+     "assetId": "line-4-5"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-33",
+     "atUs": 11880000000,
+     "type": "line_restore",
+     "assetId": "line-4-5"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-34",
+     "atUs": 2100000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S2"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 2160000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 11880000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 13680000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 1.31
+   }
+  },
+  {
+   "caseId": "rv1-12-C-partial-observation",
+   "family": "partial-observation",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-35",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-36",
+     "atUs": 1500000000,
+     "type": "line_trip",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-37",
+     "atUs": 10860000000,
+     "type": "line_restore",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "water",
+     "faultId": "rv1-38",
+     "atUs": 1380000000,
+     "type": "sensor_freeze",
+     "assetId": "lv-T1"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1560000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 10860000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 12660000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.43
+   }
+  },
+  {
+   "caseId": "rv1-13-C-false-alarm",
+   "family": "false-alarm",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-39",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1440000000,
+    "source": "weather service and crew estimate",
+    "etaScenarios": [
+     {
+      "label": "threat-nominal-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 4140000000,
+        "type": "line_trip",
+        "assetId": "line-4-5"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 13140000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     },
+     {
+      "label": "threat-late-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 4140000000,
+        "type": "line_trip",
+        "assetId": "line-4-5"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 14940000000,
+        "type": "line_restore",
+        "assetId": "line-4-5"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 3.18
+   }
+  },
+  {
+   "caseId": "rv1-14-C-no-useful-coupling",
+   "family": "no-useful-coupling",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-40",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-41",
+     "atUs": 1620000000,
+     "type": "line_trip",
+     "assetId": "line-12-13"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-42",
+     "atUs": 10440000000,
+     "type": "line_restore",
+     "assetId": "line-12-13"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 1680000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 10440000000,
+        "type": "line_restore",
+        "assetId": "line-12-13"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 12240000000,
+        "type": "line_restore",
+        "assetId": "line-12-13"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 3.37
+   }
+  },
+  {
+   "caseId": "rv1-15-C-common-cause",
+   "family": "common-cause",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-43",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-44",
+     "atUs": 2280000000,
+     "type": "line_trip",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-45",
+     "atUs": 12360000000,
+     "type": "line_restore",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "communications",
+     "faultId": "rv1-46",
+     "atUs": 2280000000,
+     "type": "router_fail",
+     "assetId": "rt-sub"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 2340000000,
+    "source": "power crew estimate",
+    "etaScenarios": [
+     {
+      "label": "eta-nominal",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 12360000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     },
+     {
+      "label": "eta-late-30min",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 14160000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 2.63
+   }
+  },
+  {
+   "caseId": "rv1-16-C-developing-threat",
+   "family": "developing-threat",
+   "layoutId": "C",
+   "layout": {
+    "pumpStationBus": "bus-5",
+    "backupPumpBus": "bus-14",
+    "substationRouterBus": "bus-12"
+   },
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "rv1-47",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-48",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-49",
+     "atUs": 3300000000,
+     "type": "line_trip",
+     "assetId": "line-3-4"
+    },
+    {
+     "domain": "power",
+     "faultId": "rv1-50",
+     "atUs": 11820000000,
+     "type": "line_restore",
+     "assetId": "line-3-4"
+    }
+   ],
+   "advisory": {
+    "issuedAtUs": 600000000,
+    "source": "weather service and crew estimate",
+    "etaScenarios": [
+     {
+      "label": "threat-nominal-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 3300000000,
+        "type": "line_trip",
+        "assetId": "line-3-4"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta",
+        "atUs": 11820000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     },
+     {
+      "label": "threat-late-repair",
+      "assume": [
+       {
+        "domain": "power",
+        "faultId": "risk",
+        "atUs": 3300000000,
+        "type": "line_trip",
+        "assetId": "line-3-4"
+       },
+       {
+        "domain": "power",
+        "faultId": "eta-late",
+        "atUs": 13620000000,
+        "type": "line_restore",
+        "assetId": "line-3-4"
+       }
+      ]
+     }
+    ]
+   },
+   "tankInitialLevels": {
+    "T1": 3.31
+   }
+  }
+ ]
+}

@@ -1,0 +1,242 @@
+{
+ "schemaVersion": "lifeline.research-protocol.v1",
+ "protocolId": "research-v1",
+ "status": "frozen",
+ "purpose": "Held-out comparison of independent, coordinated conventional and Meta-assisted control on the coupled development town (P18), the substrate for B1, B2 and B5 within this scope.",
+ "split": {
+  "development": "layout A (pump station bus 7) and every case in baseline-policy.json and plan-controls.json",
+  "heldOut": "layouts B (bus 10) and C (bus 5), with fault locations, remedies and families not used in development; no case is structurally isomorphic to a development case (role signature)"
+ },
+ "layouts": {
+  "A": {
+   "pumpStationBus": "bus-7",
+   "backupPumpBus": "bus-14",
+   "substationRouterBus": "bus-14",
+   "split": "development"
+  },
+  "B": {
+   "pumpStationBus": "bus-10",
+   "backupPumpBus": "bus-13",
+   "substationRouterBus": "bus-13",
+   "split": "held-out"
+  },
+  "C": {
+   "pumpStationBus": "bus-5",
+   "backupPumpBus": "bus-14",
+   "substationRouterBus": "bus-12",
+   "split": "held-out"
+  }
+ },
+ "families": [
+  "stable",
+  "developing-threat",
+  "abrupt",
+  "compound",
+  "delayed-dependency",
+  "partial-observation",
+  "false-alarm",
+  "impossible-recovery",
+  "no-useful-coupling",
+  "common-cause"
+ ],
+ "estimand": {
+  "primary": "paired difference in the service score S per scenario group (one run per controller per group)",
+  "S": "S = 1 - sum(w_s * D_s) / sum(w_s); D_s = unmet / requested over the 4 h episode",
+  "weights": {
+   "water:JH (hospital)": 1,
+   "water:JF (fire station)": 1,
+   "power:essential (CI3, CI7, CI9)": 1,
+   "water:JR (residential, non-essential)": 0.2
+  },
+  "reported": [
+   "each service D_s",
+   "worst family",
+   "non-essential harm",
+   "generator fuel",
+   "commands and refusals",
+   "provider calls, timeouts and tokens"
+  ]
+ },
+ "controllers": {
+  "independent": "independent domain rules (comparator revision 3: layout-independent dead-bus detection)",
+  "hybrid": "coordinated rules in parallel with the rolling-horizon planner (comparator revision 2; locked in P13/P14)",
+  "meta-complete": {
+   "mode": "complete",
+   "model": "muse-spark-1.3",
+   "reasoningEffort": "low",
+   "providerCapS": 30,
+   "maxCallsPerEpisode": 6,
+   "promptVersion": "lifeline-joint-v1",
+   "promptSha256": "9974459c690466b5ebfb686d6178edeb942e75d5d75419804a30380acd1e58df"
+  },
+  "oracle": "private perfect-information ceiling (headroom only; not a comparator)"
+ },
+ "comparisons": {
+  "B2": {
+   "method": "meta-complete",
+   "comparators": [
+    "independent",
+    "hybrid"
+   ],
+   "rule": "supported only if, against EACH comparator: 95% cluster-bootstrap interval of the mean paired S difference excludes zero, the mean gain is >= 0.5 pp, the relative essential-deficit reduction is >= 10%, and no service group regresses by more than 0.5 pp on average"
+  },
+  "B1": {
+   "method": "hybrid (forecast-guided)",
+   "comparator": "independent (reactive)",
+   "population": "families with an observable threat: developing-threat",
+   "rule": "same thresholds on the anticipatory population; warning must precede loss by more than the execution time",
+   "note": "two anticipatory groups only: at most exploratory"
+  },
+  "B5": {
+   "scope": "no-fault and disturbance strata of this suite",
+   "rule": "per-critical-group S regression lower bound above -0.5 pp for meta-complete vs hybrid; local control continues; no stale action executes"
+  }
+ },
+ "inference": {
+  "unit": "scenario group",
+  "bootstrap": {
+   "reps": 5000,
+   "seed": 20261103,
+   "clusters": "family"
+  },
+  "multiplicity": "B2 is primary; B1 and B5 are secondary and reported separately"
+ },
+ "precision": {
+  "developmentPairedSdPp": 2,
+  "groups": 16,
+  "ci95HalfWidthPp": 1,
+  "mdePp80": 1.4,
+  "statement": "Development paired S differences (hybrid - independent, 5 cases) have SD 2.0 pp. With 16 groups the 95% half-width is about 1.0 pp and the 80%-power minimum detectable effect about 1.4 pp: a true effect between 0.5 and 1.4 pp would likely be inconclusive."
+ },
+ "order": {
+  "seed": 20261104,
+  "rule": "controller order randomized within each group"
+ },
+ "budget": {
+  "metaCallsMax": 96,
+  "metaOutputTokensMax": 576000,
+  "wallHoursEstimate": 4
+ },
+ "invalidRun": "Only an evaluator/worker crash with retained evidence is infrastructure-invalid; the whole group is rerun once for all controllers and the original attempts are kept. Provider timeouts, invalid model output, refused actions and unrecovered service are method outcomes.",
+ "stopRule": "fixed batch of all groups; no early stopping; if resources run out the study is marked incomplete and the partial batch reported",
+ "cases": [
+  {
+   "caseId": "rv1-01-B-stable",
+   "family": "stable",
+   "layoutId": "B",
+   "commitmentSha256": "57070b9b7b51222a45cd333aaffd1769ca0d81a7aec30b3014c7a9553cf0fafd",
+   "signature": "399fdd474926e77731bc742878fc7ad10a62008930bf4081e481640e5ea1fb10"
+  },
+  {
+   "caseId": "rv1-02-B-developing-threat",
+   "family": "developing-threat",
+   "layoutId": "B",
+   "commitmentSha256": "870728bc5e0cb570183ed997be2dbb5251272759765c3e2fd1cbe19976fad50c",
+   "signature": "154bd4864229efcc774c0461a9399713a645b1eca1957f59b599efd63c780094"
+  },
+  {
+   "caseId": "rv1-03-B-abrupt",
+   "family": "abrupt",
+   "layoutId": "B",
+   "commitmentSha256": "9629d950e4379a3384bb9b542334f732577e75c41ad1d4038195fc6272b7c9d9",
+   "signature": "631ebd9ba206c389cf139d51210ad115c172ebae6ce41c4525f7dc60c0f0863e"
+  },
+  {
+   "caseId": "rv1-04-B-compound",
+   "family": "compound",
+   "layoutId": "B",
+   "commitmentSha256": "32a577a8cf9a6e4d858554114d49d31ef1397b888d27ef938127a259410b0d93",
+   "signature": "0c644738fd7c72269b27ef55169e5ff8a75dae829085fa9504913bdb39edfbf9"
+  },
+  {
+   "caseId": "rv1-05-B-delayed-dependency",
+   "family": "delayed-dependency",
+   "layoutId": "B",
+   "commitmentSha256": "ada1f5c550356b3a903442fe8977352c022a5338760b6b58c12f91a133ec7d19",
+   "signature": "fa4eaad543d89e87cd206caf6c11b55ff53173a4f0d781c9fc418fc7e5273154"
+  },
+  {
+   "caseId": "rv1-06-B-partial-observation",
+   "family": "partial-observation",
+   "layoutId": "B",
+   "commitmentSha256": "721863d450ea14db415fb4a7719bb535df886973fe2f44e131327e656c0da1eb",
+   "signature": "2a7b6d28969cb517ae888c591a80cf09d431986c4ef1807fb0dc65f133bbed83"
+  },
+  {
+   "caseId": "rv1-07-B-false-alarm",
+   "family": "false-alarm",
+   "layoutId": "B",
+   "commitmentSha256": "9c95f193889455ed849da85d992a23b2cb2ef3d7d08c911f48087d371455beb8",
+   "signature": "9d70ee7455efe4de26c3bcb75364b905312a1e5b74f6a76c9936d6a91870e2ed"
+  },
+  {
+   "caseId": "rv1-08-B-impossible-recovery",
+   "family": "impossible-recovery",
+   "layoutId": "B",
+   "commitmentSha256": "125e9c4306798e454f8c6fb45629541e917aede8f0a46ed10cf5c14bfd4cd799",
+   "signature": "a0562aba330a74e8aed6af4fa2426b628c42a24fce6799a613974479101cc107"
+  },
+  {
+   "caseId": "rv1-09-C-abrupt",
+   "family": "abrupt",
+   "layoutId": "C",
+   "commitmentSha256": "84b4192306fda02f069276423c99c7199c131ba730032ead291ceb40755f93c3",
+   "signature": "ef89f07c8aff9907f5f31021015198a3b7d246503677e723e10487385537a65f"
+  },
+  {
+   "caseId": "rv1-10-C-compound",
+   "family": "compound",
+   "layoutId": "C",
+   "commitmentSha256": "2261860a28d3a230025e62e86e2973c4faddc48d6fda5776f202f5844bcef96a",
+   "signature": "4a8e4ca94c1a2a29f4d4086ba98a3bbcf72bf6d66a0f839741435ca4df20b5cb"
+  },
+  {
+   "caseId": "rv1-11-C-delayed-dependency",
+   "family": "delayed-dependency",
+   "layoutId": "C",
+   "commitmentSha256": "f9330ad9fce02a634e21a7e55da8d5a3c26e86973c81243b5cef86ffdf4fa2b1",
+   "signature": "02cfeb6ce930ef298f70d01a87cd136163faebb4cbef2c002baa53f360d96de6"
+  },
+  {
+   "caseId": "rv1-12-C-partial-observation",
+   "family": "partial-observation",
+   "layoutId": "C",
+   "commitmentSha256": "06fed1ad440a3f9d03103ab9baaab283705c542c49c41fd1dab8a2e275dd71b1",
+   "signature": "812a5f4b3105ea748bf01bcd9cfd29aec52b7809c222e57e9157afed0666e9d9"
+  },
+  {
+   "caseId": "rv1-13-C-false-alarm",
+   "family": "false-alarm",
+   "layoutId": "C",
+   "commitmentSha256": "29a41feb226f987cfdd9a58fb01d96b5c6fb50e5dd53f31578fc96bdeeac454b",
+   "signature": "2ccd8c8ec4ed14fcfd187468046032b98cd70399ffbee648f31132732e9f9abd"
+  },
+  {
+   "caseId": "rv1-14-C-no-useful-coupling",
+   "family": "no-useful-coupling",
+   "layoutId": "C",
+   "commitmentSha256": "abab0cb6ca3ce20a2f10e5afa33894ad21cf0286a27a078ae5f0caa5a1e23613",
+   "signature": "d24dcfa5666116680940047d81b992302b15e06ffd7c8a71fab3a6cad3f7d628"
+  },
+  {
+   "caseId": "rv1-15-C-common-cause",
+   "family": "common-cause",
+   "layoutId": "C",
+   "commitmentSha256": "42e8693f3cd8dd3d4c1f73157817d33f3309721c0b0cba523e8b471e4c6e645f",
+   "signature": "4ae437c2e6462d28afb5717429c590e623b67585d8a830170d88a9649a5d40a4"
+  },
+  {
+   "caseId": "rv1-16-C-developing-threat",
+   "family": "developing-threat",
+   "layoutId": "C",
+   "commitmentSha256": "bea575c017abc47f983690a6b20546f2da064e4f763154003dbd10950695491f",
+   "signature": "76ea2ee67648ed43cd4ee32f0bc38f3951b1bb6cdb13486d42cee002d6ecf389"
+  }
+ ],
+ "freeze": {
+  "frozenAtUnixMs": 1793726229172,
+  "frozenAtCommit": "cc9fe67f006db20c00af948a047e0de4411c08e9",
+  "baselineFixtureSha256": "8470156f5aa049f7fce562620a31c6766e329412a6818dd93e33416621a4838f",
+  "suiteSha256": "0069cd54f78729d25fa935405b02bf8514aafdd81ef27d68c0e0d9b54c88a6df"
+ }
+}

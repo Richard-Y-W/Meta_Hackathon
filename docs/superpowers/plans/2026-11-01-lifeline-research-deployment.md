@@ -16,15 +16,17 @@
 
 **Files:** Create `fixtures/lifeline/infra/protocol-research-v1.json`, `scripts/lifeline-infra-freeze.mjs`, `test/lifeline/infra/protocol.test.mjs`, `docs/research/lifeline-infrastructure-dataset-card.md`.
 
-- [ ] RED: detect graph-isomorphic split overlap, derivative fault schedules, hidden truth in prompts and a case selected after seeing AI outcomes.
-- [ ] GREEN: freeze families, held-out topology/dependency/mechanism splits, primary estimand, margins, budgets, controller identities, randomized order, invalid-run rules and stop rule.
-- [ ] Select sample size from development variance at the scenario-family level, record precision/power assumptions, and freeze before revealing outcomes.
-- [ ] Include no-fault, impossible recovery, false alarm, partial observation, known-model optimum and zero coordination benefit controls.
-- [ ] Preserve commitment hashes and a separate evaluator-private manifest. The public dataset card describes generation without exposing future fault schedules to controllers.
+- [x] RED: detect graph-isomorphic split overlap, derivative fault schedules, hidden truth in prompts and a case selected after seeing AI outcomes.
+- [x] GREEN: freeze families, held-out topology/dependency/mechanism splits, primary estimand, margins, budgets, controller identities, randomized order, invalid-run rules and stop rule.
+- [x] Select sample size from development variance at the scenario-family level, record precision/power assumptions, and freeze before revealing outcomes.
+- [x] Include no-fault, impossible recovery, false alarm, partial observation, known-model optimum and zero coordination benefit controls.
+- [x] Preserve commitment hashes and a separate evaluator-private manifest. The public dataset card describes generation without exposing future fault schedules to controllers.
 
 **Run:** `node --test test/lifeline/infra/protocol.test.mjs`.
 
 **Gate:** The suite is immutable, adequately discriminating and free of known leakage. A pilot cannot be promoted to held-out evidence by renaming it.
+
+**State (Nov 3):** `qualified` ([run 0](../../trials/lifeline-infra-p17-run-0.md)). Frozen at `cc9fe67`, 16 groups, 10 families; known-model optimum is the latency-free oracle (headroom only).
 
 ## P18 — Run the primary held-out comparison
 
