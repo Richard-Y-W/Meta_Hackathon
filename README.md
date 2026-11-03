@@ -2,9 +2,15 @@
 
 **LIFELINE detects emerging threats, predicts how failures could spread, and coordinates interventions that preserve essential services across power, water, communications, and other infrastructure.**
 
-**Current implementation:** an emergency-communications prototype with a Meta-assisted investigator. It runs a real packet network, watches essential messages as failures develop, and executes guarded route/rate/probe decisions. Receiver receipts independently determine the result. Power, water, coupled planning and the broader breakthrough studies are specified in the [full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) and remain unimplemented.
+**Current implementation (development prototypes, November 3, 2026):**
 
-Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator, with no connection to any real dispatch, clinic or radio service.
+- An emergency-communications prototype on a real packet network, with a Meta-assisted investigator.
+- Qualified power (pandapower) and water (EPANET 2.2 via WNTR) plants, each with conventional controls and scored forecasts.
+- A coupled power–water–communications town joined only by declared dependency edges, with a resource-aware joint planner, a strong conventional comparator, Meta-assisted joint decisions, a town view (`/lifeline/town`) and verifiable run bundles.
+
+Gates Q1–Q3 of the [full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) are met. The research studies (P17+) and every breakthrough claim (B1–B6) remain open.
+
+Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator, a CIGRE benchmark feeder and a small water network, with no connection to any real dispatch, clinic, utility or radio service.
 
 ## What we measured
 
@@ -15,6 +21,11 @@ Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator,
 | Meta model takes part in real decisions with measured consequences | Supported (prototype) | [Meta run 0](docs/trials/lifeline-meta-run-0.md): typed hypotheses citing observations, discriminating probes (60% vs 0% loss on a silent lossy link), guarded interventions |
 | Failure handling (invalid, stale, partial, provider failure) | Supported | [Guard](docs/trials/lifeline-guard-run-0.md), [execution](docs/trials/lifeline-execution-run-0.md), [recovery](docs/trials/lifeline-recovery-run-0.md) runs; provider interruption rehearsal |
 | **AI improves essential delivery over the strong baseline** | **Not supported** | [Pilot run 0](docs/trials/lifeline-pilot-run-0.md): 48 runs (8 cases × 3 controllers × 2 repetitions), meta − adaptive **−1.35 pp** (6 ties at reported precision, p5 −7.24, p6 −0.88) |
+| Repaired controller removes that regression | Supported; **AI value not shown** | [Communications v2](docs/trials/lifeline-communications-v2-run-0.md): meta − adaptive −0.003 pp (regression removed); meta − model-disabled interval −0.003 to +0.015 pp |
+| Power and water plants, controls and forecasts qualified | Supported (development) | [P06](docs/trials/lifeline-infra-p06-run-0.md)–[P10](docs/trials/lifeline-infra-p10-run-0.md): analytic and reference checks, restart/fork, local and predictive baselines, forecasts scored for lead time and calibration (power overload timing is **not** calibrated) |
+| Cascades follow physical equations across domains | Supported (development town) | [P11](docs/trials/lifeline-infra-p11-run-0.md): a feeder trip stops a pump; the hospital loses water 69 min later; removing the edge removes the loss |
+| Coordination preserves essential service | Supported on development cases, with cost | [P13](docs/trials/lifeline-infra-p13-run-0.md), [release](docs/releases/lifeline-town-release.md): the joint comparator removes essential water loss in two cases at a non-essential cost |
+| **Meta improves the coupled town over the joint comparator** | **Not supported** | [P14](docs/trials/lifeline-infra-p14-run-0.md): one live model decision changed an action; against the revised comparator the model added latency, not value |
 
 **Why the AI did not win.** Live Muse Spark calls took 14–18 s, and 21% of pilot calls timed out. The deterministic layer handles failover in about a second. In this version the model replaced a fast conventional rule for unexplained degradation, so it recovered later. The model's diagnoses were often right ("r4→r3 reduced to ~3 Mbps"), but they came too late to beat the rule. The next protocol revision keeps the rule active and runs the model in parallel. That is a design hypothesis, not a result.
 
@@ -69,10 +80,25 @@ Open **http://localhost:3311/lifeline** on the Mac (Lima forwards the port).
 
 Demo: choose scenario `operator`, controller **LIFELINE (Meta-assisted)**, **Start live run**, then use **Judge fault** (cut r0-r3, then throttle r3-r4). Recorded runs replay from **Recorded run**. See the [demo script](docs/demo/lifeline-demo-script.md).
 
+## Run the coupled town (host only; no VM needed)
+
+```sh
+cd /Volumes/PortableSSD/Meta_Hackathon
+export UV_PYTHON_INSTALL_DIR=$PWD/.work/python UV_CACHE_DIR=$PWD/.work/cache/uv
+uv python install 3.12 && uv venv --python 3.12 --managed-python .work/environments/town
+VIRTUAL_ENV=$PWD/.work/environments/town uv pip install -r runtime/infra/requirements-town.lock
+PORT=3311 node --env-file-if-exists=.env server.mjs        # open http://localhost:3311/lifeline/town
+node scripts/lifeline-infra-run.mjs --case b-second-fault --controller hybrid --out artifacts/lifeline/infra/my-run
+node scripts/lifeline-infra-replay.mjs --run artifacts/lifeline/infra/my-run --verify   # no provider; recomputes the score
+```
+
+The town runs at an accelerated, modeled 60× clock: one simulated minute per wall second, with decision time charged on that clock. Rebuilding the environment from the lockfile was verified on November 3, 2026 ([release](docs/releases/lifeline-town-release.md)). Demo: [town demo script](docs/demo/lifeline-town-demo.md).
+
 ## Verify
 
 ```sh
-npm test                                                     # 240 Node tests (contracts, guard, executor, controllers, ledger, HTTP, ...)
+npm test                                                     # 394 Node tests (communications, kernel, adapters, planner, controllers, town HTTP, replay)
+.work/environments/town/bin/python -m unittest discover -s runtime/infra/tests -p "test_*.py"   # power, water, coupling, clock, baselines (Grid2Op tests skip here)
 python3 -m unittest discover -s runtime/mininet/tests -p "test_*.py"
 # inside the VM, as root, for real OVS integration:
 sudo LIFELINE_INTEGRATION=1 python3 -m unittest discover -s runtime/mininet/tests -p test_integration.py
@@ -88,7 +114,15 @@ node --env-file-if-exists=.env scripts/lifeline-evaluate.mjs --protocol fixtures
 
 ## Limits
 
-Emulated packets on one topology, not radio links. One local operator; not a hosted service. Two repetitions per pilot case, so no uncertainty interval is claimed. Localizing silent loss by probing is established practice (007, NetBouncer), not a LIFELINE invention. No claim about lives saved, real emergency traffic or field deployment.
+Emulated packets on one topology, not radio links. One local operator; not a hosted service. Two repetitions per pilot case, so no uncertainty interval is claimed. Localizing silent loss by probing is established practice (007, NetBouncer), not a LIFELINE invention.
+
+The town is a small development model:
+
+- steady-state power flow and distribution hydraulics, with no transients, protection coordination or water quality;
+- communications modeled, not packet-measured;
+- development cases only, with no held-out comparison yet.
+
+No claim about lives saved, real emergency traffic, utility operation or field deployment.
 
 ## Legacy prototype
 

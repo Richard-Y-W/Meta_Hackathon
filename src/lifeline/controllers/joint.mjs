@@ -153,7 +153,8 @@ export async function runTownEpisode({ root, policy, c, controller, advisory = n
     }
     const truth = await town.evaluatorTruth();
     const state = await town.state();
-    return { caseId: c.caseId, controller: controller.name, label: controller.label, oracle: Boolean(controller.oracle),
+    const trace = town.trace ? (await town.trace()).trace : [];
+    return { caseId: c.caseId, controller: controller.name, label: controller.label, oracle: Boolean(controller.oracle), trace, truth,
       waterEssentialUnmetM3: truth.water.essentialUnmetM3, powerEssentialUnservedJ: truth.power.essentialUnservedJ,
       waterNonessentialUnmetM3: Object.entries(truth.water.byNode ?? {}).filter(([n]) => !['JH', 'JF'].includes(n)).reduce((a, [, v]) => a + (v.deficitM3 ?? 0), 0),
       fuelUsedJ: 120e6 - state.resources['gen-portable'].fuelJ, commands: log.filter(x => x.status), decisions: log.filter(x => x.decision),

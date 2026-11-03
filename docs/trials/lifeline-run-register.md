@@ -11,10 +11,10 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P16 coupled demonstration, replay verification and release gate (Q3). |
+| Next task | P17+ research comparisons (frozen held-out protocol) per the research and deployment plan; owner items: narrated video, portal, publishing. |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
-| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1 and Q2 met (Nov 1); Q3–Q9 unqualified. |
+| Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1–Q3 met (Nov 1–3); Q4–Q9 unqualified. |
 | LIFELINE packet runs | Runtime, packet, baseline, investigator, pilot and live-rehearsal evidence retained; see linked run notes. |
 | LIFELINE live Meta runs | Development/integration traces, 16 Meta pilot episodes, and live-rehearsal evidence; see meta/pilot/release notes. |
 | LIFELINE comparative results | V1: 48 first attempts; meta − adaptive −1.35 pp. v2 (repaired, 56 first attempts): meta − adaptive −0.003 pp (regression removed); meta − meta-disabled interval −0.003 to +0.015 pp (AI value not shown). Power P07: development baselines only. Town P14: Meta participated in one live decision; against comparator rev 2 it added latency, not value. |
@@ -31,7 +31,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 | --- | --- | --- |
 | P00–P05 foundation / Q1 | **Q1 met:** P00–P05 qualified ([P00](lifeline-infra-p00-run-0.md), [P01](lifeline-infra-p01-run-0.md), [v2 run 0](lifeline-communications-v2-run-0.md), [P03](lifeline-infra-p03-run-0.md), [P04](lifeline-infra-p04-run-0.md), [P05](lifeline-infra-p05-run-0.md)) | — |
 | P06–P10 power and water / Q2 | **Q2 met:** P06–P10 qualified ([P06](lifeline-infra-p06-run-0.md), [P07](lifeline-infra-p07-run-0.md), [P08](lifeline-infra-p08-run-0.md), [P09](lifeline-infra-p09-run-0.md), [P10](lifeline-infra-p10-run-0.md)); development baselines only, overload-timing forecaster uncalibrated | P11 coupled town |
-| P11–P16 coupled town / Q3 | Active: P11–P14 qualified ([P11](lifeline-infra-p11-run-0.md), [P12](lifeline-infra-p12-run-0.md), [P13](lifeline-infra-p13-run-0.md), [P14](lifeline-infra-p14-run-0.md): comparator `hybrid` rev 2; live Meta participation shown, no benefit; [P15](lifeline-infra-p15-run-0.md) town view) | P16 coupled demonstration (Q3) |
+| P11–P16 coupled town / Q3 | **Q3 met:** P11–P16 qualified ([P11](lifeline-infra-p11-run-0.md)–[P15](lifeline-infra-p15-run-0.md), [town release](../releases/lifeline-town-release.md)); coordination removes essential water loss at a cost; Meta adds no value | — |
 | P17–P22 research / Q4 | Planned | Frozen comparison, mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |
 | P26–P30 operational progression / Q6–Q8 | Planned | Operator, lab and site-specific evidence |

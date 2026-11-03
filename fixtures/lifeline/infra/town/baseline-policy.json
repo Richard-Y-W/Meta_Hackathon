@@ -218,6 +218,80 @@
    "tankInitialLevels": {
     "T1": 3.0
    }
+  },
+  {
+   "caseId": "b-unrecoverable",
+   "note": "P16 rehearsal: the HV source is lost with no restoration in the run; no action can restore essential electricity",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "hv-loss",
+     "atUs": 1800000000,
+     "type": "source_loss",
+     "assetId": "grid-hv"
+    }
+   ],
+   "tankInitialLevels": {
+    "T1": 3.0
+   }
+  },
+  {
+   "caseId": "b-control-interruption",
+   "note": "P16 rehearsal: the substation router fails before the storm, so remote switching is unconfirmed",
+   "faults": [
+    {
+     "domain": "water",
+     "faultId": "pu2-maint",
+     "atUs": 0,
+     "type": "actuator_unavailable",
+     "assetId": "PU2"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-3-8",
+     "atUs": 1800000000,
+     "type": "line_trip",
+     "assetId": "line-3-8"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s1",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S1"
+    },
+    {
+     "domain": "power",
+     "faultId": "storm-s3",
+     "atUs": 1800000000,
+     "type": "actuator_unavailable",
+     "assetId": "sw-S3"
+    },
+    {
+     "domain": "power",
+     "faultId": "repair-3-8",
+     "atUs": 11400000000,
+     "type": "line_restore",
+     "assetId": "line-3-8"
+    },
+    {
+     "domain": "communications",
+     "faultId": "rt-sub-fail",
+     "atUs": 1740000000,
+     "type": "router_fail",
+     "assetId": "rt-sub"
+    }
+   ],
+   "tankInitialLevels": {
+    "T1": 3.0
+   }
   }
  ]
 }

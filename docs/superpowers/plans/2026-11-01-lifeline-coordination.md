@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P15 are qualified (Nov 1–3); P16 is planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P16 are qualified (Nov 1–3); gate Q3 is met.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -115,15 +115,17 @@ self.assertTrue(local_protection_remained_enabled)
 
 **Files:** Create `scripts/lifeline-infra-run.mjs`, `scripts/lifeline-infra-replay.mjs`, `docs/demo/lifeline-town-demo.md`, `docs/releases/lifeline-town-release.md`, `test/lifeline/infra/replay.test.mjs`.
 
-- [ ] RED: replay must detect a changed workload, reordered action receipt, altered clock mapping and a score copied from another run.
-- [ ] GREEN: replay recomputes scores and validates provenance without contacting the provider or changing the retained bundle.
-- [ ] Rehearse a developing threat with useful lead time, a second surprise failure, an unrecoverable case, and provider/control-channel interruption.
-- [ ] Retain matching independent-controller and joint-conventional comparisons. State whether the benefit came from coordination, Meta, both or neither.
-- [ ] Choose an understandable three-minute presentation cut from retained evidence; exact submission duration remains governed by the accepted portal. Compress presentation only, labeling replay speed.
-- [ ] Rebuild the smallest town in a fresh SSD-backed environment and verify the release instructions. Record a narrated video and publishing/portal decisions as owner dependencies.
-- [ ] Update README, claims and run register together. Disclose the original Blackbox Apprentice code and communications V1 lineage.
+- [x] RED: replay must detect a changed workload, reordered action receipt, altered clock mapping and a score copied from another run.
+- [x] GREEN: replay recomputes scores and validates provenance without contacting the provider or changing the retained bundle.
+- [x] Rehearse a developing threat with useful lead time, a second surprise failure, an unrecoverable case, and provider/control-channel interruption.
+- [x] Retain matching independent-controller and joint-conventional comparisons. State whether the benefit came from coordination, Meta, both or neither.
+- [x] Choose an understandable three-minute presentation cut from retained evidence; exact submission duration remains governed by the accepted portal. Compress presentation only, labeling replay speed.
+- [x] Rebuild the smallest town in a fresh SSD-backed environment and verify the release instructions. Record a narrated video and publishing/portal decisions as owner dependencies. *(Rebuild done on the host from the lockfile; video and portal remain owner dependencies.)*
+- [x] Update README, claims and run register together. Disclose the original Blackbox Apprentice code and communications V1 lineage.
 
 **Run:** `node --test test/lifeline/infra/replay.test.mjs`; then `node scripts/lifeline-infra-replay.mjs --run artifacts/lifeline/infra/town-release-run-0 --verify` after that bundle exists.
+
+**State (Nov 3):** `qualified`; **Gate Q3 met** in the [town release](../../releases/lifeline-town-release.md).
 
 **Gate Q3:** A measured three-domain prototype and reproducible demonstration exist. A compelling scene does not qualify B1–B5 without the research comparisons.
 
