@@ -13,6 +13,7 @@ export function spawnTownWorker({ root, python = join(root, '.work/environments/
     initialize: args => call('initialize', args),
     advance: toUs => call('advance', { toUs }),
     observe: () => call('observe'),
+    capabilities: () => call('capabilities'),
     state: () => call('state'),
     command: (domain, action, baseRevision) => call('command', { domain, action, baseRevision }),
     admittedModel: () => call('admitted_model'),

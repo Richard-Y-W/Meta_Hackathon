@@ -116,6 +116,10 @@ test('a second fault between actions expires the remainder; state is read and th
   const state = await town.state();
   assert.equal(state.resources['gen-portable'].allocatedTo, 'pump-station'); // completed steps stand: no invented rollback
   assert.ok(replanInput && replanInput.nowUs === 3600 * S);
-  assert.equal(r.replanned.best.plan.planId, 'resume-station', 'the replan restores the setting the expired step would have restored');
+  // The replan restores the setting the expired step would have restored (now or, since P13's delayed-resume
+  // templates, later when that saves fuel) and does better than leaving the station paused.
+  assert.match(r.replanned.best.plan.planId, /^resume-station/);
+  const retain = r.replanned.ranking.find(x => x.plan.planId === 'retain-policy');
+  assert.ok(r.replanned.best.key[0] < retain.key[0]);
   assert.ok(!r.replanned.ranking.some(x => x.plan.steps.some(s => s.action.type === 'allocate_generator')), 'the allocated generator is not allocated again');
 });

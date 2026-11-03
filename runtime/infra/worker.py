@@ -17,7 +17,7 @@ import time
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
-from coupling import Town, load_town  # noqa: E402
+from coupling import CAPABILITIES, Town, load_town  # noqa: E402
 from protocol import Rejected, serve  # noqa: E402
 
 S = 1000000
@@ -68,6 +68,8 @@ def handlers():
 
     return {
         'hello': lambda a: {'domainId': 'town', 'protocol': 1},
+        'capabilities': lambda a: {'commands': list(CAPABILITIES), 'switches': sorted(town().power.state['switches']), 'pumps': list(town().water.net.pumps),
+                                   'links': list(town().water.net.links), 'resources': sorted(town().state['resources'])},
         'admitted_model': admitted_model, 'preview': preview,
         'state': lambda a: {'nowUs': town().state['nowUs'], 'stationMode': town().state['stationMode'], 'resources': town().state['resources'],
                             'revisions': {'power': town().power.revision, 'water': town().water.revision}, 'worldRevision': town().world_revision()},

@@ -27,7 +27,10 @@ export function templates({ nowUs, catalog, state = {}, pauses = [3600 * S, 7200
   for (const sw of catalog.switches ?? []) {
     out.push({ planId: `close-${sw}`, template: 'switch', steps: [{ id: 'close', domain: 'power', action: { type: 'set_switch', params: { switchId: sw, closed: true } }, atUs: nowUs, cost: 1 }] });
   }
-  if (state.stationMode === 'paused') out.push({ planId: 'resume-station', template: 'restore_setting', steps: [resume(nowUs)] });
+  if (state.stationMode === 'paused') {
+    out.push({ planId: 'resume-station', template: 'restore_setting', steps: [resume(nowUs)] });
+    for (const d of [1800 * S, 3600 * S]) out.push({ planId: `resume-station-in-${d / S}s`, template: 'restore_setting', steps: [resume(nowUs + d)] });
+  }
   if (gen && !allocated) {
     const allocate = { id: 'gen', domain: 'resource', action: { type: 'allocate_generator', params: { resourceId: gen.id, site: gen.site } }, atUs: nowUs, durationUs: gen.setupUs, resources: [{ id: gen.id, use: 'allocate', site: gen.site }], cost: 2 };
     out.push({ planId: 'generator', template: 'generator', steps: [allocate] });

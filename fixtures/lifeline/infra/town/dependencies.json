@@ -220,7 +220,8 @@
     "st-PU2",
     "st-PZ",
     "st-PF",
-    "pr-JR"
+    "pr-JR",
+    "mains-pump-station"
    ],
    "actuators": {
     "water": [

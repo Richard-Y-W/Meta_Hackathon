@@ -22,6 +22,7 @@ from protocol import Rejected
 from water_wntr import WaterPlant
 
 ROOT = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+CAPABILITIES = ('set_switch', 'set_pump', 'set_link', 'set_station_mode', 'allocate_generator', 'release_generator')  # every command the town accepts
 FIX = os.path.join(ROOT, 'fixtures/lifeline/infra')
 S = 1000000
 
@@ -346,7 +347,11 @@ class Town:
         """Remote view: a reading reaches the control center only over a working path; otherwise the last
         delivered value is kept with its original time (stale), never replaced by a failure value."""
         now, out = self.state['nowUs'], []
-        for domain, obs in (('power', self.power.observe()), ('water', self.water.observe())):
+        station = {'sensorId': 'mains-pump-station', 'assetId': 'pump-station', 'metric': 'link.state', 'unit': 'state', 'observedAtUs': now,
+                   'value': 1 if self.power.bus_energized(self.edges['power-to-pump-PU1']['source']['asset']) else 0}  # the station's own mains alarm
+        water_obs = self.water.observe()
+        water_obs['readings'] = water_obs['readings'] + [station]
+        for domain, obs in (('power', self.power.observe()), ('water', water_obs)):
             for r in obs['readings']:
                 site = self._site_of(domain, r['sensorId'])
                 key = '%s:%s' % (domain, r['sensorId'])
@@ -469,15 +474,18 @@ class Town:
         time (on the coupling grid); results report service outcomes, resource use and step receipts."""
         fork = Town.from_admitted(self.bundle, model_record, assume)
         start = fork.state['nowUs']
+        end = start + plan['horizonUs']
         receipts = []
         for step in sorted(plan.get('steps', []), key=lambda x: (x['atUs'], x.get('order', 0))):
             if step['atUs'] < start or step['atUs'] % fork.step_us:
                 raise Rejected('invalid_plan', 'step %s is off the coupling grid or in the past' % step.get('id'))
+            if step['atUs'] > end:  # outside what this preview simulates: reported, not applied
+                receipts.append({'id': step.get('id'), 'atUs': step['atUs'], 'status': 'beyond_horizon', 'reason': None})
+                continue
             fork.advance(step['atUs'])
             revision = fork.power.revision if step['domain'] == 'power' else fork.water.revision
             r = fork.command(step['domain'], step['action'], revision)
             receipts.append({'id': step.get('id'), 'atUs': step['atUs'], 'status': r['status'], 'reason': r.get('reason')})
-        end = start + plan['horizonUs']
         fork.advance(end)
         power = fork.power.service_summary(from_us=start)
         water = fork.water.service_summary(from_us=start)

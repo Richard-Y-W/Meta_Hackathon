@@ -52,6 +52,10 @@ Doing nothing loses 42.5–45.7 m3 of essential water in these cases. The planne
 - Run 0 ranked on the worst scenario only, and so chose the plain generator plan for high storage: the pause saves fuel only when restoration is on time. The mean-fuel tie-break was added.
 - Run 0's replan after the second fault chose to retain policy, leaving the station paused. The templates did not see the paused setting, and the generator templates were correctly refused as double allocations. Templates now take the observed state. Both behaviors are covered by tests.
 
+## Correction found in P13 (same day)
+
+The P12 template space listed only ties S1 and S3, both disabled by the storm. Tie S2 (line 6-7) was physically available in all three plan-control cases. Closing it restores the de-energized buses without the generator: the independent comparator did exactly that in P13 run 0. The P12 tradeoff results therefore hold **only within that restricted template space**. They show that the planner chooses between demand shift and plain generator use from observed storage. They do not show the best available action in those cases. The P13 catalog lists S2, and the P13 parity test now checks assets as well as command types.
+
 ## Limits
 
 - The generator is the only shared resource, and its fuel use is a declared ratio.

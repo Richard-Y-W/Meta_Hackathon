@@ -1,6 +1,6 @@
 # LIFELINE Coordinated Resilience — Implementation Plan P11–P16
 
-> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P12 are qualified (Nov 1); P13–P16 are planned.
+> **For agentic workers:** Use `superpowers:executing-plans`; work inline unless separately authorized. Preserve local control and evaluate every new coupling against an independent control. P11–P13 are qualified (Nov 1–2); P14–P16 are planned.
 
 **Goal:** Build the coupled power–water–communications town and demonstrate measured prevention, mitigation and recovery.
 
@@ -60,15 +60,17 @@ self.assertTrue(local_protection_remained_enabled)
 
 **Files:** Create `src/lifeline/controllers/joint.mjs`, `runtime/infra/baselines.py`, `runtime/infra/tests/test_baselines.py`, `test/lifeline/infra/joint-controller.test.mjs`, `fixtures/lifeline/infra/town/baseline-policy.json`.
 
-- [ ] Implement independent domain control, a simple coordinated priority policy, and a rolling-horizon joint optimizer using admitted observations/forecasts.
-- [ ] RED: the joint baseline must solve known tiny allocation/scheduling optima and must not be beaten by a trivial feasible action because a capability was withheld.
-- [ ] GREEN: use the same dependency catalog, capabilities, observation ages, execution path and budgets as the proposed system. Include state/parameter estimation and uncertainty handling appropriate to the task.
-- [ ] On small finite cases compare with exhaustive feasible search. On larger cases record termination, objective bounds/gaps where available, incumbent solution and timeout behavior.
-- [ ] Tune only on development cases, retaining the same development allowance as the AI system. Lock settings before qualification.
-- [ ] Measure independence versus coordination separately from conventional versus Meta. If the conventional joint controller obtains the gain, attribute it to coordination.
-- [ ] Maintain a private perfect-information ceiling for headroom analysis, labeled as an oracle and never treated as a deployable comparator.
+- [x] Implement independent domain control, a simple coordinated priority policy, and a rolling-horizon joint optimizer using admitted observations/forecasts.
+- [x] RED: the joint baseline must solve known tiny allocation/scheduling optima and must not be beaten by a trivial feasible action because a capability was withheld.
+- [x] GREEN: use the same dependency catalog, capabilities, observation ages, execution path and budgets as the proposed system. Include state/parameter estimation and uncertainty handling appropriate to the task.
+- [x] On small finite cases compare with exhaustive feasible search. On larger cases record termination, objective bounds/gaps where available, incumbent solution and timeout behavior.
+- [x] Tune only on development cases, retaining the same development allowance as the AI system. Lock settings before qualification.
+- [x] Measure independence versus coordination separately from conventional versus Meta. If the conventional joint controller obtains the gain, attribute it to coordination.
+- [x] Maintain a private perfect-information ceiling for headroom analysis, labeled as an oracle and never treated as a deployable comparator.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_baselines.py`; `node --test test/lifeline/infra/joint-controller.test.mjs`.
+
+**State (Nov 2):** `qualified` in [P13 runs 0–7](../../trials/lifeline-infra-p13-run-0.md): locked comparator `hybrid` (rules in parallel with the rolling optimizer); oracle ceiling retained.
 
 **Gate:** A competent conventional joint controller passes analytic and domain controls. LIFELINE does not earn a novelty claim by beating isolated controllers only.
 
