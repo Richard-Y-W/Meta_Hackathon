@@ -3,7 +3,7 @@
 // asynchronously and its result is scheduled when it arrives, so its computation time passes on the town
 // clock exactly as in the experiments. The browser can start, inject admitted judge faults, stop and
 // export; it never reaches the worker, the evaluator's hidden schedule or the credential.
-import { readFileSync } from 'node:fs';
+import { existsSync, readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { priority, rolling } from './controllers/joint.mjs';
 import { spawnTownWorker } from './domains/town.mjs';
@@ -110,8 +110,10 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
   // Measured storyline comparison (scripts/lifeline-v2-run.mjs output), shown as recorded; nothing is computed here.
   const measured = () => {
     try {
-      const d = JSON.parse(readFileSync(resolve(repo, process.env.LIFELINE_V2_RESULTS ?? 'artifacts/lifeline/v2/run-0/storylines.json'), 'utf8'));
-      return { source: process.env.LIFELINE_V2_RESULTS ?? 'artifacts/lifeline/v2/run-0/storylines.json', brain: d.brain, rows: d.rows.map(r => ({ storyline: r.storyline, controller: r.controller, waterEssentialUnmetM3: r.waterEssentialUnmetM3, powerEssentialUnservedJ: r.powerEssentialUnservedJ, waterNonessentialUnmetM3: r.waterNonessentialUnmetM3, fuelUsedJ: r.fuelUsedJ })) };
+      // The full run output if present locally, else the committed summary of the same run.
+      const source = process.env.LIFELINE_V2_RESULTS ?? ['artifacts/lifeline/v2/run-0/storylines.json', 'docs/results/lifeline-v2-run-0.json'].find(f => existsSync(resolve(repo, f)));
+      const d = JSON.parse(readFileSync(resolve(repo, source), 'utf8'));
+      return { source, brain: d.brain, rows: d.rows.map(r => ({ storyline: r.storyline, controller: r.controller, waterEssentialUnmetM3: r.waterEssentialUnmetM3, powerEssentialUnservedJ: r.powerEssentialUnservedJ, waterNonessentialUnmetM3: r.waterNonessentialUnmetM3, fuelUsedJ: r.fuelUsedJ })) };
     } catch { return { source: null, rows: [] }; }
   };
   const send = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };

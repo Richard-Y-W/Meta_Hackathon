@@ -1,0 +1,134 @@
+{
+ "schema": "lifeline.v2-storylines.summary.v1",
+ "brain": "live",
+ "note": "Recorded run 0 of scripts/lifeline-v2-run.mjs with the live Meta brain, Nov 3 2026, host kept awake. Stopped by the operator after 13 of 15 episodes: grid-emergency was not run for hybrid or LIFELINE. Full rows with traces and brain logs are in artifacts/lifeline/v2/run-0 (not committed).",
+ "rows": [
+  {
+   "storyline": "storm-north-ridge",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 312120000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "storm-north-ridge",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 312120000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "storm-north-ridge",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 0,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": [
+    "ok",
+    "ok"
+   ]
+  },
+  {
+   "storyline": "false-alarm",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 0,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "false-alarm",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 0,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "false-alarm",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 0,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": [
+    "ok",
+    "ok"
+   ]
+  },
+  {
+   "storyline": "sudden-failure",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 273105000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "sudden-failure",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 273105000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "sudden-failure",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 78030000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "compound-storm",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 582420000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "compound-storm",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 528360000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": []
+  },
+  {
+   "storyline": "compound-storm",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 13515000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "brainCalls": [
+    "ok",
+    "ok",
+    "ok"
+   ]
+  },
+  {
+   "storyline": "grid-emergency",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 5.880000000000045,
+   "powerEssentialUnservedJ": 10506000000,
+   "waterNonessentialUnmetM3": 11.759999999999991,
+   "fuelUsedJ": 120000000,
+   "brainCalls": []
+  }
+ ]
+}

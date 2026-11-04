@@ -46,7 +46,7 @@ Every number on screen comes from a recorded run (`artifacts/lifeline/v2/run-0/s
 
 **[cut to results table]**
 
-> Same faults, same town, three controllers. In the storm scenario, conventional control lost 312 MJ of essential power, and LIFELINE lost none. *[fill the cyber-scenario row from the run.]*
+> Same faults, same town, three controllers. In the storm, conventional control lost 312 MJ of essential power, and LIFELINE lost none. Storm plus a second failure: 528 against 14. A sudden failure with jammed switches: 273 against 78. And when the warning was a false alarm, LIFELINE did no harm.
 
 ## 2:15 – 2:40 · It scales
 
@@ -64,7 +64,7 @@ Every number on screen comes from a recorded run (`artifacts/lifeline/v2/run-0/s
 
 ## What may and may not be said
 
-- **Say:** the measured numbers from the results table, attributed to "our simulated town".
+- **Say:** the measured numbers from the results table, attributed to "our simulated town" (recorded run: `docs/results/lifeline-v2-run-0.json`). The cyber scenario has no recorded live-brain run yet; show it live instead of quoting numbers.
 - **Don't say:** "saves millions of dollars", "30 seconds faster on average", or that LIFELINE detects cyber intrusions. It reads the security team's alerts and protects services against the attack's effects.
 - **If asked whether this is real:** it is a working system on a physics-simulated town (a CIGRE benchmark feeder in pandapower, an EPANET water network, modeled communications), not a deployment.
 
