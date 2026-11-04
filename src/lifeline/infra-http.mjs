@@ -8,6 +8,7 @@ import { resolve } from 'node:path';
 import { priority, rolling } from './controllers/joint.mjs';
 import { spawnTownWorker } from './domains/town.mjs';
 import { lifeline } from './brain/lifeline.mjs';
+import { LANDMARKS } from './brain/brain.mjs';
 import { stubBrain } from './brain/stub.mjs';
 import { callModel as metaCall } from './meta-provider.mjs';
 
@@ -33,7 +34,9 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
   const snapshot = () => {
     if (!live) return { state: 'idle' };
     const { town, layers, loop, shared, ...rest } = live;
-    return { ...rest, layers: layers.map(L => ({ name: L.ctrl.name, label: L.ctrl.label, pending: L.pending ? { requestedAtUs: L.pending.requestedAtUs } : null })),
+    // Display only: scenario faults that have already happened (never future ones; controllers never see this).
+    const scenarioEvents = (live.scenarioFaults ?? []).filter(f => f.atUs <= live.nowUs && f.atUs > 0).map(f => ({ type: f.type, assetId: f.assetId, atUs: f.atUs }));
+    return { ...rest, scenarioFaults: undefined, scenarioEvents, layers: layers.map(L => ({ name: L.ctrl.name, label: L.ctrl.label, pending: L.pending ? { requestedAtUs: L.pending.requestedAtUs } : null })),
       lifeline: shared ? { log: shared.log.slice(-80), threats: shared.threats, brainCalls: shared.calls.map(c => ({ atUs: c.atUs, code: c.code, parse: c.parse ?? null, durationMs: c.durationMs })) } : null };
   };
   const note = (entry) => { live.timeline.push(entry); if (live.timeline.length > 400) live.timeline.shift(); };
@@ -70,6 +73,7 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
     { const [state2, obs2] = [await t.state(), await t.observe()];
     live.assets = { stationMode: state2.stationMode, closedLinks: state2.closedLinks, resources: state2.resources,
       switches: Object.fromEntries(obs2.readings.filter(r => /^power:st-s/.test(r.sensorId)).map(r => [r.assetId, r.value === null ? 'unknown' : r.value ? 'closed' : 'open'])),
+      buses: Object.fromEntries(obs2.readings.filter(r => /^power:v-bus-/.test(r.sensorId)).map(r => [r.assetId, r.value === null ? 'unknown' : r.value > 0 ? 'live' : 'dark'])),
       routers: obs2.routers };
     }
   }
@@ -103,6 +107,13 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
     }
   }
 
+  // Measured storyline comparison (scripts/lifeline-v2-run.mjs output), shown as recorded; nothing is computed here.
+  const measured = () => {
+    try {
+      const d = JSON.parse(readFileSync(resolve(repo, process.env.LIFELINE_V2_RESULTS ?? 'artifacts/lifeline/v2/run-0/storylines.json'), 'utf8'));
+      return { source: process.env.LIFELINE_V2_RESULTS ?? 'artifacts/lifeline/v2/run-0/storylines.json', brain: d.brain, rows: d.rows.map(r => ({ storyline: r.storyline, controller: r.controller, waterEssentialUnmetM3: r.waterEssentialUnmetM3, powerEssentialUnservedJ: r.powerEssentialUnservedJ, waterNonessentialUnmetM3: r.waterNonessentialUnmetM3, fuelUsedJ: r.fuelUsedJ })) };
+    } catch { return { source: null, rows: [] }; }
+  };
   const send = (res, status, body) => { res.writeHead(status, { 'Content-Type': 'application/json' }); res.end(JSON.stringify(body)); };
   async function body(req) {
     if (!req.headers['content-type']?.startsWith('application/json')) throw Object.assign(new Error('JSON required'), { status: 415 });
@@ -119,9 +130,10 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
     try {
       if (req.method === 'GET') {
         if (route === 'cases') return send(res, 200, { cases: Object.values(cases).map(c => ({ caseId: c.caseId, title: c.title ?? c.caseId, story: c.story ?? null, storyline: Boolean(c.storyline) })), controllers: CONTROLLERS, judgeFaults: JUDGE_FAULTS,
-          brain: apiKey ? 'Meta model (live)' : 'rehearsal stand-in (keyword rules, no model)',
+          brain: apiKey ? 'Meta model (live)' : 'rehearsal stand-in (keyword rules, no model)', landmarks: LANDMARKS,
           clock: { mode: 'accelerated_modeled', acceleration: 60, wallSecondsPerStep: tickMs / 1000, stepSimSeconds: policy.gridUs / S } }), true;
         if (route === 'live') return send(res, 200, snapshot()), true;
+        if (route === 'v2-results') return send(res, 200, measured()), true;
         if (route === 'live/export') {
           if (!current(url.searchParams.get('runId'))) return send(res, 409, { error: 'stale_run', current: live?.runId ?? null }), true;
           res.setHeader('Content-Disposition', `attachment; filename="${live.runId}.json"`);
@@ -142,7 +154,7 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
         const lf = b.controller === 'lifeline' ? lifeline(policy, { callModel: apiKey ? callModel : stubBrain(), reports: c.reports ?? [] }) : null;
         const ctrls = lf ? lf.layers : b.controller === 'hybrid' ? [priority(policy), rolling(policy)] : [priority(policy)];
         live = { runId: `town-${stamp}-${++counter}`, caseId: c.caseId, controller: b.controller, state: 'running', nowUs: 0, durationUs: policy.durationUs,
-          clock: { mode: 'accelerated_modeled', acceleration: 60 }, title: c.title ?? c.caseId, story: c.story ?? null, shared: lf?.shared ?? null,
+          clock: { mode: 'accelerated_modeled', acceleration: 60 }, title: c.title ?? c.caseId, story: c.story ?? null, shared: lf?.shared ?? null, scenarioFaults: c.storyline ? c.faults : [],
           provider: lf ? { state: apiKey ? 'Meta brain live' : 'brain rehearsal (keyword stand-in)', note: 'the brain reads warning signs; reflexes and rules act without it' } : { state: 'model off', note: 'conventional comparator only' },
           startedAtUnixMs: now(), world: (await town.state()).worldRevision, eventsSeen: 0, timeline: [], series: [], assets: null, truth: null, error: null,
           advisory: !c.storyline && c.faults.some(f => f.type === 'line_trip') ? policy.advisory : null, town, layers: ctrls.map(ctrl => ({ ctrl, future: [], nextDecision: 0, pending: null })) };

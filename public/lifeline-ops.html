@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>LIFELINE operations</title>
+  <link rel="stylesheet" href="/lifeline-ops.css">
+</head>
+<body>
+  <header class="top">
+    <div class="brand">
+      <span class="mark" aria-hidden="true">▲</span>
+      <div>
+        <h1>LIFELINE</h1>
+        <p class="mission">Detects emerging threats, predicts how failures spread, and coordinates interventions that keep essential services running.</p>
+      </div>
+    </div>
+    <div class="runbar" aria-label="Run controls">
+      <label>Scenario <select id="case"></select></label>
+      <label>Controller <select id="controller"></select></label>
+      <button id="start" type="button" class="primary">Start</button>
+      <button id="stop" type="button" disabled>Stop</button>
+    </div>
+    <div class="meta">
+      <span id="clock" class="clock">T+0 min</span>
+      <span id="mode" class="chip">simulated town</span>
+      <span id="brainchip" class="chip">brain</span>
+      <span id="state" class="chip" role="status" aria-live="polite">idle</span>
+    </div>
+  </header>
+
+  <p id="story" class="story"></p>
+
+  <section class="tiles" aria-label="Essential services">
+    <div class="tile" id="tile-water"></div>
+    <div class="tile" id="tile-power"></div>
+    <div class="tile" id="tile-tank"></div>
+    <div class="tile" id="tile-comms"></div>
+  </section>
+
+  <main class="grid">
+    <section class="panel mapwrap" aria-labelledby="h-map">
+      <div class="panelhead">
+        <h2 id="h-map">Town</h2>
+        <div class="toggle" role="tablist" aria-label="Infrastructure view">
+          <button id="view-power" role="tab" aria-selected="true" type="button">Power</button>
+          <button id="view-water" role="tab" aria-selected="false" type="button">Water</button>
+        </div>
+      </div>
+      <svg id="map" viewBox="0 0 1000 560" role="img" aria-label="Town infrastructure map"></svg>
+      <ul class="legend" aria-label="Legend">
+        <li><span class="sw normal"></span>normal</li>
+        <li><span class="sw threat"></span>threatened (predicted)</li>
+        <li><span class="sw lost"></span>service lost</li>
+        <li><span class="sw acted"></span>changed by LIFELINE</li>
+      </ul>
+    </section>
+
+    <section class="panel brain" aria-label="LIFELINE brain">
+      <div class="step">
+        <h2><span class="num">1</span> Detect · warning signs</h2>
+        <ol id="warnings" class="feed"></ol>
+      </div>
+      <div class="step">
+        <h2><span class="num">2</span> Predict · how it would spread</h2>
+        <div id="threats"></div>
+      </div>
+      <div class="step">
+        <h2><span class="num">3</span> Coordinate · armed and acted</h2>
+        <ol id="actions" class="feed"></ol>
+      </div>
+    </section>
+
+    <section class="panel timeline" aria-labelledby="h-time">
+      <div class="panelhead"><h2 id="h-time">Timeline</h2><span class="muted">warnings ◆ · predicted failure window ▭ · LIFELINE action ▲ · essential service below</span></div>
+      <svg id="time" viewBox="0 0 1000 162" role="img" aria-label="Scenario timeline"></svg>
+    </section>
+
+    <section class="panel results" aria-labelledby="h-res">
+      <div class="panelhead"><h2 id="h-res">Measured: same scenarios, same faults</h2><span id="res-src" class="muted"></span></div>
+      <div id="results"></div>
+    </section>
+  </main>
+
+  <footer class="foot">
+    <span>Simulated town: CIGRE medium-voltage feeder (pandapower) coupled to an EPANET water network, modeled communications, 60× clock; model thinking time is charged on that clock.</span>
+    <a href="/lifeline/town">engineering view</a>
+  </footer>
+  <script src="/lifeline-ops.js" type="module"></script>
+</body>
+</html>

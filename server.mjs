@@ -20,6 +20,7 @@ export async function createApp() {
     '/': ['index.html', 'text/html'], '/app.js': ['app.js', 'text/javascript'], '/style.css': ['style.css', 'text/css'],
     '/lifeline': ['lifeline.html', 'text/html'], '/lifeline.js': ['lifeline.js', 'text/javascript'], '/lifeline.css': ['lifeline.css', 'text/css'],
     '/lifeline/town': ['lifeline-town.html', 'text/html'], '/lifeline-town.js': ['lifeline-town.js', 'text/javascript'], '/lifeline-town.css': ['lifeline-town.css', 'text/css'],
+    '/lifeline/ops': ['lifeline-ops.html', 'text/html'], '/lifeline-ops.js': ['lifeline-ops.js', 'text/javascript'], '/lifeline-ops.css': ['lifeline-ops.css', 'text/css'],
   };
   const repo = fileURLToPath(new URL('.', import.meta.url));
   const artifactsRoot = resolve(repo, process.env.LIFELINE_ARTIFACTS ?? 'artifacts/lifeline');

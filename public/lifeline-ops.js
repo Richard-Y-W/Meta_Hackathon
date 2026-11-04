@@ -1,0 +1,269 @@
+// LIFELINE operations view. Every value comes from the live server snapshot or the recorded results file;
+// nothing on this page is invented. Layout follows situation-awareness levels: detect (warning signs),
+// predict (simulated spread), coordinate (what LIFELINE armed and did), on a gray map where color marks
+// only what is abnormal (red lost, amber threatened) or changed by LIFELINE (blue).
+const $ = id => document.getElementById(id);
+const S = 1e6, MIN = 60 * S;
+const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]);
+const tmin = us => (us == null ? '—' : `T+${Math.round(us / MIN)}`);
+const pct = v => (v == null ? '—' : `${(v * 100).toFixed(v >= 0.995 ? 0 : 1)}%`);
+let meta = null, snap = { state: 'idle' }, view = 'power', results = null;
+
+// Town layout: positions on the map, by bus. Lines and ties follow the simulated CIGRE feeder.
+const P = { 'bus-1': [70, 330], 'bus-2': [175, 330], 'bus-3': [290, 330], 'bus-4': [420, 410], 'bus-5': [560, 455], 'bus-6': [700, 470],
+  'bus-7': [640, 285], 'bus-8': [500, 205], 'bus-9': [620, 110], 'bus-10': [770, 95], 'bus-11': [905, 150],
+  'bus-12': [70, 80], 'bus-13': [185, 105], 'bus-14': [300, 145] };
+const LINES = { 'line-1-2': ['bus-1', 'bus-2'], 'line-2-3': ['bus-2', 'bus-3'], 'line-3-4': ['bus-3', 'bus-4'], 'line-4-5': ['bus-4', 'bus-5'], 'line-5-6': ['bus-5', 'bus-6'],
+  'line-7-8': ['bus-7', 'bus-8'], 'line-8-9': ['bus-8', 'bus-9'], 'line-9-10': ['bus-9', 'bus-10'], 'line-10-11': ['bus-10', 'bus-11'], 'line-3-8': ['bus-3', 'bus-8'],
+  'line-12-13': ['bus-12', 'bus-13'], 'line-13-14': ['bus-13', 'bus-14'] };
+const TIES = { 'sw-S1': ['bus-14', 'bus-8'], 'sw-S2': ['bus-6', 'bus-7'], 'sw-S3': ['bus-11', 'bus-4'] };
+const PLACES = { 'bus-1': 'Substation A', 'bus-2': 'River crossing', 'bus-3': 'Main St · clinic', 'bus-4': 'School district', 'bus-5': 'East industrial', 'bus-6': 'Bus depot',
+  'bus-7': 'Pump station', 'bus-8': 'Ridge junction', 'bus-9': 'Hospital', 'bus-10': 'Fire station', 'bus-11': 'North housing', 'bus-12': 'Substation B', 'bus-13': 'West mall', 'bus-14': 'West housing' };
+const ESSENTIAL = new Set(['bus-3', 'bus-7', 'bus-9']);
+// Label placement per bus [dx, dy] so names sit clear of lines.
+const LABEL = { 'bus-1': [-30, 36], 'bus-2': [-40, -16], 'bus-3': [-110, 30], 'bus-4': [-120, 26], 'bus-5': [-44, 32], 'bus-6': [14, 26], 'bus-7': [18, 26],
+  'bus-8': [16, 6], 'bus-9': [-30, -20], 'bus-10': [-36, -18], 'bus-11': [-20, 34], 'bus-12': [-30, -22], 'bus-13': [-26, -16], 'bus-14': [-60, 34] };
+const TIE_AT = { 'sw-S1': 0.45, 'sw-S2': 0.5, 'sw-S3': 0.28 };
+const TOWER = [395, 245];
+
+async function api(path, body) {
+  const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error ?? `HTTP ${r.status}`);
+  return data;
+}
+
+function busState(s, b) {
+  const buses = s.assets?.buses ?? {};
+  if (b === 'bus-1' || b === 'bus-12') { const all = Object.values(buses); return all.length && all.every(v => v === 'dark') ? 'dark' : 'live'; }
+  return buses[b] ?? 'live';
+}
+const threatened = s => new Set((s.lifeline?.threats ?? []).map(t => t.assetId));
+// Lines that have failed in the scenario so far (display only; reported by the server after they happen).
+function failedLines(s) {
+  const out = new Set();
+  for (const e of (s.scenarioEvents ?? []).slice().sort((a, b) => a.atUs - b.atUs)) { if (e.type === 'line_trip') out.add(e.assetId); if (e.type === 'line_restore') out.delete(e.assetId); }
+  return out;
+}
+
+function powerMap(s) {
+  const th = threatened(s), failed = failedLines(s), out = [];
+  for (const [id, [a, b]] of Object.entries(LINES)) {
+    const [x1, y1] = P[a], [x2, y2] = P[b];
+    const mid = id === 'line-3-8' ? `Q ${TOWER[0] - 20} ${TOWER[1] - 10} ${x2} ${y2}` : `L ${x2} ${y2}`;
+    const down = failed.has(id);
+    const dark = down || busState(s, a) === 'dark' || busState(s, b) === 'dark';
+    const isThreat = th.has(id) && !dark;
+    if (isThreat) out.push(`<path class="halo" d="M ${x1} ${y1} ${mid}"/>`);
+    out.push(`<path class="ln ${dark ? 'dark' : isThreat ? 'threat' : ''}" d="M ${x1} ${y1} ${mid}"><title>${esc(id)}: ${esc(meta?.landmarks?.[id] ?? '')}</title></path>`);
+    if (down) { const mx = id === 'line-3-8' ? TOWER[0] - 10 : (x1 + x2) / 2, my = id === 'line-3-8' ? TOWER[1] + 30 : (y1 + y2) / 2 + 22; out.push(`<text class="lbl lost" x="${mx}" y="${my}">✕ ${esc(id)} FAILED</text>`); }
+  }
+  for (const [id, [a, b]] of Object.entries(TIES)) {
+    const closed = s.assets?.switches?.[id] === 'closed';
+    const [x1, y1] = P[a], [x2, y2] = P[b];
+    out.push(`<path class="tie ${closed ? 'closed' : ''}" d="M ${x1} ${y1} L ${x2} ${y2}"><title>tie ${esc(id)} ${closed ? 'closed' : 'open'}</title></path>`);
+    const f = TIE_AT[id];
+    out.push(`<text class="lbl ${closed ? 'acted' : ''}" x="${x1 + (x2 - x1) * f + 8}" y="${y1 + (y2 - y1) * f - 8}">${esc(id.replace('sw-', 'tie '))}${closed ? ' · closed by LIFELINE' : ''}</text>`);
+  }
+  // water tower beside the ridge line
+  out.push(`<rect class="bus" x="${TOWER[0] - 9}" y="${TOWER[1] - 26}" width="18" height="22" rx="3"/><text class="lbl" x="${TOWER[0] - 104}" y="${TOWER[1] - 12}">water tower</text>`);
+  for (const [b, [x, y]] of Object.entries(P)) {
+    const st = busState(s, b);
+    const sub = b === 'bus-1' || b === 'bus-12';
+    out.push(sub ? `<rect class="sub ${st === 'dark' ? 'dark' : ''}" x="${x - 13}" y="${y - 13}" width="26" height="26" rx="4"/>`
+      : `<circle class="bus ${st === 'dark' ? 'dark' : ''} ${ESSENTIAL.has(b) ? 'essential' : ''}" cx="${x}" cy="${y}" r="${ESSENTIAL.has(b) ? 11 : 8}"/>`);
+    const strong = ESSENTIAL.has(b) || sub;
+    const [dx, dy] = LABEL[b];
+    out.push(`<text class="lbl ${st === 'dark' ? 'lost' : strong ? 'strong' : ''}" x="${x + dx}" y="${y + dy}">${esc(PLACES[b])}${st === 'dark' ? ' · NO POWER' : ''}</text>`);
+  }
+  return out.join('');
+}
+
+function waterMap(s) {
+  const last = (s.series ?? []).at(-1) ?? {};
+  const pumps = last.pumps ?? {};
+  const level = last.tankLevelM, hosp = last.hospitalWaterFraction;
+  const pz = (s.assets?.closedLinks ?? []).includes('PZ');
+  const T = { x: 470, y: 300, w: 120, h: 210 };
+  const fill = level == null ? 0 : Math.max(0, Math.min(1, (level - 0.5) / 4.5));
+  const fillCls = level != null && level < 0.8 ? 'empty' : level != null && level < 1.5 ? 'low' : '';
+  const deliver = hosp == null ? '' : hosp >= 0.99 ? 'flow' : 'dry';
+  const pipe = (d, cls) => `<path class="pipe ${cls}" d="${d}"/>`;
+  const pump = (id, x, y, name, bus) => {
+    const p = pumps[id] ?? {};
+    const powered = busState(s, bus) !== 'dark' && p.powered !== false;
+    const state = p.running ? 'running' : powered ? 'idle' : 'NO POWER';
+    return `<circle class="pump ${p.running ? '' : powered ? 'maint' : 'off'}" cx="${x}" cy="${y}" r="26"/>
+      <text class="lbl strong" x="${x - 15}" y="${y + 6}">${id}</text>
+      <text class="lbl strong" x="${x - 70}" y="${y - 40}">${esc(name)}</text>
+      <text class="lbl ${state === 'NO POWER' ? 'lost' : ''}" x="${x - 70}" y="${y + 50}">${state}</text>
+      <text class="lbl" x="${x - 70}" y="${y + 70}">power: ${esc(PLACES[bus])} ${powered ? '✓' : '✕'}</text>`;
+  };
+  const out = (y, name, value, cls) => `<rect class="bus" x="800" y="${y - 24}" width="170" height="48" rx="6"/>
+      <text class="lbl strong" x="814" y="${y - 3}">${esc(name)}</text><text class="lbl ${cls}" x="814" y="${y + 16}">${esc(value)}</text>`;
+  return [
+    `<text class="lbl" x="40" y="40">Water: pumps fill the tower; the tower feeds the town. Pumps need power: this is where the two networks meet.</text>`,
+    pipe(`M 196 190 H 410 V ${T.y - 60} H ${T.x - T.w / 2}`, pumps.PU2?.running ? 'flow' : 'shut'),
+    pipe(`M 196 410 H 410 V ${T.y + 60} H ${T.x - T.w / 2}`, pumps.PU1?.running ? 'flow' : 'shut'),
+    pipe(`M ${T.x + T.w / 2} ${T.y - 60} H 700 V 150 H 800`, deliver),
+    pipe(`M ${T.x + T.w / 2} ${T.y} H 800`, deliver),
+    pipe(`M ${T.x + T.w / 2} ${T.y + 60} H 700 V 450 H 800`, pz ? 'shut' : deliver),
+    `<rect class="tankshell" x="${T.x - T.w / 2}" y="${T.y - T.h / 2}" width="${T.w}" height="${T.h}" rx="10"/>`,
+    `<rect class="tankfill ${fillCls}" x="${T.x - T.w / 2 + 4}" y="${T.y + T.h / 2 - 4 - (T.h - 8) * fill}" width="${T.w - 8}" height="${(T.h - 8) * fill}" rx="6"/>`,
+    `<text class="lbl strong" x="${T.x - 70}" y="${T.y - T.h / 2 - 14}">Water tower T1</text>`,
+    `<text class="lbl strong" x="${T.x - 40}" y="${T.y + T.h / 2 + 26}">${level == null ? '—' : `${level.toFixed(2)} m`}</text>`,
+    pump('PU2', 170, 190, 'Backup pump', 'bus-14'), pump('PU1', 170, 410, 'Pump station', 'bus-7'),
+    `<rect class="bus" x="676" y="438" width="48" height="24" rx="4"/><text class="lbl ${pz ? 'acted' : ''}" x="660" y="485">valve PZ ${pz ? 'shut' : 'open'}</text>`,
+    out(150, 'Hospital', `${pct(hosp)} delivered`, hosp != null && hosp < 0.99 ? 'lost' : ''),
+    out(300, 'Fire station', hosp == null ? '—' : hosp >= 0.99 ? 'supplied' : 'pressure low', hosp != null && hosp < 0.99 ? 'lost' : ''),
+    out(450, 'Residential', pz ? 'shed to save the hospital' : 'supplied', pz ? 'acted' : ''),
+  ].join('');
+}
+
+function tile(id, label, value, sub, cls) {
+  $(id).className = `tile ${cls}`;
+  $(id).innerHTML = `<div class="label">${esc(label)}</div><div class="value">${esc(value)}</div><div class="sub">${esc(sub)}</div>`;
+}
+
+function renderTiles(s) {
+  const last = (s.series ?? []).at(-1) ?? {};
+  const threats = s.lifeline?.threats ?? [];
+  const riskW = threats.some(t => t.spread?.waterEssentialUnmetM3 > 0.01 && !t.actNow);
+  const riskP = threats.some(t => t.spread?.powerEssentialUnservedJ > 1e6 && !t.actNow);
+  const guarded = threats.some(t => t.actNow);
+  const w = last.hospitalWaterFraction, p = last.essentialPowerFraction, lv = last.tankLevelM;
+  tile('tile-water', 'Hospital water', pct(w), w != null && w < 0.99 ? 'service lost' : riskW ? 'at risk: predicted loss' : guarded ? 'protected by LIFELINE' : 'normal', w != null && w < 0.99 ? 'lost' : riskW ? 'threat' : guarded ? 'acted' : '');
+  tile('tile-power', 'Essential power', pct(p), p != null && p < 0.99 ? 'clinic, pump station or hospital dark' : riskP ? 'at risk: predicted loss' : guarded ? 'protected by LIFELINE' : 'clinic · pump station · hospital', p != null && p < 0.99 ? 'lost' : riskP ? 'threat' : guarded ? 'acted' : '');
+  tile('tile-tank', 'Water reserve', lv == null ? '—' : `${lv.toFixed(2)} m`, 'water tower T1, usable 0.5–5 m', lv != null && lv < 0.8 ? 'lost' : lv != null && lv < 1.5 ? 'threat' : '');
+  const routers = last.routers ?? {};
+  const down = Object.entries(routers).filter(([, r]) => !r.up).map(([k]) => k);
+  const battery = Object.entries(routers).filter(([, r]) => r.up && !r.onMains).map(([k]) => k);
+  tile('tile-comms', 'Control radios', down.length ? `${down.length} down` : battery.length ? `${battery.length} on battery` : Object.keys(routers).length ? 'all on mains' : '—',
+    down.length ? `remote control lost: ${down.join(', ')}` : battery.length ? `${battery.join(', ')} running on battery` : 'pump station · substations', down.length ? 'lost' : battery.length ? 'threat' : '');
+}
+
+const band = c => (c >= 0.7 ? 'high confidence' : c >= 0.4 ? 'medium confidence' : 'low confidence');
+const mj = j => `${Math.round(j / 1e6).toLocaleString()} MJ`;
+
+function renderBrain(s) {
+  const lf = s.lifeline;
+  if (!lf) {
+    const msg = s.state === 'idle' ? 'Choose a scenario and start.' : 'This run uses a conventional controller: no brain, no warning signs read.';
+    $('warnings').innerHTML = `<li class="empty">${esc(msg)}</li>`; $('threats').innerHTML = ''; $('actions').innerHTML = ''; return;
+  }
+  const log = lf.log ?? [];
+  $('warnings').innerHTML = log.filter(e => e.kind === 'warning').map(e => {
+    const i = e.text.indexOf(': ');
+    return `<li class="warnline"><span class="when">${tmin(e.atUs)}</span><span class="src">${esc(e.text.slice(0, i))}</span><q>${esc(e.text.slice(i + 2))}</q></li>`;
+  }).join('') || '<li class="empty">No warning signs yet. Reflexes are armed for any line that fails.</li>';
+  $('threats').innerHTML = (lf.threats ?? []).map(t => {
+    const sp = t.spread;
+    const name = meta?.landmarks?.[t.assetId] ?? t.assetId;
+    return `<div class="threat"><div class="head"><span class="asset">${esc(t.assetId)}</span><span class="band">${band(t.confidence)}</span></div>
+      <div class="muted">${esc(name)} · may fail between ${tmin(t.assessedAtUs + t.windowMin[0] * MIN)} and ${tmin(t.assessedAtUs + t.windowMin[1] * MIN)}</div>
+      <p class="why">${esc(t.why)} <span class="muted">(from ${esc(t.evidence.join(', '))})</span></p>
+      ${(t.actNow?.chain ?? sp?.chain) ? `<div class="muted">Predicted spread with no action${t.actNow ? ` (assessed ${tmin(t.actNow.atUs)})` : ''}:</div><ol class="chain">${(t.actNow?.chain ?? sp.chain).map(x => `<li><span class="t">${tmin(x.atUs)}</span><span>${esc(x.text)}</span></li>`).join('')}</ol>` : ''}
+      <div class="verdict">${t.actNow ? `<span class="acted">${t.actNow.done ? 'Protected: ' : 'Act now: '}${esc(t.actNow.label)}${t.actNow.done ? ` at ${tmin(t.actNow.atUs)}` : ''}</span>
+        <div class="cmp"><div>If it fails, no action<br><span class="bad">${t.actNow.without.waterEssentialUnmetM3.toFixed(1)} m³ water · ${mj(t.actNow.without.powerEssentialUnservedJ)}</span></div>
+        <div>If it fails, with LIFELINE<br><span class="good">${t.actNow.ifThreat.waterEssentialUnmetM3.toFixed(1)} m³ water · ${mj(t.actNow.ifThreat.powerEssentialUnservedJ)}</span></div></div>`
+        : sp && sp.waterEssentialUnmetM3 <= 0.01 && sp.powerEssentialUnservedJ <= 1e6 ? 'Predicted: no essential loss even if it fails.'
+        : t.reflex?.length ? `Armed: if it fails → close ${esc(t.reflex.join(', then '))}; generator if the pump station stays dark` : 'Monitoring: no switching can help; generator stands by'}</div></div>`;
+  }).join('') || '<p class="empty">No current threat.</p>';
+  const cls = { 'act-now': 'act', armed: 'act', 'reflex-fire': 'fire', reflex: 'act', dismissed: 'dismiss', threat: 'warnline', brain: '' };
+  $('actions').innerHTML = log.filter(e => e.kind !== 'warning' && e.kind !== 'threat').slice().reverse().map(e =>
+    `<li class="${cls[e.kind] ?? ''}"><span class="when">${tmin(e.atUs)}</span>${esc(e.text)}</li>`).join('') || '<li class="empty">Armed and watching.</li>';
+}
+
+function renderTimeline(s) {
+  const D = s.durationUs ?? 240 * MIN, X = us => 40 + (us / D) * 940;
+  const out = [`<line class="axis" x1="40" x2="980" y1="60" y2="60"/>`];
+  for (let m = 0; m <= D / MIN; m += 30) out.push(`<text class="tick" x="${X(m * MIN) - 8}" y="76">${m}</text>`);
+  const lf = s.lifeline;
+  for (const t of lf?.threats ?? []) {
+    const a = X(t.assessedAtUs + t.windowMin[0] * MIN), b = X(Math.min(D, t.assessedAtUs + t.windowMin[1] * MIN));
+    out.push(`<rect class="win" x="${a}" y="14" width="${Math.max(2, b - a)}" height="40"/><line class="winedge" x1="${a}" x2="${a}" y1="14" y2="54"/><text class="tick" x="${a + 4}" y="27">${esc(t.assetId)} window</text>`);
+  }
+  for (const e of lf?.log ?? []) {
+    const x = X(e.atUs);
+    if (e.kind === 'warning') out.push(`<path class="warnmark" d="M ${x} 38 l 6 6 l -6 6 l -6 -6 z"><title>${esc(e.text)}</title></path>`);
+    if (e.kind === 'act-now' || e.kind === 'reflex-fire') out.push(`<path class="actmark" d="M ${x} 34 l 7 12 l -14 0 z"><title>${esc(e.text)}</title></path>`);
+  }
+  for (const e of s.scenarioEvents ?? []) if (e.type !== 'actuator_unavailable') out.push(`<path class="failmark" d="M ${X(e.atUs)} 50 l 7 -12 l -14 0 z"><title>${esc(e.type.replace('_', ' '))} ${esc(e.assetId)}</title></path><text class="tick lostt" x="${X(e.atUs) + 9}" y="48">${esc(e.assetId)} fails</text>`);
+  const series = s.series ?? [];
+  const Y = v => 150 - v * 56;
+  const path = key => series.filter(p => p[key] != null).map((p, i) => `${i ? 'L' : 'M'} ${X(p.atUs).toFixed(1)} ${Y(p[key]).toFixed(1)}`).join(' ');
+  let start = null;
+  for (const p of series) {
+    const low = (p.essentialPowerFraction ?? 1) < 0.99 || (p.hospitalWaterFraction ?? 1) < 0.99;
+    if (low && start === null) start = p.atUs;
+    if (!low && start !== null) { out.push(`<rect class="lossband" x="${X(start)}" y="92" width="${Math.max(2, X(p.atUs) - X(start))}" height="60"/>`); start = null; }
+  }
+  if (start !== null) out.push(`<rect class="lossband" x="${X(start)}" y="92" width="${Math.max(2, X(series.at(-1).atUs) - X(start))}" height="60"/>`);
+  out.push(`<path class="trace" d="${path('essentialPowerFraction')}"/><path class="trace water" d="${path('hospitalWaterFraction')}"/>`);
+  out.push(`<text class="tick" x="984" y="104" text-anchor="end">essential power ─ · hospital water ─ (100% at top)</text><line class="axis" x1="40" x2="980" y1="150" y2="150"/>`);
+  if (s.nowUs != null && s.state !== 'idle') out.push(`<line class="now" x1="${X(s.nowUs)}" x2="${X(s.nowUs)}" y1="8" y2="156"/>`);
+  $('time').innerHTML = out.join('');
+}
+
+function renderResults() {
+  if (!results?.rows?.length) { $('results').innerHTML = '<p class="empty">No recorded comparison yet.</p>'; return; }
+  $('res-src').textContent = `recorded run · brain: ${results.brain === 'live' ? 'Meta model, live' : results.brain}`;
+  const names = { independent: 'Rules only (each utility alone)', hybrid: 'Conventional coordinated', lifeline: 'LIFELINE' };
+  const stories = [...new Set(results.rows.map(r => r.storyline))];
+  const ctrls = ['independent', 'hybrid', 'lifeline'];
+  const cell = r => (r ? r.waterEssentialUnmetM3 * 1e3 + r.powerEssentialUnservedJ / 1e6 : null);
+  const body = stories.map(st => {
+    const rs = Object.fromEntries(ctrls.map(c => [c, results.rows.find(r => r.storyline === st && r.controller === c)]));
+    const best = Math.min(...ctrls.map(c => cell(rs[c])).filter(v => v != null));
+    const title = meta?.cases?.find(c => c.caseId === st)?.title ?? st;
+    return `<tr><td>${esc(title)}</td>${ctrls.map(c => { const r = rs[c]; if (!r) return '<td class="n">—</td>';
+      const lost = r.waterEssentialUnmetM3 > 0.01 || r.powerEssentialUnservedJ > 1e6;
+      return `<td class="n ${cell(r) === best && c === 'lifeline' ? 'best' : lost ? 'lost' : ''}">${r.waterEssentialUnmetM3.toFixed(1)} m³ · ${mj(r.powerEssentialUnservedJ)}</td>`; }).join('')}</tr>`;
+  }).join('');
+  $('results').innerHTML = `<table><thead><tr><th>Scenario (essential loss: hospital/fire water · essential power)</th>${ctrls.map(c => `<th class="n">${names[c]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
+}
+
+function render() {
+  const s = snap;
+  $('state').textContent = s.state === 'idle' ? 'idle' : s.state;
+  $('state').className = `chip ${s.state === 'running' ? 'running' : s.state === 'disconnected' ? 'bad' : ''}`;
+  $('clock').textContent = s.state === 'idle' ? 'T+0 min' : `T+${Math.round((s.nowUs ?? 0) / MIN)} min`;
+  $('mode').textContent = `simulated town · ${s.clock?.acceleration ?? 60}× clock`;
+  $('brainchip').textContent = s.provider?.state ?? meta?.brain ?? 'brain';
+  $('brainchip').className = `chip ${/live/i.test(s.provider?.state ?? meta?.brain ?? '') ? 'live' : ''}`;
+  $('story').innerHTML = s.title ? `<strong>${esc(s.title)}</strong>${esc(s.story ?? '')}` : '';
+  const running = s.state === 'running';
+  $('start').disabled = running; $('stop').disabled = !running;
+  renderTiles(s);
+  $('map').innerHTML = view === 'power' ? powerMap(s) : waterMap(s);
+  renderBrain(s);
+  renderTimeline(s);
+}
+
+async function poll() {
+  try { snap = await api('/api/town/live'); render(); } catch (e) { $('state').textContent = 'server unreachable'; $('state').className = 'chip bad'; }
+}
+
+function setView(v) {
+  view = v;
+  $('view-power').setAttribute('aria-selected', String(v === 'power'));
+  $('view-water').setAttribute('aria-selected', String(v === 'water'));
+  render();
+}
+
+async function init() {
+  meta = await api('/api/town/cases');
+  const stories = meta.cases.filter(c => c.storyline);
+  $('case').innerHTML = stories.map(c => `<option value="${esc(c.caseId)}">${esc(c.title)}</option>`).join('');
+  const labels = { lifeline: 'LIFELINE', hybrid: 'Conventional coordinated', priority: 'Rules only' };
+  $('controller').innerHTML = meta.controllers.map(c => `<option value="${esc(c)}">${esc(labels[c] ?? c)}</option>`).join('');
+  $('start').addEventListener('click', async () => { try { snap = await api('/api/town/live/start', { caseId: $('case').value, controller: $('controller').value }); render(); } catch (e) { $('story').textContent = e.message; } });
+  $('stop').addEventListener('click', async () => { try { snap = await api('/api/town/live/stop', { runId: snap.runId }); render(); } catch (e) { $('story').textContent = e.message; } });
+  $('view-power').addEventListener('click', () => setView('power'));
+  $('view-water').addEventListener('click', () => setView('water'));
+  try { results = await api('/api/town/v2-results'); } catch { results = null; }
+  renderResults();
+  await poll();
+  setInterval(poll, 1000);
+}
+init();

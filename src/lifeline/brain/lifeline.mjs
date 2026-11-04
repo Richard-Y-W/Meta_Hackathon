@@ -140,11 +140,14 @@ export function brainLayer({ policy, callModel, reports = [], providerCapS = 45,
         const threat = { ...t, assessedAtUs: nowUs, spread, reflex };
         log({ kind: 'threat', atUs: nowUs, text: `threat ${t.assetId} in ${t.windowMin[0]}-${t.windowMin[1]} min (confidence ${t.confidence}): ${t.why}`, threat });
         const act = horizonUs > 0 ? await preArm({ town, modelId, nowUs, threat, spread, horizonUs, quiet, allocated }) : null;
+        const before = shared.threats.find(x => x.assetId === t.assetId && x.actNow);
+        if (before && !act) threat.actNow = { ...before.actNow, done: true }; // already protected by an earlier act-now
         if (act) {
-          threat.actNow = { label: act.label, ifThreat: { waterEssentialUnmetM3: act.ifThreat.waterEssentialUnmetM3, powerEssentialUnservedJ: act.ifThreat.powerEssentialUnservedJ } };
+          threat.actNow = { label: act.label, atUs: nowUs, chain: spread.chain, without: { waterEssentialUnmetM3: spread.waterEssentialUnmetM3, powerEssentialUnservedJ: spread.powerEssentialUnservedJ },
+            ifThreat: { waterEssentialUnmetM3: act.ifThreat.waterEssentialUnmetM3, powerEssentialUnservedJ: act.ifThreat.powerEssentialUnservedJ } };
           if (!steps.some(x => x.id === act.steps[0].id)) steps.push(...act.steps.map(x => ({ ...x, id: `pre-${x.id}` })));
           if (act.steps.some(x => x.action.type === 'allocate_generator')) allocated = true;
-          log({ kind: 'act-now', atUs: nowUs, text: `act now: ${act.label} — verified: if ${t.assetId} fails, essential loss ${act.ifThreat.waterEssentialUnmetM3.toFixed(1)} m3 water / ${(act.ifThreat.powerEssentialUnservedJ / 1e6).toFixed(0)} MJ power instead of ${spread.waterEssentialUnmetM3.toFixed(1)} m3 / ${(spread.powerEssentialUnservedJ / 1e6).toFixed(0)} MJ; harmless if it does not` });
+          log({ kind: 'act-now', atUs: nowUs, text: `act now: ${act.label} — verified: if ${t.assetId} fails, essential loss ${act.ifThreat.waterEssentialUnmetM3.toFixed(1)} m³ water / ${(act.ifThreat.powerEssentialUnservedJ / 1e6).toFixed(0)} MJ power instead of ${spread.waterEssentialUnmetM3.toFixed(1)} m³ / ${(spread.powerEssentialUnservedJ / 1e6).toFixed(0)} MJ; harmless if it does not` });
         } else if (spread && (spread.waterEssentialUnmetM3 > 0.01 || spread.powerEssentialUnservedJ > 1e6)) {
           log({ kind: 'armed', atUs: nowUs, text: `armed: if ${t.assetId} fails → ${reflex.length ? `close ${reflex.join(' then ')}` : 'no tie can help'}${t.assetId !== 'grid-hv' ? '' : ''}, generator if the pump station stays dark` });
         }
