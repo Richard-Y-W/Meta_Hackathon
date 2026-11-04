@@ -22,6 +22,37 @@
 <header class="top"><a class="wordmark" href="/lifeline/ops">LIFELINE<span>Infrastructure intelligence</span></a><div class="header-location"><span class="location-dot"></span> Coupled town <span class="slash">/</span> Operations</div><div class="meta"><span id="mode" class="chip">Simulated town · 60× clock</span><span id="state" class="chip" role="status" aria-live="polite">Connecting</span></div></header>
 <main id="workspace">
 <div class="page-heading"><div><h1>Keep the essentials running<span class="heading-dot">.</span></h1><p>One view of power, water and the decisions that connect them.</p></div><div class="clock-block"><span class="clock-label">Simulation time</span><span id="clock" class="clock">T+000 <small>min</small></span></div></div>
+<svg class="skyline" viewBox="0 0 1400 170" preserveAspectRatio="xMidYMax slice" aria-hidden="true">
+<defs><linearGradient id="sky" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#15120e"/><stop offset="1" stop-color="#1f1a14"/></linearGradient></defs>
+<rect width="1400" height="170" fill="url(#sky)"/>
+<g class="stars">
+<circle cx="70" cy="34" r="1.1"/><circle cx="140" cy="20" r="1"/><circle cx="230" cy="46" r="1.3"/><circle cx="305" cy="18" r="1"/><circle cx="430" cy="30" r="1.1"/>
+<circle cx="520" cy="14" r="1"/><circle cx="640" cy="40" r="1.2"/><circle cx="760" cy="22" r="1"/><circle cx="845" cy="50" r="1.1"/><circle cx="930" cy="16" r="1"/>
+<circle cx="1040" cy="36" r="1.2"/><circle cx="1140" cy="20" r="1"/><circle cx="1230" cy="48" r="1.1"/><circle cx="1320" cy="24" r="1"/>
+</g>
+<g class="pylon"><path d="M50 150V70l20-20 20 20v80M50 95h40M50 120h40"/></g>
+<path class="skyline-wire" id="wire1" d="M70 72 Q 180 55 290 80"/>
+<circle class="wire-pulse" r="2.4"><animateMotion dur="3.2s" repeatCount="indefinite"><mpath href="#wire1"/></animateMotion></circle>
+<g class="block" transform="translate(300,96)"><rect width="46" height="54" rx="1"/><rect class="win" x="8" y="10" width="8" height="8"/><rect class="win" x="24" y="10" width="8" height="8"/><rect class="win" x="8" y="26" width="8" height="8"/><rect class="win lit" x="24" y="26" width="8" height="8"/></g>
+<g class="block" transform="translate(356,78)"><rect width="36" height="72" rx="1"/><rect class="win lit" x="7" y="10" width="7" height="7"/><rect class="win" x="21" y="10" width="7" height="7"/><rect class="win" x="7" y="24" width="7" height="7"/><rect class="win lit" x="21" y="24" width="7" height="7"/><rect class="win" x="7" y="38" width="7" height="7"/><rect class="win lit" x="21" y="38" width="7" height="7"/></g>
+<g class="hospital" id="hero-hospital" transform="translate(420,60)"><rect width="78" height="90" rx="1"/><path class="cross" d="M35 14h8v8h8v8h-8v8h-8v-8h-8v-8h8z"/>
+<rect class="win lit" x="10" y="40" width="9" height="9"/><rect class="win lit" x="26" y="40" width="9" height="9"/><rect class="win lit" x="43" y="40" width="9" height="9"/><rect class="win lit" x="59" y="40" width="9" height="9"/>
+<rect class="win lit" x="10" y="56" width="9" height="9"/><rect class="win lit" x="26" y="56" width="9" height="9"/><rect class="win lit" x="43" y="56" width="9" height="9"/><rect class="win lit" x="59" y="56" width="9" height="9"/>
+<rect class="win lit" x="10" y="72" width="9" height="9"/><rect class="win" x="26" y="72" width="9" height="9"/><rect class="win lit" x="43" y="72" width="9" height="9"/><rect class="win lit" x="59" y="72" width="9" height="9"/></g>
+<g class="block" transform="translate(520,88)"><rect width="40" height="62" rx="1"/><rect class="win" x="8" y="10" width="8" height="8"/><rect class="win lit" x="24" y="10" width="8" height="8"/><rect class="win lit" x="8" y="26" width="8" height="8"/><rect class="win" x="24" y="26" width="8" height="8"/><rect class="win lit" x="8" y="42" width="8" height="8"/><rect class="win" x="24" y="42" width="8" height="8"/></g>
+<path class="skyline-wire" id="wire2" d="M560 92 Q 680 70 800 94"/>
+<circle class="wire-pulse" r="2.4"><animateMotion dur="2.8s" begin="0.6s" repeatCount="indefinite"><mpath href="#wire2"/></animateMotion></circle>
+<g class="block" transform="translate(600,100)"><rect width="34" height="50" rx="1"/><rect class="win lit" x="7" y="9" width="7" height="7"/><rect class="win" x="20" y="9" width="7" height="7"/><rect class="win" x="7" y="24" width="7" height="7"/><rect class="win lit" x="20" y="24" width="7" height="7"/></g>
+<g class="block" transform="translate(700,82)"><rect width="50" height="68" rx="1"/><rect class="win" x="9" y="10" width="9" height="9"/><rect class="win lit" x="26" y="10" width="9" height="9"/><rect class="win lit" x="9" y="27" width="9" height="9"/><rect class="win" x="26" y="27" width="9" height="9"/><rect class="win lit" x="9" y="44" width="9" height="9"/><rect class="win lit" x="26" y="44" width="9" height="9"/></g>
+<g class="tank"><path d="M940 150V96h40v54M932 96h56l-10-16h-36Z"/><path d="M938 110h44M938 124h44M938 138h44"/></g>
+<g class="pylon"><path d="M1060 150V70l20-20 20 20v80M1060 95h40M1060 120h40"/></g>
+<path class="skyline-wire" id="wire3" d="M1080 72 Q 1200 52 1310 78"/>
+<circle class="wire-pulse" r="2.4"><animateMotion dur="3s" begin="1.2s" repeatCount="indefinite"><mpath href="#wire3"/></animateMotion></circle>
+<g class="block" transform="translate(1140,94)"><rect width="42" height="56" rx="1"/><rect class="win lit" x="8" y="10" width="8" height="8"/><rect class="win" x="24" y="10" width="8" height="8"/><rect class="win" x="8" y="26" width="8" height="8"/><rect class="win lit" x="24" y="26" width="8" height="8"/></g>
+<g class="block" transform="translate(1220,108)"><rect width="32" height="42" rx="1"/><rect class="win lit" x="6" y="8" width="7" height="7"/><rect class="win" x="18" y="8" width="7" height="7"/><rect class="win" x="6" y="22" width="7" height="7"/><rect class="win lit" x="18" y="22" width="7" height="7"/></g>
+<g class="block" transform="translate(1280,86)"><rect width="46" height="64" rx="1"/><rect class="win" x="9" y="10" width="8" height="8"/><rect class="win lit" x="25" y="10" width="8" height="8"/><rect class="win lit" x="9" y="26" width="8" height="8"/><rect class="win" x="25" y="26" width="8" height="8"/><rect class="win lit" x="9" y="42" width="8" height="8"/><rect class="win" x="25" y="42" width="8" height="8"/></g>
+<line class="ground" x1="0" y1="150" x2="1400" y2="150"/>
+</svg>
 <section class="runbar" aria-label="Simulation controls"><label class="scenario-field"><span class="control-label">SCENARIO</span><select id="case" aria-describedby="scenario-summary"><option>Loading scenarios…</option></select></label><label><span class="control-label">CONTROLLER</span><select id="controller"><option>LIFELINE</option></select></label><div class="run-actions"><button id="start" type="button" class="primary" disabled><span aria-hidden="true">▶</span> Start simulation</button><button id="stop" type="button" disabled aria-label="Stop simulation"><span aria-hidden="true">■</span> Stop</button></div></section>
 <div class="scenario-line" id="scenario-summary"><span class="scenario-icon" aria-hidden="true">↳</span><p id="story">Connecting to the town simulator.</p><span id="brainchip" class="brain-label">Checking controller</span></div>
 <div id="notice" class="notice" role="alert" hidden></div>

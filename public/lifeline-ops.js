@@ -69,15 +69,21 @@ function powerMap(s) {
     const dark = down || busState(s, a) === 'dark' || busState(s, b) === 'dark';
     const isThreat = th.has(id) && !dark;
     if (isThreat) out.push(`<path class="halo" d="M ${x1} ${y1} ${mid}"/>`);
-    out.push(`<path class="ln ${dark ? 'dark' : isThreat ? 'threat' : ''}" d="M ${x1} ${y1} ${mid}"><title>${esc(id)}: ${esc(meta?.landmarks?.[id] ?? '')}</title></path>`);
-    if (!dark && !isThreat && s.assets && busState(s, b) === 'live') out.push(`<path class="flow-overlay" d="M ${x1} ${y1} ${mid}"/>`);
+    out.push(`<path class="ln ${dark ? 'dark' : isThreat ? 'threat' : ''}" id="ln-${id}" d="M ${x1} ${y1} ${mid}"><title>${esc(id)}: ${esc(meta?.landmarks?.[id] ?? '')}</title></path>`);
+    if (!dark && !isThreat && s.assets && busState(s, b) === 'live') {
+      out.push(`<path class="flow-overlay" d="M ${x1} ${y1} ${mid}"/>`);
+      out.push(`<circle class="flow-pulse" r="3"><animateMotion dur="2.6s" repeatCount="indefinite"><mpath href="#ln-${id}"/></animateMotion></circle>`);
+    }
     if (down) { const mx = id === 'line-3-8' ? TOWER[0] - 10 : (x1 + x2) / 2, my = id === 'line-3-8' ? TOWER[1] + 30 : (y1 + y2) / 2 + 22; out.push(`<text class="lbl lost" x="${mx}" y="${my}">✕ ${esc(id)} FAILED</text>`); }
   }
   for (const [id, [a, b]] of Object.entries(TIES)) {
     const closed = s.assets?.switches?.[id] === 'closed';
     const [x1, y1] = P[a], [x2, y2] = P[b];
-    out.push(`<path class="tie ${closed ? 'closed' : ''}" d="M ${x1} ${y1} L ${x2} ${y2}"><title>tie ${esc(id)} ${closed ? 'closed' : 'open'}</title></path>`);
-    if (closed) out.push(`<path class="flow-overlay intervention" d="M ${x1} ${y1} L ${x2} ${y2}"/>`);
+    out.push(`<path class="tie ${closed ? 'closed' : ''}" id="ln-${id}" d="M ${x1} ${y1} L ${x2} ${y2}"><title>tie ${esc(id)} ${closed ? 'closed' : 'open'}</title></path>`);
+    if (closed) {
+      out.push(`<path class="flow-overlay intervention" d="M ${x1} ${y1} L ${x2} ${y2}"/>`);
+      out.push(`<circle class="flow-pulse intervention" r="3"><animateMotion dur="2.2s" repeatCount="indefinite"><mpath href="#ln-${id}"/></animateMotion></circle>`);
+    }
     const f = TIE_AT[id];
     out.push(`<text class="lbl ${closed ? 'acted' : ''}" x="${x1 + (x2 - x1) * f + 8}" y="${y1 + (y2 - y1) * f - 8}">${esc(id.replace('sw-', 'tie '))}${closed ? ' · closed by LIFELINE' : ''}</text>`);
   }
@@ -88,10 +94,16 @@ function powerMap(s) {
     const sub = b === 'bus-1' || b === 'bus-12';
     if (ESSENTIAL.has(b)) out.push(`<circle class="essential-halo ${st === 'dark' ? 'dark' : ''}" cx="${x}" cy="${y}" r="20"/>`);
     out.push(`<g class="asset-hit ${selectedAsset === b ? 'selected' : ''}" data-asset="${b}" role="button" tabindex="0" aria-label="Inspect ${esc(PLACES[b])}"><title>${esc(PLACES[b])} · ${esc(b)} · ${st === 'unknown' ? 'Awaiting telemetry' : st === 'dark' ? 'No power' : 'Energized'}</title><circle class="hit" cx="${x}" cy="${y}" r="23"/>`);
-    out.push(sub ? `<rect class="sub ${st === 'dark' ? 'dark' : ''}" x="${x - 13}" y="${y - 13}" width="26" height="26" rx="3"/><path class="node-symbol" d="M${x - 5} ${y - 4}h10m-10 8h10m-5-12v16"/>`
-      : `<circle class="bus ${st === 'dark' ? 'dark' : ''} ${ESSENTIAL.has(b) ? 'essential' : ''}" cx="${x}" cy="${y}" r="${ESSENTIAL.has(b) ? 11 : 8}"/>`);
-    if (b === 'bus-9' || b === 'bus-3') out.push(`<path class="node-symbol" d="M${x - 4} ${y}h8m-4-4v8"/>`);
-    if (b === 'bus-7') out.push(`<path class="node-symbol" d="m${x - 3} ${y - 5} 7 5-7 5Z"/>`);
+    if (b === 'bus-9') {
+      out.push(`<g transform="translate(${x - 15} ${y - 18})"><rect class="hospital-bldg ${st === 'dark' ? 'dark' : ''}" width="30" height="32" rx="2"/>
+        <path class="hospital-cross" d="M13 6h4v4h4v4h-4v4h-4v-4H9v-4h4z"/>
+        <rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="5" y="21" width="5" height="6"/><rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="13" y="21" width="5" height="6"/><rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="21" y="21" width="5" height="6"/></g>`);
+    } else {
+      out.push(sub ? `<rect class="sub ${st === 'dark' ? 'dark' : ''}" x="${x - 13}" y="${y - 13}" width="26" height="26" rx="3"/><path class="node-symbol" d="M${x - 5} ${y - 4}h10m-10 8h10m-5-12v16"/>`
+        : `<circle class="bus ${st === 'dark' ? 'dark' : ''} ${ESSENTIAL.has(b) ? 'essential' : ''}" cx="${x}" cy="${y}" r="${ESSENTIAL.has(b) ? 11 : 8}"/>`);
+      if (b === 'bus-3') out.push(`<path class="node-symbol" d="M${x - 4} ${y}h8m-4-4v8"/>`);
+      if (b === 'bus-7') out.push(`<path class="node-symbol" d="m${x - 3} ${y - 5} 7 5-7 5Z"/>`);
+    }
     const strong = ESSENTIAL.has(b) || sub;
     const [dx, dy] = LABEL[b];
     out.push(`<text class="lbl ${st === 'dark' ? 'lost' : strong ? 'strong' : ''}" x="${x + dx}" y="${y + dy}">${esc(PLACES[b])}${st === 'dark' ? ' · NO POWER' : ''}</text>`);
@@ -130,7 +142,9 @@ function waterMap(s) {
     pipe(`M ${T.x + T.w / 2} ${T.y} H 800`, deliver),
     pipe(`M ${T.x + T.w / 2} ${T.y + 60} H 700 V 450 H 800`, pz ? 'shut' : deliver),
     `<rect class="tankshell" x="${T.x - T.w / 2}" y="${T.y - T.h / 2}" width="${T.w}" height="${T.h}" rx="10"/>`,
-    `<rect class="tankfill ${fillCls}" x="${T.x - T.w / 2 + 4}" y="${T.y + T.h / 2 - 4 - (T.h - 8) * fill}" width="${T.w - 8}" height="${(T.h - 8) * fill}" rx="6"/>`,
+    `<clipPath id="tank-clip"><rect x="${T.x - T.w / 2 + 4}" y="${T.y - T.h / 2 + 4}" width="${T.w - 8}" height="${T.h - 8}" rx="6"/></clipPath>`,
+    `<g clip-path="url(#tank-clip)"><rect class="tankfill ${fillCls}" x="${T.x - T.w / 2 + 4}" y="${T.y + T.h / 2 - 4 - (T.h - 8) * fill}" width="${T.w - 8}" height="${(T.h - 8) * fill + 20}" rx="6"/>
+      ${level != null ? `<path class="tank-ripple" d="M ${T.x - T.w / 2 - 10} ${T.y + T.h / 2 - 4 - (T.h - 8) * fill} q 15 -5 30 0 t 30 0 t 30 0 t 30 0 v 6 h -120 Z"/>` : ''}</g>`,
     `<text class="lbl strong" x="${T.x - 70}" y="${T.y - T.h / 2 - 14}">Water tower T1</text>`,
     `<text class="lbl strong" x="${T.x - 40}" y="${T.y + T.h / 2 + 26}">${level == null ? '—' : `${level.toFixed(2)} m`}</text>`,
     pump('PU2', 170, 190, 'Backup pump', 'bus-14'), pump('PU1', 170, 410, 'Pump station', 'bus-7'),
