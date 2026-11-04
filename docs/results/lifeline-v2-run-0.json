@@ -1,7 +1,7 @@
 {
  "schema": "lifeline.v2-storylines.summary.v1",
  "brain": "live",
- "note": "Recorded run 0 of scripts/lifeline-v2-run.mjs with the live Meta brain, Nov 3 2026, host kept awake. Stopped by the operator after 13 of 15 episodes: grid-emergency was not run for hybrid or LIFELINE. Full rows with traces and brain logs are in artifacts/lifeline/v2/run-0 (not committed).",
+ "note": "Live Meta brain, Nov 3 2026, host kept awake. run-0: five storylines, stopped by the operator after 13 of 15 episodes. run-1: cyber-recloser and grid-emergency, all three controllers. grid-emergency/independent ran in both (identical result). Full rows with traces and brain logs are in artifacts/lifeline/v2/run-0 and run-1 (not committed).",
  "rows": [
   {
    "storyline": "storm-north-ridge",
@@ -10,6 +10,7 @@
    "powerEssentialUnservedJ": 312120000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -19,6 +20,7 @@
    "powerEssentialUnservedJ": 312120000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -28,6 +30,7 @@
    "powerEssentialUnservedJ": 0,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": [
     "ok",
     "ok"
@@ -40,6 +43,7 @@
    "powerEssentialUnservedJ": 0,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -49,6 +53,7 @@
    "powerEssentialUnservedJ": 0,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -58,6 +63,7 @@
    "powerEssentialUnservedJ": 0,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": [
     "ok",
     "ok"
@@ -70,6 +76,7 @@
    "powerEssentialUnservedJ": 273105000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -79,6 +86,7 @@
    "powerEssentialUnservedJ": 273105000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -88,6 +96,7 @@
    "powerEssentialUnservedJ": 78030000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -97,6 +106,7 @@
    "powerEssentialUnservedJ": 582420000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -106,6 +116,7 @@
    "powerEssentialUnservedJ": 528360000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": []
   },
   {
@@ -115,8 +126,42 @@
    "powerEssentialUnservedJ": 13515000,
    "waterNonessentialUnmetM3": 0,
    "fuelUsedJ": 0,
+   "run": "run-0",
    "brainCalls": [
     "ok",
+    "ok",
+    "ok"
+   ]
+  },
+  {
+   "storyline": "cyber-recloser",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 117045000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "run": "run-1",
+   "brainCalls": []
+  },
+  {
+   "storyline": "cyber-recloser",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 117045000,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "run": "run-1",
+   "brainCalls": []
+  },
+  {
+   "storyline": "cyber-recloser",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 0,
+   "waterNonessentialUnmetM3": 0,
+   "fuelUsedJ": 0,
+   "run": "run-1",
+   "brainCalls": [
     "ok",
     "ok"
    ]
@@ -128,6 +173,41 @@
    "powerEssentialUnservedJ": 10506000000,
    "waterNonessentialUnmetM3": 11.759999999999991,
    "fuelUsedJ": 120000000,
+   "run": "run-1",
+   "brainCalls": []
+  },
+  {
+   "storyline": "grid-emergency",
+   "controller": "hybrid",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 10506000000,
+   "waterNonessentialUnmetM3": 20.879999999999967,
+   "fuelUsedJ": 120000000,
+   "run": "run-1",
+   "brainCalls": []
+  },
+  {
+   "storyline": "grid-emergency",
+   "controller": "lifeline",
+   "waterEssentialUnmetM3": 0,
+   "powerEssentialUnservedJ": 10506000000,
+   "waterNonessentialUnmetM3": 20.879999999999967,
+   "fuelUsedJ": 120000000,
+   "run": "run-1",
+   "brainCalls": [
+    "ok"
+   ]
+  }
+ ],
+ "alsoRecorded": [
+  {
+   "storyline": "grid-emergency",
+   "controller": "independent",
+   "waterEssentialUnmetM3": 5.880000000000045,
+   "powerEssentialUnservedJ": 10506000000,
+   "waterNonessentialUnmetM3": 11.759999999999991,
+   "fuelUsedJ": 120000000,
+   "run": "run-0",
    "brainCalls": []
   }
  ]

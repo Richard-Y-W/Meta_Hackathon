@@ -110,8 +110,8 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
   // Measured storyline comparison (scripts/lifeline-v2-run.mjs output), shown as recorded; nothing is computed here.
   const measured = () => {
     try {
-      // The full run output if present locally, else the committed summary of the same run.
-      const source = process.env.LIFELINE_V2_RESULTS ?? ['artifacts/lifeline/v2/run-0/storylines.json', 'docs/results/lifeline-v2-run-0.json'].find(f => existsSync(resolve(repo, f)));
+      // The committed summary of the recorded runs; the raw run output if the summary is absent.
+      const source = process.env.LIFELINE_V2_RESULTS ?? ['docs/results/lifeline-v2-run-0.json', 'artifacts/lifeline/v2/run-0/storylines.json'].find(f => existsSync(resolve(repo, f)));
       const d = JSON.parse(readFileSync(resolve(repo, source), 'utf8'));
       return { source, brain: d.brain, rows: d.rows.map(r => ({ storyline: r.storyline, controller: r.controller, waterEssentialUnmetM3: r.waterEssentialUnmetM3, powerEssentialUnservedJ: r.powerEssentialUnservedJ, waterNonessentialUnmetM3: r.waterNonessentialUnmetM3, fuelUsedJ: r.fuelUsedJ })) };
     } catch { return { source: null, rows: [] }; }

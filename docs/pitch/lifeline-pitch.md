@@ -42,11 +42,11 @@ Every number on screen comes from a recorded run (`artifacts/lifeline/v2/run-0/s
 >
 > It finds the fix: close the tie that back-feeds the ridge from the other substation. It proves in simulation that the fix works if the attack comes and is harmless if it doesn't, and acts.
 >
-> The attacker opens the recloser. **[the line goes red on the map]** The hospital never notices.
+> The attacker even locks out one of the backup switches, so LIFELINE re-plans around it. Three minutes before the attacker strikes, the tie closes. The attacker opens the recloser. **[the line goes red on the map]** The hospital never notices.
 
 **[cut to results table]**
 
-> Same faults, same town, three controllers. In the storm, conventional control lost 312 MJ of essential power, and LIFELINE lost none. Storm plus a second failure: 528 against 14. A sudden failure with jammed switches: 273 against 78. And when the warning was a false alarm, LIFELINE did no harm.
+> Same faults, same town, three controllers. In the cyber attack, conventional control lost 117 MJ of essential power, and LIFELINE lost none. In the storm: 312 against none. Storm plus a second failure: 528 against 14. A sudden failure with jammed switches: 273 against 78. And when the warning was a false alarm, LIFELINE did no harm.
 
 ## 2:15 – 2:40 · It scales
 
@@ -64,7 +64,7 @@ Every number on screen comes from a recorded run (`artifacts/lifeline/v2/run-0/s
 
 ## What may and may not be said
 
-- **Say:** the measured numbers from the results table, attributed to "our simulated town" (recorded run: `docs/results/lifeline-v2-run-0.json`). The cyber scenario has no recorded live-brain run yet; show it live instead of quoting numbers.
+- **Say:** the measured numbers from the results table, attributed to "our simulated town" (recorded run: `docs/results/lifeline-v2-run-0.json`). When asked about limits: in the unrecoverable grid emergency LIFELINE did no better than conventional coordination. Say so.
 - **Don't say:** "saves millions of dollars", "30 seconds faster on average", or that LIFELINE detects cyber intrusions. It reads the security team's alerts and protects services against the attack's effects.
 - **If asked whether this is real:** it is a working system on a physics-simulated town (a CIGRE benchmark feeder in pandapower, an EPANET water network, modeled communications), not a deployment.
 

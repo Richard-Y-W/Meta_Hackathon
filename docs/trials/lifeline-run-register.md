@@ -11,7 +11,7 @@
 | Current state | Legacy Tasks 1–11 and 13 qualified in communications scope; Task 14 rehearsed/packaged but clean setup and owner items remain. New P00–P31 tasks are planned. |
 | Canonical workspace | `/Volumes/PortableSSD/Meta_Hackathon` |
 | Storage requirement | All project-controlled files and runtime data on SSD; old home path is a symlink |
-| Next task | P19 attribution ablations (protocol-ablation-v1 frozen), then P20–P22; P23–P25 not started because P18 was negative; owner items: narrated video, portal, publishing. |
+| Next task | Hackathon submission (deadline Nov 4, 9 PM Eastern): LIFELINE v2 demo at /lifeline/ops, pitch script, README; owner items: narrated video, portal, publishing. Research P19–P22 paused; P23–P25 not started (P18 negative). |
 | Minimum hackathon path | Finish the qualified communications release without overstating its result; the full program requires power, water and coupled coordination. |
 | Source baseline | Inspected local branch `lifeline` at `127ba02`; original prototype baseline `d12459829cce71d65771c2a85236d46800bdfe1d`. |
 | Qualified LIFELINE gates | Legacy G0–G3 and completed-negative G4a; G5 not complete. Q1–Q3 met (Nov 1–3); Q4–Q9 unqualified. |
@@ -34,6 +34,7 @@ The [rewritten master](../superpowers/plans/2026-10-31-lifeline-program.md) repl
 | P11–P16 coupled town / Q3 | **Q3 met:** P11–P16 qualified ([P11](lifeline-infra-p11-run-0.md)–[P15](lifeline-infra-p15-run-0.md), [town release](../releases/lifeline-town-release.md)); coordination removes essential water loss at a cost; Meta adds no value | — |
 | P17 held-out suite | **Qualified:** [run 0](lifeline-infra-p17-run-0.md); research-v1 frozen (16 groups, layouts B/C, 10 families) before any outcome; leakage checks shown by mutation; corrected after P18 (layout C had no headroom) | — |
 | P18 held-out comparison | **Complete, negative:** [run 0](lifeline-infrastructure-comparison-run-0.md); B2 not supported, B5 contradicted, B1 exploratory; Meta changed no decision; P23–P25 not started (condition not met) | P19 attribution |
+| LIFELINE v2 (architecture change after P18) | **Built, demonstrated:** the model moved out of the live loop. It reads warning signs and states threats; simulation verifies act-now steps; reflexes act instantly. [Run 0 summary](../results/lifeline-v2-run-0.json): storylines on the development town, live brain, not a held-out study. P19 replication and P20–P22 paused at the owner's direction | Cyber and grid-emergency rows; a frozen held-out test of v2 if continued |
 | P17–P22 research / Q4 | In progress: P17 qualified, P18 complete (negative) | P19 attribution, then mechanism/transfer/robustness studies |
 | P23–P25 broader adapters / Q5 | Planned | Named treatment, transport and facility profiles |
 | P26–P30 operational progression / Q6–Q8 | Planned | Operator, lab and site-specific evidence |

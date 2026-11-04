@@ -2,13 +2,55 @@
 
 **LIFELINE detects emerging threats, predicts how failures could spread, and coordinates interventions that preserve essential services across power, water, communications, and other infrastructure.**
 
-**Current implementation (development prototypes, November 3, 2026):**
+## LIFELINE v2: think slow, act fast
+
+```
+ warning signs (security alerts, crew radio notes,     ┌──────── SLOW · the brain (Meta model) ────────┐
+ weather bulletins, in plain language) ──────────────► │ reads the reports with the town map and live  │
+ live telemetry ─────────────────────────────────────► │ telemetry → threats: asset, time window,      │
+                                                        │ confidence, cited report                      │
+                                                        └──────────────────────┬───────────────────────┘
+                                                                               ▼
+                           PREDICT · the coupled simulator plays each threat forward: what fails, when
+                           VERIFY  · an act-now step is taken only if it helps when the threat comes
+                                     and does no harm when it does not
+                                                                               ▼
+                           FAST · reflexes fire the pre-planned tie or generator within one step of buses
+                                  going dark; the safety rules and the mitigation planner keep running
+```
+
+The model never touches a switch directly. It turns what people write into specific threats, and the physics checks and fast automation do the rest. The design follows from our own negative result: putting the model *inside* the live control loop added delay and changed no decision ([P18](docs/trials/lifeline-infrastructure-comparison-run-0.md)). So v2 does its thinking before the failure.
+
+**Measured on the simulated town** (recorded run, live Meta brain; same faults, same clock and executor for every controller: [`docs/results/lifeline-v2-run-0.json`](docs/results/lifeline-v2-run-0.json)). Each cell is essential power left unserved; hospital and fire water loss was 0 unless shown.
+
+| Scenario | Rules only | Conventional coordinated | **LIFELINE** |
+| --- | --- | --- | --- |
+| Storm on the north ridge (wind bulletin, then a crew sighting) | 312 MJ | 312 MJ | **0 MJ**: flagged the ridge line from the bulletin at T+5; tie closed at T+24, 31 min before the line failed |
+| Storm warning that never lands | 0 | 0 | **0**: pre-closed a tie the simulation showed harmless; the all-clear lowered confidence (0.70 → 0.65); no harm |
+| Sudden failure, two tie switches jammed (no warning) | 273 MJ | 273 MJ | **78 MJ**: reflex at T+30; jammed tie refused; second tie restored power at T+32 |
+| Storm, then a flood takes a second line | 582 MJ | 528 MJ | **14 MJ** |
+| Cyber intrusion on the ridge feeder (security team's alert) | 117 MJ | 117 MJ | **0 MJ**: read the alert at T+8; the attacker's tie lockout at T+15 cancelled the pending step; re-planned, tie closed at T+42, 3 min before the attack |
+| Regional grid emergency (nothing can restore supply) | 10,506 MJ + 5.9 m³ water | 10,506 MJ | 10,506 MJ: generator pre-dispatched at T+18; **no better than conventional coordination** here |
+
+These are six scenarios on one small simulated town, not a statistical study. In the cyber scenario LIFELINE reads the security team's alert; it does not detect intrusions.
+
+**Run it** (after the town environment below is built):
+
+```sh
+npm start                                   # loads .env (MODEL_API_KEY) → http://127.0.0.1:3210/lifeline/ops
+node --env-file-if-exists=.env scripts/lifeline-v2-run.mjs --out artifacts/lifeline/v2/my-run   # all storylines × 3 controllers
+node scripts/lifeline-v2-run.mjs --brain stub --out artifacts/lifeline/v2/offline               # no model: keyword stand-in
+```
+
+The operations view (`/lifeline/ops`) follows control-room display practice: a gray map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md).
+
+## Platform underneath
 
 - An emergency-communications prototype on a real packet network, with a Meta-assisted investigator.
 - Qualified power (pandapower) and water (EPANET 2.2 via WNTR) plants, each with conventional controls and scored forecasts.
-- A coupled power–water–communications town joined only by declared dependency edges, with a resource-aware joint planner, a strong conventional comparator, Meta-assisted joint decisions, a town view (`/lifeline/town`) and verifiable run bundles.
+- A coupled power–water–communications town joined only by declared dependency edges, with a resource-aware joint planner, a strong conventional comparator, replayable run bundles and an engineering view (`/lifeline/town`).
 
-Gates Q1–Q3 of the [full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) are met. The research studies (P17+) and every breakthrough claim (B1–B6) remain open.
+Gates Q1–Q3 of the [full living program](docs/superpowers/plans/2026-10-31-lifeline-program.md) are met. The frozen held-out study (P17–P18) is complete and **negative** for the model-in-the-loop design: B2 not supported, B5 contradicted.
 
 Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator, a CIGRE benchmark feeder and a small water network, with no connection to any real dispatch, clinic, utility or radio service.
 
@@ -26,6 +68,8 @@ Facilities are synthetic: real Linux packets in a Mininet/Open vSwitch emulator,
 | Cascades follow physical equations across domains | Supported (development town) | [P11](docs/trials/lifeline-infra-p11-run-0.md): a feeder trip stops a pump; the hospital loses water 69 min later; removing the edge removes the loss |
 | Coordination preserves essential service | Supported on development cases, with cost | [P13](docs/trials/lifeline-infra-p13-run-0.md), [release](docs/releases/lifeline-town-release.md): the joint comparator removes essential water loss in two cases at a non-essential cost |
 | **Meta improves the coupled town over the joint comparator** | **Not supported** | [P14](docs/trials/lifeline-infra-p14-run-0.md): one live model decision changed an action; against the revised comparator the model added latency, not value |
+| **Meta in the loop beats both comparators on a frozen held-out suite (B2)** | **Not supported** | [P18](docs/trials/lifeline-infrastructure-comparison-run-0.md): 16 groups; contradicted vs independent, inconclusive vs coordinated; the model changed 0 of 17 decisions |
+| LIFELINE v2 (brain reads warnings, verified act-now, reflexes) keeps essential service in the demo storylines | Measured on 6 storylines; better in 4, equal in 2; not a statistical study | [Run summary](docs/results/lifeline-v2-run-0.json): 0 / 0 / 78 / 14 / 0 / 10,506 MJ vs 312 / 0 / 273 / 528 / 117 / 10,506 MJ for conventional coordination |
 
 **Why the AI did not win.** Live Muse Spark calls took 14–18 s, and 21% of pilot calls timed out. The deterministic layer handles failover in about a second. In this version the model replaced a fast conventional rule for unexplained degradation, so it recovered later. The model's diagnoses were often right ("r4→r3 reduced to ~3 Mbps"), but they came too late to beat the rule. The next protocol revision keeps the rule active and runs the model in parallel. That is a design hypothesis, not a result.
 
@@ -97,7 +141,7 @@ The town runs at an accelerated, modeled 60× clock: one simulated minute per wa
 ## Verify
 
 ```sh
-npm test                                                     # 394 Node tests (communications, kernel, adapters, planner, controllers, town HTTP, replay)
+npm test                                                     # Node tests (communications, kernel, adapters, planner, controllers, town HTTP, replay)
 .work/environments/town/bin/python -m unittest discover -s runtime/infra/tests -p "test_*.py"   # power, water, coupling, clock, baselines (Grid2Op tests skip here)
 python3 -m unittest discover -s runtime/mininet/tests -p "test_*.py"
 # inside the VM, as root, for real OVS integration:
@@ -120,7 +164,7 @@ The town is a small development model:
 
 - steady-state power flow and distribution hydraulics, with no transients, protection coordination or water quality;
 - communications modeled, not packet-measured;
-- development cases only, with no held-out comparison yet.
+- one frozen held-out comparison (P18, 16 groups, negative for the model-in-the-loop design); the v2 storylines are demonstrations, not a held-out study.
 
 No claim about lives saved, real emergency traffic, utility operation or field deployment.
 
