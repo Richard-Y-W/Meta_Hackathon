@@ -2,6 +2,20 @@
 
 **LIFELINE detects emerging threats, predicts how failures could spread, and coordinates interventions that preserve essential services across power, water, communications, and other infrastructure.**
 
+<p align="center">
+  <a href="docs/demo/lifeline-promo.mp4">
+    <img src="docs/demo/screenshots/overview.png" alt="LIFELINE operations console" width="100%">
+  </a>
+</p>
+
+<p align="center">
+  <video src="docs/demo/lifeline-promo.mp4" controls width="100%" poster="docs/demo/screenshots/network-map.png">
+    Your viewer can't play inline video — <a href="docs/demo/lifeline-promo.mp4">download/open the video directly</a>.
+  </video>
+</p>
+
+<p align="center"><sub>2:09 — cinematic cold open, then a real screen capture of an actual simulated run (not staged). See <a href="docs/demo/lifeline-promo.md">production notes</a>.</sub></p>
+
 ## LIFELINE v2: think slow, act fast
 
 ```
@@ -42,7 +56,30 @@ node --env-file-if-exists=.env scripts/lifeline-v2-run.mjs --out artifacts/lifel
 node scripts/lifeline-v2-run.mjs --brain stub --out artifacts/lifeline/v2/offline               # no model: keyword stand-in
 ```
 
-The operations view (`/lifeline/ops`) follows control-room display practice: a gray map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md). Promo video: [docs/demo/lifeline-promo.mp4](docs/demo/lifeline-promo.mp4) (2:09 — [notes](docs/demo/lifeline-promo.md)).
+The operations view (`/lifeline/ops`) follows control-room display practice: a neutral map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md). Promo video: [docs/demo/lifeline-promo.mp4](docs/demo/lifeline-promo.mp4) (2:09 — [notes](docs/demo/lifeline-promo.md)).
+
+<table>
+<tr>
+<td width="50%">
+<img src="docs/demo/screenshots/network-map.png" alt="Network map during the cyber-intrusion scenario: a failed line in red, the tie LIFELINE pre-closed in blue, the hospital still fully supplied">
+<p align="center"><sub>LIFELINE closed the back-feed tie 3 minutes before the attacker struck — the failed line (red) never touches the hospital, because the tie (blue) already rerouted around it.</sub></p>
+</td>
+<td width="50%">
+<img src="docs/demo/screenshots/hospital-xray.png" alt="Cross-section of the hospital showing its power and water feeds still live">
+<p align="center"><sub>Click any facility for a cutaway of its power and water feeds — this one's still live on both.</sub></p>
+</td>
+</tr>
+<tr>
+<td width="50%">
+<img src="docs/demo/screenshots/results.png" alt="Controller comparison table: LIFELINE vs conventional coordination vs rules only">
+<p align="center"><sub>Same faults, same town, three controllers — every number here is a measured result, not a projection.</sub></p>
+</td>
+<td width="50%">
+<img src="docs/demo/screenshots/water-view.png" alt="Water network view: pumps, tower and delivery to the hospital">
+<p align="center"><sub>The same brain and the same physics check, now on the water network — infrastructure plugs in the same way each time.</sub></p>
+</td>
+</tr>
+</table>
 
 ## Platform underneath
 
