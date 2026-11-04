@@ -39,47 +39,52 @@ const LABEL = { 'bus-1': [-30, 36], 'bus-2': [-40, -16], 'bus-3': [-110, 30], 'b
 const TIE_AT = { 'sw-S1': 0.45, 'sw-S2': 0.5, 'sw-S3': 0.28 };
 const TOWER = [395, 245];
 
-// Isometric building glyphs: each bus renders as a small dimensional building colored by
-// function, not by status — status reads through the ring/halo drawn around it instead,
-// so "what this is" and "is it okay" never compete for the same pixel.
-const BTYPE = {
-  substation: { top: '#cfd8dd', left: '#a3b3ba', right: '#bac7cc' },
-  clinic: { top: '#bfe3d6', left: '#8fc2b1', right: '#a7d3c4' },
-  school: { top: '#f3dc92', left: '#d9bd68', right: '#e8cd7c' },
-  industrial: { top: '#cdb7e0', left: '#a58cc0', right: '#bba3d2' },
-  depot: { top: '#f0b89a', left: '#cf8d6c', right: '#e0a383' },
-  pump: { top: '#a9c7e0', left: '#7a9ebd', right: '#92b4d0' },
-  junction: { top: '#e3dcc9', left: '#c0b595', right: '#d2c8ac' },
-  fire: { top: '#f2a28f', left: '#cf7461', right: '#e08c78' },
-  housing: { top: '#f5c9a8', left: '#d8a176', right: '#e6b78e' },
-  mall: { top: '#c3d8ec', left: '#93afc9', right: '#aac3d9' },
-};
+// Building sprites: every facility renders in the same visual language as the hospital
+// (white shell, a colored icon badge, small windows that go dark with the facility) —
+// status reads through the shell's outline/fill, not a recolor of the whole glyph, so
+// "what this is" and "is it okay" never compete for the same pixel. Junctions aren't
+// real facilities (just electrical connection points), so they stay plain nodes.
 const BUS_TYPE = { 'bus-1': 'substation', 'bus-12': 'substation', 'bus-3': 'clinic', 'bus-4': 'school', 'bus-5': 'industrial',
   'bus-6': 'depot', 'bus-7': 'pump', 'bus-8': 'junction', 'bus-2': 'junction', 'bus-10': 'fire', 'bus-11': 'housing', 'bus-13': 'mall', 'bus-14': 'housing' };
-const BUS_SIZE = { 'bus-1': [36, 28], 'bus-12': [36, 28], 'bus-3': [28, 22], 'bus-4': [26, 19], 'bus-5': [24, 18], 'bus-6': [24, 18],
-  'bus-7': [30, 25], 'bus-8': [20, 14], 'bus-2': [18, 12], 'bus-10': [27, 21], 'bus-11': [24, 18], 'bus-13': [27, 20], 'bus-14': [24, 18] };
-
-function isoBuilding(cx, baseY, w, h) {
-  const hw = w / 2, hh = w / 4, top = baseY - h;
-  const f = n => n.toFixed(1);
-  return {
-    top: `${f(cx)},${f(top - hh)} ${f(cx + hw)},${f(top)} ${f(cx)},${f(top + hh)} ${f(cx - hw)},${f(top)}`,
-    left: `${f(cx - hw)},${f(top)} ${f(cx)},${f(top + hh)} ${f(cx)},${f(top + hh + h)} ${f(cx - hw)},${f(top + h)}`,
-    right: `${f(cx)},${f(top + hh)} ${f(cx + hw)},${f(top)} ${f(cx + hw)},${f(top + h)} ${f(cx)},${f(top + hh + h)}`,
-  };
+const BUS_SIZE = { 'bus-1': [34, 28], 'bus-12': [34, 28], 'bus-3': [28, 22], 'bus-4': [27, 21], 'bus-5': [25, 20], 'bus-6': [25, 20],
+  'bus-7': [28, 23], 'bus-10': [27, 22], 'bus-11': [24, 19], 'bus-13': [27, 21], 'bus-14': [24, 19] };
+const BWINDOWS = { substation: 0, clinic: 3, school: 3, industrial: 2, depot: 2, pump: 2, fire: 2, housing: 2, mall: 2 };
+const BICON = {
+  substation: '<path d="M1 -7 L-4 1 L-1 1 L-2 7 L4 -2 L1 -2 Z"/>',
+  clinic: '<path d="M-2 -6 L2 -6 L2 -2 L6 -2 L6 2 L2 2 L2 6 L-2 6 L-2 2 L-6 2 L-6 -2 L-2 -2 Z"/>',
+  school: '<path d="M-6 -1 L0 -4 L6 -1 L0 2 Z"/><rect x="-1" y="2" width="2" height="5"/>',
+  industrial: '<path d="M-2 -5 L2 -5 L5 -2 L5 2 L2 5 L-2 5 L-5 2 L-5 -2 Z"/>',
+  depot: '<rect x="-6" y="-4" width="12" height="7" rx="1"/><rect x="-5" y="4" width="3" height="2.5"/><rect x="2" y="4" width="3" height="2.5"/>',
+  pump: '<path d="M-3 -5 L5 0 L-3 5 Z"/>',
+  fire: '<rect x="-5" y="-6" width="2" height="12"/><rect x="3" y="-6" width="2" height="12"/><rect x="-5" y="-4" width="10" height="1.6"/><rect x="-5" y="0" width="10" height="1.6"/><rect x="-5" y="4" width="10" height="1.6"/>',
+  housing: '<path d="M-6 1 L0 -6 L6 1 L4 1 L4 6 L-4 6 L-4 1 Z"/>',
+  mall: '<path d="M-5 -2 L5 -2 L4 6 L-4 6 Z"/><rect x="-2" y="-5" width="4" height="3"/>',
+};
+function spriteBuilding(x, y, w, h, st, type, iconSvg, windows) {
+  const dark = st === 'dark';
+  const tx = x - w / 2, ty = y - h;
+  let wins = '';
+  if (windows > 0) {
+    const ws = Math.max(4, Math.min(7, Math.floor((w - 10) / windows) - 2));
+    const totalW = windows * ws + (windows - 1) * 3;
+    const wx0 = tx + (w - totalW) / 2, wy = ty + h - ws - 4;
+    for (let i = 0; i < windows; i++) wins += `<rect class="sprite-win ${!dark ? 'lit' : ''}" x="${(wx0 + i * (ws + 3)).toFixed(1)}" y="${wy.toFixed(1)}" width="${ws}" height="${ws}"/>`;
+  }
+  return `<g class="sprite-bldg ${type} ${dark ? 'dark' : ''}">
+    <g transform="translate(${tx.toFixed(1)} ${ty.toFixed(1)})">
+      <rect class="sprite-shell" width="${w}" height="${h}" rx="3"/>
+      <g class="sprite-icon" transform="translate(${(w / 2).toFixed(1)} ${(h * 0.38).toFixed(1)})">${iconSvg}</g>
+      ${wins}
+    </g></g>`;
 }
 function isoNode(b, x, y, st) {
-  const type = BUS_TYPE[b] ?? 'junction', c = BTYPE[type];
-  const [w, h] = BUS_SIZE[b] ?? [22, 16];
-  const baseY = y + h / 4, pts = isoBuilding(x, baseY, w, h);
-  const dark = st === 'dark';
-  let out = dark ? `<circle class="iso-ring lost" cx="${x}" cy="${baseY - h / 2}" r="${w * 0.78}"/>` : '';
-  out += `<g class="iso-node ${dark ? 'dark' : ''}">
-    <polygon class="iso-top" points="${pts.top}" fill="${c.top}"/>
-    <polygon class="iso-left" points="${pts.left}" fill="${c.left}"/>
-    <polygon class="iso-right" points="${pts.right}" fill="${c.right}"/></g>`;
-  if (type === 'substation') out += `<path class="node-symbol" d="M${x - 5} ${baseY - h - 6}v-9m-5 5 5-5 5 5" stroke="#5c6a72"/>`;
-  return out;
+  const type = BUS_TYPE[b] ?? 'junction';
+  if (type === 'junction') {
+    const dark = st === 'dark';
+    return `<circle class="junction-dot ${dark ? 'dark' : ''}" cx="${x}" cy="${y}" r="6"/>`;
+  }
+  const [w, h] = BUS_SIZE[b] ?? [24, 19];
+  return spriteBuilding(x, y + h / 4, w, h, st, type, BICON[type], BWINDOWS[type]);
 }
 
 async function api(path, body) {

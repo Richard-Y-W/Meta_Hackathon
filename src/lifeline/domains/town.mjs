@@ -3,7 +3,11 @@
 import { join } from 'node:path';
 import { spawnStdioWorker } from '../kernel/stdio-worker.mjs';
 
-export function spawnTownWorker({ root, python = join(root, '.work/environments/town/bin/python'), timeoutMs = 600_000 }) {
+// uv (and venv/virtualenv generally) lay out the interpreter at bin/python on POSIX
+// but Scripts/python.exe on Windows — there is no bin/ there at all.
+const PY_BIN = process.platform === 'win32' ? 'Scripts/python.exe' : 'bin/python';
+
+export function spawnTownWorker({ root, python = join(root, '.work/environments/town', PY_BIN), timeoutMs = 600_000 }) {
   const worker = spawnStdioWorker({
     command: python, args: [join(root, 'runtime/infra/worker.py'), 'serve'], cwd: root, timeoutMs,
     env: { ...process.env, MPLBACKEND: 'Agg', MPLCONFIGDIR: join(root, '.work/cache/matplotlib'), TMPDIR: join(root, '.work/tmp'), PYTHONDONTWRITEBYTECODE: '1' },

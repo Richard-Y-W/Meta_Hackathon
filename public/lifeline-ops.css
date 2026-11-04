@@ -246,14 +246,25 @@ h2 { font-size: 13px; font-weight: 600; margin: 0; letter-spacing: .1px; }
 .xray-water { fill: none; stroke: var(--acted); stroke-width: 2; stroke-dasharray: 3 4; animation: water-flow 1.6s linear infinite; }
 .xray-label { font: 9px var(--font-mono); fill: var(--dim); letter-spacing: .6px; }
 
-/* ---------- Isometric building glyphs ---------- */
-.iso-node { transition: opacity .2s; }
-.iso-node.dark .iso-top, .iso-node.dark .iso-left, .iso-node.dark .iso-right { filter: saturate(.25) brightness(.85); }
-.iso-ring { fill: none; stroke-width: 2.5; opacity: 0; transition: opacity .2s; }
-.iso-node.dark ~ .iso-ring, .iso-ring.lost { opacity: 1; stroke: var(--lost); animation: ring-pulse 1.6s ease-in-out infinite; }
-.iso-ring.threat { opacity: 1; stroke: var(--threat); animation: ring-pulse 1.6s ease-in-out infinite; }
-.iso-ring.acted { opacity: 1; stroke: var(--acted); }
-.essential-ring { fill: none; stroke: var(--accent); stroke-width: 1; stroke-dasharray: 2 4; opacity: .5; }
+/* ---------- Building sprites (same language as the hospital glyph) ---------- */
+.sprite-shell { fill: #fff; stroke-width: 1.6; transition: stroke .2s, fill .2s; }
+.sprite-win { fill: #e3ddc9; }
+.sprite-win.lit { opacity: .8; animation: window-glow 4.5s ease-in-out infinite; }
+.sprite-bldg.dark .sprite-shell { stroke: var(--lost); fill: var(--lost-dim); }
+.sprite-bldg.dark .sprite-icon path, .sprite-bldg.dark .sprite-icon rect { fill: var(--dim); }
+.asset-hit:hover .sprite-shell, .asset-hit:focus-visible .sprite-shell, .asset-hit.selected .sprite-shell { stroke: var(--accent) !important; stroke-width: 2.4; }
+.sprite-bldg.substation .sprite-shell { stroke: #6b7f8d; } .sprite-bldg.substation .sprite-icon path, .sprite-bldg.substation .sprite-icon rect, .sprite-bldg.substation .sprite-win.lit { fill: #6b7f8d; }
+.sprite-bldg.clinic .sprite-shell { stroke: #2f8f6e; } .sprite-bldg.clinic .sprite-icon path, .sprite-bldg.clinic .sprite-icon rect, .sprite-bldg.clinic .sprite-win.lit { fill: #2f8f6e; }
+.sprite-bldg.school .sprite-shell { stroke: #b98a1e; } .sprite-bldg.school .sprite-icon path, .sprite-bldg.school .sprite-icon rect, .sprite-bldg.school .sprite-win.lit { fill: #b98a1e; }
+.sprite-bldg.industrial .sprite-shell { stroke: #7d5ba0; } .sprite-bldg.industrial .sprite-icon path, .sprite-bldg.industrial .sprite-icon rect, .sprite-bldg.industrial .sprite-win.lit { fill: #7d5ba0; }
+.sprite-bldg.depot .sprite-shell { stroke: #b96a3a; } .sprite-bldg.depot .sprite-icon path, .sprite-bldg.depot .sprite-icon rect, .sprite-bldg.depot .sprite-win.lit { fill: #b96a3a; }
+.sprite-bldg.pump .sprite-shell { stroke: #2f6f9e; } .sprite-bldg.pump .sprite-icon path, .sprite-bldg.pump .sprite-icon rect, .sprite-bldg.pump .sprite-win.lit { fill: #2f6f9e; }
+.sprite-bldg.fire .sprite-shell { stroke: #b8503c; } .sprite-bldg.fire .sprite-icon path, .sprite-bldg.fire .sprite-icon rect, .sprite-bldg.fire .sprite-win.lit { fill: #b8503c; }
+.sprite-bldg.housing .sprite-shell { stroke: #b87a4a; } .sprite-bldg.housing .sprite-icon path, .sprite-bldg.housing .sprite-icon rect, .sprite-bldg.housing .sprite-win.lit { fill: #b87a4a; }
+.sprite-bldg.mall .sprite-shell { stroke: #3f6f9e; } .sprite-bldg.mall .sprite-icon path, .sprite-bldg.mall .sprite-icon rect, .sprite-bldg.mall .sprite-win.lit { fill: #3f6f9e; }
+.junction-dot { fill: var(--panel); stroke: var(--normal); stroke-width: 2; }
+.junction-dot.dark { fill: var(--lost-dim); stroke: var(--lost); }
+.asset-hit:hover .junction-dot, .asset-hit:focus-visible .junction-dot, .asset-hit.selected .junction-dot { stroke: var(--accent); stroke-width: 2.6; }
 @keyframes ring-pulse { 0%, 100% { opacity: .35; } 50% { opacity: .9; } }
 
 /* ---------- SVG network elements ---------- */

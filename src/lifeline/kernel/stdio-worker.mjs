@@ -10,7 +10,10 @@ export function spawnStdioWorker({ command, args = [], cwd, env, timeoutMs = 30_
   const child = spawn(command, args, { cwd, env, stdio: ['pipe', 'pipe', 'pipe'] });
   const pending = new Map();
   const violations = [];
-  let buffer = '', stderr = '', nextId = 1, lastSeq = 0, closedReason = null;
+  let buffer = '', stderr = '', nextId = 1, lastSeq = 0, closedReason = null, stdinEnded = false;
+  // A write that races child.stdin.end() can still emit 'error' on the stream asynchronously,
+  // after request() already returned — an unhandled stream error crashes the whole process.
+  child.stdin.on('error', () => {});
 
   const close = reason => {
     if (closedReason) return;
@@ -48,6 +51,7 @@ export function spawnStdioWorker({ command, args = [], cwd, env, timeoutMs = 30_
 
   function request(cmd, requestArgs = {}, { timeoutMs: limit = timeoutMs } = {}) {
     if (closedReason) return Promise.reject(new WorkerError('worker_unavailable', closedReason));
+    if (stdinEnded) return Promise.reject(new WorkerError('worker_unavailable', 'shutting_down'));
     const id = nextId++;
     return new Promise((resolve, reject) => {
       const timer = setTimeout(() => { pending.delete(id); reject(new WorkerError('worker_unavailable', 'timeout')); }, limit);
@@ -63,6 +67,7 @@ export function spawnStdioWorker({ command, args = [], cwd, env, timeoutMs = 30_
     get closedReason() { return closedReason; },
     async shutdown({ graceMs = 2000 } = {}) {
       if (!closedReason) await request('shutdown', {}, { timeoutMs: graceMs }).catch(() => {});
+      stdinEnded = true;
       child.stdin.end();
       const timer = setTimeout(() => child.kill('SIGKILL'), graceMs);
       const result = await exited;
