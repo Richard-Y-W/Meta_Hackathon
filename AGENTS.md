@@ -5,7 +5,7 @@
 The owner requires all project-created files and project-controlled runtime data to stay on the external SSD.
 
 - The canonical macOS repository is `/Volumes/PortableSSD/Meta_Hackathon`.
-- A home-directory alias is a compatibility symlink only. Never replace it with an internal-drive checkout.
+- A home-directory symlink to it may exist as a compatibility alias only. Never replace it with an internal-drive checkout.
 - Before any write, install, build, environment creation or experiment, confirm the SSD mount and resolve the physical working/output paths. If the SSD is absent, stop; never silently create an internal-drive fallback or a directory pretending to be the missing mount.
 - Keep source, Git data, dependencies, environments, caches, downloads, temporary project files, build outputs, logs, captures, evidence and worktrees on the SSD. Use repository-local paths, `.work/` for disposable working data, and `artifacts/lifeline/` for run evidence.
 - Configure package-manager, model-cache, VM and container storage locations explicitly before provisioning. Keep VM disks and snapshots on the SSD; do not accept an internal-drive default. Do not repurpose `HOME` or `CODEX_HOME`.
