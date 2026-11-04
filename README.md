@@ -14,7 +14,7 @@
   </video>
 </p>
 
-<p align="center"><sub>2:09 — cinematic cold open, then a real screen capture of an actual simulated run (not staged). See <a href="docs/demo/lifeline-promo.md">production notes</a>.</sub></p>
+<p align="center"><sub>1:56 — cinematic cold open, then a real screen capture of an actual simulated run (not staged), with a music bed. See <a href="docs/demo/lifeline-promo.md">production notes</a>.</sub></p>
 
 ## LIFELINE v2: think slow, act fast
 
@@ -56,7 +56,7 @@ node --env-file-if-exists=.env scripts/lifeline-v2-run.mjs --out artifacts/lifel
 node scripts/lifeline-v2-run.mjs --brain stub --out artifacts/lifeline/v2/offline               # no model: keyword stand-in
 ```
 
-The operations view (`/lifeline/ops`) follows control-room display practice: a neutral map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md). Promo video: [docs/demo/lifeline-promo.mp4](docs/demo/lifeline-promo.mp4) (2:09 — [notes](docs/demo/lifeline-promo.md)).
+The operations view (`/lifeline/ops`) follows control-room display practice: a neutral map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md). Promo video: [docs/demo/lifeline-promo.mp4](docs/demo/lifeline-promo.mp4) (1:56 — [notes](docs/demo/lifeline-promo.md)).
 
 <table>
 <tr>
