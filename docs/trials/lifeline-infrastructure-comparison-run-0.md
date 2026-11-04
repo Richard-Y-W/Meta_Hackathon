@@ -96,6 +96,20 @@ The weighted mean is −0.27 pp. This matches the P13–P16 finding that coordin
 
 **4. The suite was less discriminating than P17 stated.** In all 8 layout-C groups, no controller and not the oracle had any essential deficit. The C trips leave essential power unaffected, as noted before the freeze, and storage covers the pump outages. Those groups can only reveal non-essential differences and harm. The effective population for essential service is the 8 layout-B groups, 6 of which have headroom. This lowers the study's power below the frozen precision statement, which assumed 16 informative groups. The P17 run note carries a correction.
 
+## Threat to validity found after the run: host sleep
+
+Decision latency is charged from the wall clock. The host was on battery, and from 13:22 it cycled between maintenance sleep and dark wake about every 95 s (`pmset -g log`; `scripts/lifeline-host-sleep-check.py`, evidence `artifacts/lifeline/infra/p18/host-sleep-check.json`).
+
+| Batch | Overlapped sleep | What it affects |
+| --- | --- | --- |
+| research-v1 | 18 of 48 episodes, all layout C | None of the 24 layout-B episodes overlapped. They carry every essential-service difference above. |
+| Oracle | 16 of 16 | Nothing: the oracle is charged no latency. |
+| P19 ablations | 40 of 48 | The timing contrasts. |
+
+The frozen invalid-run rule did not anticipate host suspension, so these episodes stay in the primary result. The layout-C non-essential differences are possibly sleep artifacts: hybrid's residential losses in C common-cause and C delayed-dependency, and Meta's gains over hybrid there. The finding that the model changed no decision does not depend on timing.
+
+A replication of the whole batch with idle sleep prevented (`caffeinate -i`) is reported as run 1 beside this one. Neither run replaces the other.
+
 ## Accounting (valid attempts)
 
 | | Independent | Hybrid | Meta-assisted |
