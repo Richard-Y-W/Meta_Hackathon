@@ -7,6 +7,7 @@ import { SimulatedDevice, BridgeDevice } from './src/device.mjs';
 import { Session } from './src/session.mjs';
 import { createLifelineHandler } from './src/lifeline/http.mjs';
 import { createTownHandler } from './src/lifeline/infra-http.mjs';
+import { stayAwake } from './src/lifeline/kernel/awake.mjs';
 
 export async function createApp() {
   const kind = process.env.DEVICE_BRIDGE_URL ? 'hardware bridge' : 'simulation';
@@ -76,6 +77,7 @@ export async function createApp() {
 
 if (process.argv[1] && fileURLToPath(import.meta.url) === resolve(process.argv[1])) {
   const server = await createApp();
+  stayAwake(); // the town charges decision time from the wall clock; a sleeping host would corrupt live runs
   server.listen(Number(process.env.PORT || 3210), '127.0.0.1', () => console.log(`Blackbox Apprentice → http://127.0.0.1:${server.address().port}`));
   for (const signal of ['SIGINT', 'SIGTERM']) process.on(signal, () => server.close(() => process.exit(0)));
 }

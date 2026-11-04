@@ -1,0 +1,83 @@
+{
+ "schemaVersion": "lifeline.storylines.v1",
+ "note": "LIFELINE v2 demonstration storylines on the development town (layout A). Reports are what a controller may read, at their arrival time; faults are evaluator-private. Backup pump PU2 is out for maintenance in every storyline, so the pump station's supply is the binding dependency.",
+ "storylines": [
+  {
+   "id": "storm-north-ridge",
+   "title": "Storm on the north ridge",
+   "story": "A wind warning, then a crew sighting of a tree leaning on the span past the water tower. The span fails 55 minutes in.",
+   "tankInitialLevels": { "T1": 3.0 },
+   "reports": [
+    { "id": "r1", "atUs": 300000000, "source": "regional weather bulletin", "text": "Severe wind warning: gusts of 80 to 100 km/h expected along the north ridge from roughly 40 to 80 minutes from now. Exposed overhead lines at risk." },
+    { "id": "r2", "atUs": 900000000, "source": "field crew 3 (radio)", "text": "Crew 3 here. There's a big spruce leaning right onto the long overhead line that goes up the ridge past the water tower. If these gusts come through it's coming down on the wires." }
+   ],
+   "faults": [
+    { "domain": "water", "faultId": "pu2-maint", "atUs": 0, "type": "actuator_unavailable", "assetId": "PU2" },
+    { "domain": "power", "faultId": "storm-3-8", "atUs": 3300000000, "type": "line_trip", "assetId": "line-3-8" },
+    { "domain": "power", "faultId": "repair-3-8", "atUs": 12000000000, "type": "line_restore", "assetId": "line-3-8" }
+   ],
+   "expect": "essential loss prevented"
+  },
+  {
+   "id": "false-alarm",
+   "title": "Storm warning that never lands",
+   "story": "The same wind warning, but the crew reports the ridge span is clear. Nothing fails; LIFELINE must not cause harm.",
+   "tankInitialLevels": { "T1": 3.0 },
+   "reports": [
+    { "id": "r1", "atUs": 300000000, "source": "regional weather bulletin", "text": "Severe wind warning: gusts of 80 to 100 km/h expected along the north ridge from roughly 40 to 80 minutes from now. Exposed overhead lines at risk." },
+    { "id": "r2", "atUs": 1500000000, "source": "field crew 3 (radio)", "text": "Crew 3. Walked the long line up the ridge by the water tower. Vegetation was cut back last month, nothing near the wires. Looks solid." }
+   ],
+   "faults": [
+    { "domain": "water", "faultId": "pu2-maint", "atUs": 0, "type": "actuator_unavailable", "assetId": "PU2" }
+   ],
+   "expect": "no harm"
+  },
+  {
+   "id": "sudden-failure",
+   "title": "Sudden failure, damaged ties",
+   "story": "No warning. The ridge span fails at 30 minutes and the storm has also jammed two of the three tie switches.",
+   "tankInitialLevels": { "T1": 3.0 },
+   "reports": [],
+   "faults": [
+    { "domain": "water", "faultId": "pu2-maint", "atUs": 0, "type": "actuator_unavailable", "assetId": "PU2" },
+    { "domain": "power", "faultId": "trip-3-8", "atUs": 1800000000, "type": "line_trip", "assetId": "line-3-8" },
+    { "domain": "power", "faultId": "jam-s1", "atUs": 1800000000, "type": "actuator_unavailable", "assetId": "sw-S1" },
+    { "domain": "power", "faultId": "jam-s3", "atUs": 1800000000, "type": "actuator_unavailable", "assetId": "sw-S3" },
+    { "domain": "power", "faultId": "repair-3-8", "atUs": 11400000000, "type": "line_restore", "assetId": "line-3-8" }
+   ],
+   "expect": "essential loss prevented"
+  },
+  {
+   "id": "compound-storm",
+   "title": "Storm, then a second failure",
+   "story": "The north-ridge storm as before, and 20 minutes after the span fails a flood washes out the river crossing.",
+   "tankInitialLevels": { "T1": 3.0 },
+   "reports": [
+    { "id": "r1", "atUs": 300000000, "source": "regional weather bulletin", "text": "Severe wind warning: gusts of 80 to 100 km/h expected along the north ridge from roughly 40 to 80 minutes from now. Exposed overhead lines at risk." },
+    { "id": "r2", "atUs": 900000000, "source": "field crew 3 (radio)", "text": "Crew 3 here. There's a big spruce leaning right onto the long overhead line that goes up the ridge past the water tower. If these gusts come through it's coming down on the wires." },
+    { "id": "r3", "atUs": 3600000000, "source": "river authority", "text": "Flash flood alert: the river is rising fast at the crossing; poles on the river-crossing span may be undermined within the next half hour." }
+   ],
+   "faults": [
+    { "domain": "water", "faultId": "pu2-maint", "atUs": 0, "type": "actuator_unavailable", "assetId": "PU2" },
+    { "domain": "power", "faultId": "storm-3-8", "atUs": 3300000000, "type": "line_trip", "assetId": "line-3-8" },
+    { "domain": "power", "faultId": "flood-2-3", "atUs": 4500000000, "type": "line_trip", "assetId": "line-2-3" },
+    { "domain": "power", "faultId": "repair-3-8", "atUs": 12000000000, "type": "line_restore", "assetId": "line-3-8" }
+   ],
+   "expect": "essential loss reduced"
+  },
+  {
+   "id": "grid-emergency",
+   "title": "Regional grid emergency (unrecoverable)",
+   "story": "The transmission operator warns of a regional supply loss; both substations go dark at 40 minutes. No switching can help; LIFELINE must use what it has and report the deficit honestly.",
+   "tankInitialLevels": { "T1": 3.0 },
+   "reports": [
+    { "id": "r1", "atUs": 600000000, "source": "transmission operator", "text": "Regional grid emergency: we may lose supply to both town substations within the hour. Prepare for islanded operation." }
+   ],
+   "faults": [
+    { "domain": "water", "faultId": "pu2-maint", "atUs": 0, "type": "actuator_unavailable", "assetId": "PU2" },
+    { "domain": "power", "faultId": "hv-loss", "atUs": 2400000000, "type": "source_loss", "assetId": "grid-hv" }
+   ],
+   "expect": "honest deficit"
+  }
+ ]
+}

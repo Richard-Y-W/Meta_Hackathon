@@ -1,4 +1,4 @@
-// LIFELINE town endpoints (P15). One live coupled-town session runs at the town's accelerated clock: each
+// LIFELINE town endpoints (P15; LIFELINE v2 storylines and controller added Nov 3). One live coupled-town session runs at the town's accelerated clock: each
 // wall tick advances one coupling step. Conventional rules decide synchronously; the planner layer runs
 // asynchronously and its result is scheduled when it arrives, so its computation time passes on the town
 // clock exactly as in the experiments. The browser can start, inject admitted judge faults, stop and
@@ -7,6 +7,9 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import { priority, rolling } from './controllers/joint.mjs';
 import { spawnTownWorker } from './domains/town.mjs';
+import { lifeline } from './brain/lifeline.mjs';
+import { stubBrain } from './brain/stub.mjs';
+import { callModel as metaCall } from './meta-provider.mjs';
 
 const S = 1_000_000;
 export const JUDGE_FAULTS = {
@@ -17,15 +20,21 @@ export const JUDGE_FAULTS = {
 };
 const RUN_ID = /^town-[0-9]{14}-[0-9]+$/;
 
-export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ root: repo }), tickMs = 1000, sleep = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now() }) {
+export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ root: repo }), tickMs = 1000, sleep = ms => new Promise(r => setTimeout(r, ms)), now = () => Date.now(),
+  apiKey = process.env.MODEL_API_KEY, callModel = ({ prompt, timeoutMs }) => metaCall({ apiKey, prompt, timeoutMs, reasoningEffort: 'low' }) }) {
   const policy = JSON.parse(readFileSync(resolve(repo, 'fixtures/lifeline/infra/town/baseline-policy.json'), 'utf8'));
-  const cases = Object.fromEntries(policy.cases.map(c => [c.caseId, c]));
+  const { storylines } = JSON.parse(readFileSync(resolve(repo, 'fixtures/lifeline/infra/town/storylines.json'), 'utf8'));
+  // LIFELINE v2 storylines first (they carry warning signs), then the P13 development cases.
+  const cases = Object.fromEntries([...storylines.map(st => [st.id, { caseId: st.id, title: st.title, story: st.story, faults: st.faults, tankInitialLevels: st.tankInitialLevels, reports: st.reports, storyline: true }]),
+    ...policy.cases.map(c => [c.caseId, c])]);
+  const CONTROLLERS = ['lifeline', 'hybrid', 'priority'];
   let live = null, counter = 0;
 
   const snapshot = () => {
     if (!live) return { state: 'idle' };
-    const { town, layers, loop, ...rest } = live;
-    return { ...rest, layers: layers.map(L => ({ name: L.ctrl.name, label: L.ctrl.label, pending: L.pending ? { requestedAtUs: L.pending.requestedAtUs } : null })) };
+    const { town, layers, loop, shared, ...rest } = live;
+    return { ...rest, layers: layers.map(L => ({ name: L.ctrl.name, label: L.ctrl.label, pending: L.pending ? { requestedAtUs: L.pending.requestedAtUs } : null })),
+      lifeline: shared ? { log: shared.log.slice(-80), threats: shared.threats, brainCalls: shared.calls.map(c => ({ atUs: c.atUs, code: c.code, parse: c.parse ?? null, durationMs: c.durationMs })) } : null };
   };
   const note = (entry) => { live.timeline.push(entry); if (live.timeline.length > 400) live.timeline.shift(); };
 
@@ -53,7 +62,7 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
       x.nextDecision = live.nowUs + policy.periodUs;
       const requestedAtUs = live.nowUs;
       const job = x.ctrl.decide({ town: t, nowUs: requestedAtUs, obs, advisory: visible });
-      if (x.ctrl.name === 'priority') { await settle(x, await job, requestedAtUs); continue; }
+      if (x.ctrl.name === 'priority' || x.ctrl.sync) { await settle(x, await job, requestedAtUs); continue; }
       x.pending = { requestedAtUs };
       job.then(plan => settle(x, plan, requestedAtUs)).catch(error => { x.pending = null; note({ kind: 'decision', layer: x.ctrl.name, status: 'failed', detail: String(error.message ?? error), atUs: live.nowUs }); });
     }
@@ -71,7 +80,7 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
     if (plan.redecideAtUs !== undefined) x.nextDecision = Math.min(x.nextDecision, plan.redecideAtUs);
     if (plan.replaceFuture) x.future = [];
     x.future.push(...plan.steps.map(s => ({ ...s, atUs: Math.max(s.atUs, availableUs + policy.gridUs) })));
-    if (plan.steps.length || x.ctrl.name !== 'priority') note({ kind: 'decision', layer: x.ctrl.name, plan: plan.planId, steps: plan.steps.map(s => s.action), predicted: plan.predicted ?? null, requestedAtUs, availableUs, atUs: availableUs });
+    if (plan.steps.length || !(x.ctrl.name === 'priority' || x.ctrl.sync || /idle|assessed/.test(plan.planId))) note({ kind: 'decision', layer: x.ctrl.name, plan: plan.planId, steps: plan.steps.map(s => s.action), predicted: plan.predicted ?? null, requestedAtUs, availableUs, atUs: availableUs });
   }
 
   async function run() {
@@ -109,7 +118,8 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
     const route = url.pathname.slice('/api/town/'.length);
     try {
       if (req.method === 'GET') {
-        if (route === 'cases') return send(res, 200, { cases: policy.cases.map(c => ({ caseId: c.caseId })), controllers: ['priority', 'hybrid'], judgeFaults: JUDGE_FAULTS,
+        if (route === 'cases') return send(res, 200, { cases: Object.values(cases).map(c => ({ caseId: c.caseId, title: c.title ?? c.caseId, story: c.story ?? null, storyline: Boolean(c.storyline) })), controllers: CONTROLLERS, judgeFaults: JUDGE_FAULTS,
+          brain: apiKey ? 'Meta model (live)' : 'rehearsal stand-in (keyword rules, no model)',
           clock: { mode: 'accelerated_modeled', acceleration: 60, wallSecondsPerStep: tickMs / 1000, stepSimSeconds: policy.gridUs / S } }), true;
         if (route === 'live') return send(res, 200, snapshot()), true;
         if (route === 'live/export') {
@@ -125,15 +135,17 @@ export function createTownHandler({ repo, makeTown = () => spawnTownWorker({ roo
       if (route === 'live/start') {
         if (live?.state === 'running') return send(res, 409, { error: 'already_running', runId: live.runId }), true;
         const c = cases[b.caseId];
-        if (!c || !['priority', 'hybrid'].includes(b.controller)) return send(res, 400, { error: 'unknown case or controller' }), true;
+        if (!c || !CONTROLLERS.includes(b.controller)) return send(res, 400, { error: 'unknown case or controller' }), true;
         const town = makeTown();
         await town.initialize({ caseId: 't-no-fault', faults: c.faults, tankInitialLevels: c.tankInitialLevels });
         const stamp = new Date(now()).toISOString().replace(/[-:.TZ]/g, '').slice(0, 14);
-        const ctrls = b.controller === 'hybrid' ? [priority(policy), rolling(policy)] : [priority(policy)];
+        const lf = b.controller === 'lifeline' ? lifeline(policy, { callModel: apiKey ? callModel : stubBrain(), reports: c.reports ?? [] }) : null;
+        const ctrls = lf ? lf.layers : b.controller === 'hybrid' ? [priority(policy), rolling(policy)] : [priority(policy)];
         live = { runId: `town-${stamp}-${++counter}`, caseId: c.caseId, controller: b.controller, state: 'running', nowUs: 0, durationUs: policy.durationUs,
-          clock: { mode: 'accelerated_modeled', acceleration: 60 }, provider: { state: 'model off', note: 'conventional comparator only; Meta runs are retained replays' },
+          clock: { mode: 'accelerated_modeled', acceleration: 60 }, title: c.title ?? c.caseId, story: c.story ?? null, shared: lf?.shared ?? null,
+          provider: lf ? { state: apiKey ? 'Meta brain live' : 'brain rehearsal (keyword stand-in)', note: 'the brain reads warning signs; reflexes and rules act without it' } : { state: 'model off', note: 'conventional comparator only' },
           startedAtUnixMs: now(), world: (await town.state()).worldRevision, eventsSeen: 0, timeline: [], series: [], assets: null, truth: null, error: null,
-          advisory: c.faults.some(f => f.type === 'line_trip') ? policy.advisory : null, town, layers: ctrls.map(ctrl => ({ ctrl, future: [], nextDecision: 0, pending: null })) };
+          advisory: !c.storyline && c.faults.some(f => f.type === 'line_trip') ? policy.advisory : null, town, layers: ctrls.map(ctrl => ({ ctrl, future: [], nextDecision: 0, pending: null })) };
         live.loop = run();
         return send(res, 200, snapshot()), true;
       }

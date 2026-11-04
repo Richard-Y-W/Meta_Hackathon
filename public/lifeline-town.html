@@ -8,12 +8,13 @@
 </head>
 <body>
   <header>
-    <h1>LIFELINE town</h1>
+    <h1>LIFELINE</h1>
+    <p class="tagline">Think slow, act fast: the brain reads the warning signs, verifies a plan in simulation, and arms the town before the failure.</p>
     <p id="mode" class="badge">loading…</p>
     <p class="badge" id="state" role="status" aria-live="polite">idle</p>
   </header>
   <section class="controls" aria-label="Run controls">
-    <label>Case <select id="case"></select></label>
+    <label>Scenario <select id="case"></select></label>
     <label>Controller <select id="controller"></select></label>
     <button id="start" type="button">Start</button>
     <button id="stop" type="button" disabled>Stop</button>
@@ -26,6 +27,24 @@
     <label>Asset <select id="fault-asset"></select></label>
     <button id="inject" type="button" disabled>Inject</button>
     <span id="fault-note" class="muted" aria-live="polite"></span>
+  </section>
+  <p id="story" class="story"></p>
+  <section class="brain" aria-label="LIFELINE brain">
+    <section aria-labelledby="h-warn">
+      <h2 id="h-warn">1 · Detect: warning signs</h2>
+      <p class="muted">What crews, bulletins and operators report, in their own words. The brain reads these; nothing here is evaluator data.</p>
+      <ol id="warnings"></ol>
+    </section>
+    <section aria-labelledby="h-threat">
+      <h2 id="h-threat">2 · Predict: threats and how they would spread</h2>
+      <p class="muted">Each threat is simulated on the coupled town with no intervention: what fails, and when.</p>
+      <div id="threats"></div>
+    </section>
+    <section aria-labelledby="h-act">
+      <h2 id="h-act">3 · Coordinate: what LIFELINE armed and did</h2>
+      <p class="muted">Act-now steps are taken only if simulation shows they help under the threat and do no harm if it never comes. Reflexes fire within one step of buses going dark.</p>
+      <ol id="actions"></ol>
+    </section>
   </section>
   <main>
     <section aria-labelledby="h-services">

@@ -65,7 +65,25 @@ function render() {
     if (e.kind === 'command') return `<li><span class="tag">action</span>${esc(e.action ? `${e.action.type} ${JSON.stringify(e.action.params)}` : e.id)} → <strong class="${e.status === 'delivered' ? 'good' : 'bad'}">${esc(e.status)}</strong>${e.reason ? ` (${esc(e.reason)})` : ''} at ${t(e.atUs)}</li>`;
     return `<li>${esc(JSON.stringify(e))}</li>`;
   }).join('');
+  renderBrain(s);
   $('raw').textContent = JSON.stringify({ runId: s.runId, state: s.state, clock: s.clock, layers: s.layers, error: s.error, nowUs: s.nowUs }, null, 2);
+}
+
+function renderBrain(s) {
+  $('story').textContent = s.story ? `${s.title}: ${s.story}` : '';
+  const lf = s.lifeline;
+  const none = msg => `<p class="muted">${esc(msg)}</p>`;
+  if (!lf) { $('warnings').innerHTML = ''; $('threats').innerHTML = none(s.state === 'idle' ? 'Start a scenario with the LIFELINE controller.' : 'This run has no LIFELINE brain (conventional controller).'); $('actions').innerHTML = ''; return; }
+  const log = lf.log ?? [];
+  $('warnings').innerHTML = log.filter(e => e.kind === 'warning').map(e => `<li><strong>${t(e.atUs)}</strong> · ${esc(e.text)}</li>`).join('') || '<li class="muted">No warning signs yet.</li>';
+  $('threats').innerHTML = (lf.threats ?? []).map(th => `<div class="threat"><strong>${esc(th.assetId)}</strong> may fail in ${th.windowMin[0]}–${th.windowMin[1]} min · confidence ${Math.round(th.confidence * 100)}%
+    <div class="muted">${esc(th.why)} (cites ${esc(th.evidence.join(', '))})</div>
+    ${th.spread ? `<div>Predicted spread with no action:</div><ol>${th.spread.chain.map(x => `<li>${t(x.atUs)}: ${esc(x.text)}</li>`).join('')}</ol>
+    <div class="muted">Predicted loss: hospital/fire water ${th.spread.waterEssentialUnmetM3.toFixed(1)} m³, essential power ${(th.spread.powerEssentialUnservedJ / 1e6).toFixed(0)} MJ</div>` : ''}
+    ${th.actNow ? `<div class="good">Act now: ${esc(th.actNow.label)}</div>` : ''}${th.reflex?.length ? `<div>Armed reflex: if it fails → close ${esc(th.reflex.join(' then '))}, generator if the pump station stays dark</div>` : ''}</div>`).join('')
+    || none('No current threat. Reflexes stay armed for any line that fails.');
+  const cls = { 'act-now': 'act', armed: 'act', 'reflex-fire': 'reflex', reflex: 'reflex', threat: 'brain', dismissed: 'brain', brain: 'brain' };
+  $('actions').innerHTML = log.filter(e => e.kind !== 'warning').slice().reverse().map(e => `<li><span class="tag ${cls[e.kind] ?? ''}">${esc(e.kind)}</span><strong>${t(e.atUs)}</strong> · ${esc(e.text)}</li>`).join('') || '<li class="muted">Reflexes armed; nothing to do yet.</li>';
 }
 
 async function poll() {
@@ -74,7 +92,7 @@ async function poll() {
 
 async function init() {
   meta = await api('/api/town/cases');
-  $('case').innerHTML = meta.cases.map(c => `<option>${esc(c.caseId)}</option>`).join('');
+  $('case').innerHTML = meta.cases.map(c => `<option value="${esc(c.caseId)}">${esc(c.storyline ? c.title : `dev case: ${c.caseId}`)}</option>`).join('');
   $('controller').innerHTML = meta.controllers.map(c => `<option>${esc(c)}</option>`).join('');
   $('fault-type').innerHTML = Object.keys(meta.judgeFaults).map(k => `<option>${esc(k)}</option>`).join('');
   const assets = () => { $('fault-asset').innerHTML = meta.judgeFaults[$('fault-type').value].map(a => `<option>${esc(a)}</option>`).join(''); };

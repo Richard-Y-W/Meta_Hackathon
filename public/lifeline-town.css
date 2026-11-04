@@ -33,3 +33,14 @@ td, th { text-align: left; padding: 0.2rem 0.3rem; border-bottom: 1px solid var(
 #timeline li { margin-bottom: 0.45rem; }
 .tag { font-size: 0.75rem; padding: 0 0.35rem; border-radius: 4px; border: 1px solid var(--line); margin-right: 0.3rem; }
 pre { white-space: pre-wrap; word-break: break-word; font-size: 0.78rem; color: var(--muted); }
+
+.tagline { margin: 0; color: var(--muted); flex-basis: 100%; }
+.story { padding: 0.4rem 1rem; margin: 0; color: var(--text); }
+.brain { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0.8rem; padding: 0.6rem 1rem; }
+.brain > section { background: var(--panel); border: 1px solid var(--accent); border-radius: 8px; padding: 0.7rem; min-width: 0; }
+@media (max-width: 960px) { .brain { grid-template-columns: 1fr; } }
+#warnings, #actions { padding-left: 1.2rem; margin: 0; max-height: 40vh; overflow: auto; }
+#warnings li, #actions li { margin-bottom: 0.45rem; }
+.threat { border: 1px solid var(--line); border-radius: 6px; padding: 0.5rem; margin-bottom: 0.5rem; }
+.threat ol { margin: 0.3rem 0 0; padding-left: 1.2rem; font-size: 0.9rem; }
+.tag.act { color: var(--ok); border-color: var(--ok); } .tag.reflex { color: var(--warn); border-color: var(--warn); } .tag.brain { color: var(--accent); border-color: var(--accent); }
