@@ -9,6 +9,7 @@ const tmin = us => (us == null ? '—' : `T+${Math.round(us / MIN)}`);
 const pct = v => (v == null ? '—' : `${(v * 100).toFixed(v >= 0.995 ? 0 : 1)}%`);
 let meta = null, snap = { state: 'idle' }, view = 'power', results = null;
 let selectedAsset = null, zoom = 1, busy = false, connected = false;
+const prevTileValue = {};
 const icons = {
   water: '<path d="M12 2S5 10 5 14a7 7 0 0 0 14 0c0-4-7-12-7-12Z"/><path d="M8 14a4 4 0 0 0 4 4"/>',
   power: '<path d="m13 2-8 12h6l-1 8 9-13h-7l1-7Z"/>',
@@ -85,6 +86,7 @@ function powerMap(s) {
   for (const [b, [x, y]] of Object.entries(P)) {
     const st = busState(s, b);
     const sub = b === 'bus-1' || b === 'bus-12';
+    if (ESSENTIAL.has(b)) out.push(`<circle class="essential-halo ${st === 'dark' ? 'dark' : ''}" cx="${x}" cy="${y}" r="20"/>`);
     out.push(`<g class="asset-hit ${selectedAsset === b ? 'selected' : ''}" data-asset="${b}" role="button" tabindex="0" aria-label="Inspect ${esc(PLACES[b])}"><title>${esc(PLACES[b])} · ${esc(b)} · ${st === 'unknown' ? 'Awaiting telemetry' : st === 'dark' ? 'No power' : 'Energized'}</title><circle class="hit" cx="${x}" cy="${y}" r="23"/>`);
     out.push(sub ? `<rect class="sub ${st === 'dark' ? 'dark' : ''}" x="${x - 13}" y="${y - 13}" width="26" height="26" rx="3"/><path class="node-symbol" d="M${x - 5} ${y - 4}h10m-10 8h10m-5-12v16"/>`
       : `<circle class="bus ${st === 'dark' ? 'dark' : ''} ${ESSENTIAL.has(b) ? 'essential' : ''}" cx="${x}" cy="${y}" r="${ESSENTIAL.has(b) ? 11 : 8}"/>`);
@@ -150,6 +152,12 @@ function tile(id, label, value, sub, cls) {
     spark = `<svg class="spark" viewBox="0 0 80 25" aria-hidden="true"><path d="${values.map((v, i) => `${i ? 'L' : 'M'}${(i / (values.length - 1) * 80).toFixed(1)},${(24 - Math.max(0, Math.min(1, (v - lo) / (hi - lo))) * 22).toFixed(1)}`).join(' ')}"/></svg>`;
   }
   $(id).innerHTML = `<div class="label">${esc(label)}${icon(key)}</div><div class="value ${String(value).length > 9 ? 'long' : ''}">${esc(value)}</div><div class="sub">${esc(value === '—' ? 'Awaiting telemetry' : sub)}</div>${spark}`;
+  const changed = prevTileValue[id] !== undefined && prevTileValue[id] !== value && value !== '—';
+  prevTileValue[id] = value;
+  if (changed) {
+    const v = $(id).querySelector('.value');
+    v.classList.remove('flash'); void v.offsetWidth; v.classList.add('flash');
+  }
 }
 
 function renderTiles(s) {
@@ -188,7 +196,7 @@ function renderBrain(s) {
   $('threats').innerHTML = (lf.threats ?? []).map(t => {
     const sp = t.spread;
     const name = meta?.landmarks?.[t.assetId] ?? t.assetId;
-    return `<div class="threat"><div class="head"><span class="asset">${esc(t.assetId)}</span><span class="band">${band(t.confidence)}</span></div>
+    return `<div class="threat-card"><div class="head"><span class="asset">${esc(t.assetId)}</span><span class="band">${band(t.confidence)}</span></div>
       <div class="muted">${esc(name)} · may fail between ${tmin(t.assessedAtUs + t.windowMin[0] * MIN)} and ${tmin(t.assessedAtUs + t.windowMin[1] * MIN)}</div>
       <p class="why">${esc(t.why)} <span class="muted">(from ${esc(t.evidence.join(', '))})</span></p>
       ${(t.actNow?.chain ?? sp?.chain) ? `<div class="muted">Predicted spread with no action${t.actNow ? ` (assessed ${tmin(t.actNow.atUs)})` : ''}:</div><ol class="chain">${(t.actNow?.chain ?? sp.chain).map(x => `<li><span class="t">${tmin(x.atUs)}</span><span>${esc(x.text)}</span></li>`).join('')}</ol>` : ''}
