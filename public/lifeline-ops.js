@@ -39,6 +39,49 @@ const LABEL = { 'bus-1': [-30, 36], 'bus-2': [-40, -16], 'bus-3': [-110, 30], 'b
 const TIE_AT = { 'sw-S1': 0.45, 'sw-S2': 0.5, 'sw-S3': 0.28 };
 const TOWER = [395, 245];
 
+// Isometric building glyphs: each bus renders as a small dimensional building colored by
+// function, not by status — status reads through the ring/halo drawn around it instead,
+// so "what this is" and "is it okay" never compete for the same pixel.
+const BTYPE = {
+  substation: { top: '#cfd8dd', left: '#a3b3ba', right: '#bac7cc' },
+  clinic: { top: '#bfe3d6', left: '#8fc2b1', right: '#a7d3c4' },
+  school: { top: '#f3dc92', left: '#d9bd68', right: '#e8cd7c' },
+  industrial: { top: '#cdb7e0', left: '#a58cc0', right: '#bba3d2' },
+  depot: { top: '#f0b89a', left: '#cf8d6c', right: '#e0a383' },
+  pump: { top: '#a9c7e0', left: '#7a9ebd', right: '#92b4d0' },
+  junction: { top: '#e3dcc9', left: '#c0b595', right: '#d2c8ac' },
+  fire: { top: '#f2a28f', left: '#cf7461', right: '#e08c78' },
+  housing: { top: '#f5c9a8', left: '#d8a176', right: '#e6b78e' },
+  mall: { top: '#c3d8ec', left: '#93afc9', right: '#aac3d9' },
+};
+const BUS_TYPE = { 'bus-1': 'substation', 'bus-12': 'substation', 'bus-3': 'clinic', 'bus-4': 'school', 'bus-5': 'industrial',
+  'bus-6': 'depot', 'bus-7': 'pump', 'bus-8': 'junction', 'bus-2': 'junction', 'bus-10': 'fire', 'bus-11': 'housing', 'bus-13': 'mall', 'bus-14': 'housing' };
+const BUS_SIZE = { 'bus-1': [36, 28], 'bus-12': [36, 28], 'bus-3': [28, 22], 'bus-4': [26, 19], 'bus-5': [24, 18], 'bus-6': [24, 18],
+  'bus-7': [30, 25], 'bus-8': [20, 14], 'bus-2': [18, 12], 'bus-10': [27, 21], 'bus-11': [24, 18], 'bus-13': [27, 20], 'bus-14': [24, 18] };
+
+function isoBuilding(cx, baseY, w, h) {
+  const hw = w / 2, hh = w / 4, top = baseY - h;
+  const f = n => n.toFixed(1);
+  return {
+    top: `${f(cx)},${f(top - hh)} ${f(cx + hw)},${f(top)} ${f(cx)},${f(top + hh)} ${f(cx - hw)},${f(top)}`,
+    left: `${f(cx - hw)},${f(top)} ${f(cx)},${f(top + hh)} ${f(cx)},${f(top + hh + h)} ${f(cx - hw)},${f(top + h)}`,
+    right: `${f(cx)},${f(top + hh)} ${f(cx + hw)},${f(top)} ${f(cx + hw)},${f(top + h)} ${f(cx)},${f(top + hh + h)}`,
+  };
+}
+function isoNode(b, x, y, st) {
+  const type = BUS_TYPE[b] ?? 'junction', c = BTYPE[type];
+  const [w, h] = BUS_SIZE[b] ?? [22, 16];
+  const baseY = y + h / 4, pts = isoBuilding(x, baseY, w, h);
+  const dark = st === 'dark';
+  let out = dark ? `<circle class="iso-ring lost" cx="${x}" cy="${baseY - h / 2}" r="${w * 0.78}"/>` : '';
+  out += `<g class="iso-node ${dark ? 'dark' : ''}">
+    <polygon class="iso-top" points="${pts.top}" fill="${c.top}"/>
+    <polygon class="iso-left" points="${pts.left}" fill="${c.left}"/>
+    <polygon class="iso-right" points="${pts.right}" fill="${c.right}"/></g>`;
+  if (type === 'substation') out += `<path class="node-symbol" d="M${x - 5} ${baseY - h - 6}v-9m-5 5 5-5 5 5" stroke="#5c6a72"/>`;
+  return out;
+}
+
 async function api(path, body) {
   const r = await fetch(path, body ? { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) } : {});
   const data = await r.json();
@@ -91,7 +134,6 @@ function powerMap(s) {
   out.push(`<rect class="bus" x="${TOWER[0] - 9}" y="${TOWER[1] - 26}" width="18" height="22" rx="3"/><text class="lbl" x="${TOWER[0] - 104}" y="${TOWER[1] - 12}">water tower</text>`);
   for (const [b, [x, y]] of Object.entries(P)) {
     const st = busState(s, b);
-    const sub = b === 'bus-1' || b === 'bus-12';
     if (ESSENTIAL.has(b)) out.push(`<circle class="essential-halo ${st === 'dark' ? 'dark' : ''}" cx="${x}" cy="${y}" r="20"/>`);
     out.push(`<g class="asset-hit ${selectedAsset === b ? 'selected' : ''}" data-asset="${b}" role="button" tabindex="0" aria-label="Inspect ${esc(PLACES[b])}"><title>${esc(PLACES[b])} · ${esc(b)} · ${st === 'unknown' ? 'Awaiting telemetry' : st === 'dark' ? 'No power' : 'Energized'}</title><circle class="hit" cx="${x}" cy="${y}" r="23"/>`);
     if (b === 'bus-9') {
@@ -99,12 +141,9 @@ function powerMap(s) {
         <path class="hospital-cross" d="M13 6h4v4h4v4h-4v4h-4v-4H9v-4h4z"/>
         <rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="5" y="21" width="5" height="6"/><rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="13" y="21" width="5" height="6"/><rect class="hwin ${st !== 'dark' ? 'lit' : ''}" x="21" y="21" width="5" height="6"/></g>`);
     } else {
-      out.push(sub ? `<rect class="sub ${st === 'dark' ? 'dark' : ''}" x="${x - 13}" y="${y - 13}" width="26" height="26" rx="3"/><path class="node-symbol" d="M${x - 5} ${y - 4}h10m-10 8h10m-5-12v16"/>`
-        : `<circle class="bus ${st === 'dark' ? 'dark' : ''} ${ESSENTIAL.has(b) ? 'essential' : ''}" cx="${x}" cy="${y}" r="${ESSENTIAL.has(b) ? 11 : 8}"/>`);
-      if (b === 'bus-3') out.push(`<path class="node-symbol" d="M${x - 4} ${y}h8m-4-4v8"/>`);
-      if (b === 'bus-7') out.push(`<path class="node-symbol" d="m${x - 3} ${y - 5} 7 5-7 5Z"/>`);
+      out.push(isoNode(b, x, y, st));
     }
-    const strong = ESSENTIAL.has(b) || sub;
+    const strong = ESSENTIAL.has(b) || b === 'bus-1' || b === 'bus-12';
     const [dx, dy] = LABEL[b];
     out.push(`<text class="lbl ${st === 'dark' ? 'lost' : strong ? 'strong' : ''}" x="${x + dx}" y="${y + dy}">${esc(PLACES[b])}${st === 'dark' ? ' · NO POWER' : ''}</text>`);
     out.push('</g>');
@@ -332,13 +371,28 @@ function renderMap() {
   renderInspector();
 }
 
+function hospitalXray(dark, hasTelemetry) {
+  const off = dark ? 'off' : '';
+  return `<svg class="xray" viewBox="0 0 220 120" role="img" aria-label="Cross-section of the hospital's power and water connections">
+    <path class="xray-roof" d="M4 4 L110 -12 L216 4"/>
+    <rect class="xray-shell" x="4" y="4" width="212" height="112" rx="6"/>
+    <line class="xray-floor" x1="4" y1="62" x2="216" y2="62"/>
+    <g class="xray-bed"><rect x="18" y="18" width="24" height="14" rx="2"/><rect x="54" y="18" width="24" height="14" rx="2"/><rect x="90" y="18" width="24" height="14" rx="2"/><rect x="126" y="18" width="24" height="14" rx="2"/><rect x="170" y="18" width="30" height="14" rx="2"/></g>
+    <g class="xray-bed"><rect x="18" y="76" width="34" height="18" rx="2"/><rect x="66" y="76" width="34" height="18" rx="2"/><rect x="114" y="76" width="34" height="18" rx="2"/><rect x="162" y="76" width="38" height="18" rx="2"/></g>
+    <path class="xray-power ${off}" d="M-6 100 L30 100 L30 70"/>
+    ${hasTelemetry && !dark ? `<circle class="xray-power-pulse" r="3"><animateMotion dur="1.6s" repeatCount="indefinite"><mpath href="#xray-power-path"/></animateMotion></circle><path id="xray-power-path" d="M-6 100 L30 100 L30 70" opacity="0"/>` : ''}
+    <path class="xray-water" d="M226 100 L190 100 L190 70"/>
+    <text class="xray-label" x="30" y="114">POWER</text><text class="xray-label" x="190" y="114" text-anchor="end">WATER</text>
+  </svg>`;
+}
 function renderInspector() {
   const box = $('asset-inspector');
   box.hidden = !selectedAsset || view !== 'power';
   if (box.hidden) return;
   const state = busState(snap, selectedAsset);
   const neighbors = Object.entries(LINES).filter(([, ends]) => ends.includes(selectedAsset)).map(([id]) => id);
-  box.innerHTML = `<div><strong>${esc(PLACES[selectedAsset])}</strong><small>${esc(selectedAsset)}${ESSENTIAL.has(selectedAsset) ? ' · ESSENTIAL SERVICE' : ''}</small></div><div class="asset-reading">${snap.assets ? state === 'dark' ? 'No power' : state === 'unknown' ? 'Unknown' : 'Energized' : 'Awaiting telemetry'}<small>${neighbors.length} feeder connection${neighbors.length === 1 ? '' : 's'}</small></div><button type="button" id="close-inspector" aria-label="Close facility details">×</button>`;
+  const row = `<div class="row"><div><strong>${esc(PLACES[selectedAsset])}</strong><small>${esc(selectedAsset)}${ESSENTIAL.has(selectedAsset) ? ' · ESSENTIAL SERVICE' : ''}</small></div><div class="asset-reading">${snap.assets ? state === 'dark' ? 'No power' : state === 'unknown' ? 'Unknown' : 'Energized' : 'Awaiting telemetry'}<small>${neighbors.length} feeder connection${neighbors.length === 1 ? '' : 's'}</small></div><button type="button" id="close-inspector" aria-label="Close facility details">×</button></div>`;
+  box.innerHTML = selectedAsset === 'bus-9' ? row + hospitalXray(state === 'dark', Boolean(snap.assets)) : row;
 }
 
 function setView(v) {
