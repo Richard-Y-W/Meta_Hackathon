@@ -32,15 +32,17 @@
 
 **Files:** Create `scripts/lifeline-infra-evaluate.mjs`, `runtime/infra/analysis.py`, `runtime/infra/tests/test_analysis.py`, `docs/trials/lifeline-infrastructure-comparison-run-0.md`.
 
-- [ ] RED: aggregation must count failed actions, provider timeouts, unrecovered episodes and all declared first attempts. Test paired signs and cluster weighting on hand-calculated data.
-- [ ] GREEN: compare independent, coordinated conventional and Meta-assisted controllers using identical offered demands, faults, authority and clock rules.
-- [ ] Retain per-service effects, paired uncertainty intervals, intervention/resource costs, constraint events, worst-family outcomes and headroom.
-- [ ] Apply the frozen stop/invalid-run rules without tuning. If resources run out, mark the study incomplete and report the partial batch.
-- [ ] Classify each proposed B claim independently as supported within scope, tied/inconclusive or contradicted.
+- [x] RED: aggregation must count failed actions, provider timeouts, unrecovered episodes and all declared first attempts. Test paired signs and cluster weighting on hand-calculated data.
+- [x] GREEN: compare independent, coordinated conventional and Meta-assisted controllers using identical offered demands, faults, authority and clock rules.
+- [x] Retain per-service effects, paired uncertainty intervals, intervention/resource costs, constraint events, worst-family outcomes and headroom.
+- [x] Apply the frozen stop/invalid-run rules without tuning. If resources run out, mark the study incomplete and report the partial batch.
+- [x] Classify each proposed B claim independently as supported within scope, tied/inconclusive or contradicted.
 
 **Run:** `python3 -m unittest discover -s runtime/infra/tests -p test_analysis.py`; `node scripts/lifeline-infra-evaluate.mjs --protocol fixtures/lifeline/infra/protocol-research-v1.json --out artifacts/lifeline/infra/research-v1`.
 
 **Gate:** A complete interpretable comparison; statistical success is not required to complete the experiment.
+
+**State (Nov 3):** `complete` ([run 0](../../trials/lifeline-infrastructure-comparison-run-0.md)). B2 not supported (contradicted vs independent, inconclusive vs hybrid), B5 contradicted, B1 exploratory signal only; the Meta model changed no decision (0/17 calls); layout-C groups had no headroom.
 
 ## P19 — Identify what caused any benefit
 

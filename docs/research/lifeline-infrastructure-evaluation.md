@@ -53,7 +53,11 @@ Report the aggregate beside every service group, worst-family result, noncritica
 
 ## 4. Breakthrough ledger
 
-All B claims currently have status **unproven**.
+All B claims currently have status **unproven**, with these study outcomes recorded (Nov 3, 2026):
+
+- **B2 (research-v1, P18): not supported.** Contradicted against independent control (95% interval [−1.64, 0.00] pp, below the 0.5 pp margin) and inconclusive against coordinated conventional control ([−1.37, +0.64] pp). The Meta model changed no decision. [Run note](../trials/lifeline-infrastructure-comparison-run-0.md).
+- **B5 (research-v1): contradicted.** The critical-group lower bound was −2.2 pp for hospital and fire water.
+- **B1 (research-v1): exploratory signal only.** One positive anticipatory group out of two.
 
 | ID | Hypothesis and mechanism | Comparison | Proposed qualification target | Falsifier |
 | --- | --- | --- | --- | --- |

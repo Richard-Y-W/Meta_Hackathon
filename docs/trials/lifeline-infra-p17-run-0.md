@@ -49,3 +49,13 @@ The protocol records these numbers and the consequence: an effect between the 0.
 ## Gate
 
 The P17 gate is met. The suite is immutable (the commitments and suite hash are checked in the test), and every held-out case is structurally distinct from development and from the other held-out cases. Prompts carry no hidden truth, and the freeze preceded all outcomes. A renamed or time-shifted development case is rejected.
+
+## Correction after P18 (November 3, 2026)
+
+The gate statement above calls the suite "adequately discriminating". That was judged from structural distinctness only, and P18 shows it was too strong.
+- **Layout C.** In all 8 layout-C groups, no controller and not the perfect-information oracle had any essential deficit. Those groups can reveal only non-essential differences.
+- **Layout B.** The informative population for essential service was the 8 layout-B groups, 6 of which have headroom.
+- **Precision.** The frozen precision statement assumed 16 informative groups, so the study's precision was lower than stated.
+- **Future suites.** A suite should check headroom before freezing, with a controller-independent diagnostic such as no-action and oracle runs that report only whether essential loss is possible.
+
+The original text is kept unchanged above.
