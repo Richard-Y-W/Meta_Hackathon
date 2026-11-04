@@ -1,5 +1,9 @@
 # LIFELINE
 
+[![License: MIT](https://img.shields.io/badge/license-MIT-informational.svg)](LICENSE)
+[![Node >= 22](https://img.shields.io/badge/node-%E2%89%A522-339933?logo=node.js&logoColor=white)](package.json)
+[![Built on Meta Muse](https://img.shields.io/badge/brain-Meta%20Muse-0866FF.svg)](docs/pitch/lifeline-pitch.md)
+
 **LIFELINE detects emerging threats, predicts how failures could spread, and coordinates interventions that preserve essential services across power, water, communications, and other infrastructure.**
 
 <p align="center">
@@ -15,6 +19,8 @@
 </p>
 
 <p align="center"><sub>2:40 — cinematic cold open, then a continuous, real screen capture of an actual simulated run (not staged), with a music bed. See <a href="docs/demo/lifeline-promo.md">production notes</a>.</sub></p>
+
+**Contents:** [How it works + measured results](#lifeline-v2-think-slow-act-fast) · [Quick start](#quick-start) · [Full research log](#what-we-measured) (including the negative results) · [Deep platform setup](#platform-underneath) · [Limits](#limits)
 
 ## LIFELINE v2: think slow, act fast
 
@@ -48,13 +54,15 @@ The model never touches a switch directly. It turns what people write into speci
 
 These are six scenarios on one small simulated town, not a statistical study. In the cyber scenario LIFELINE reads the security team's alert; it does not detect intrusions.
 
-**Run it** (after the town environment below is built):
+### Quick start
 
 ```sh
 npm start                                   # loads .env (MODEL_API_KEY) → http://127.0.0.1:3210/lifeline/ops
 node --env-file-if-exists=.env scripts/lifeline-v2-run.mjs --out artifacts/lifeline/v2/my-run   # all storylines × 3 controllers
 node scripts/lifeline-v2-run.mjs --brain stub --out artifacts/lifeline/v2/offline               # no model: keyword stand-in
 ```
+
+`npm start` alone is enough for `/lifeline/ops` above. The engineering view (`/lifeline/town`) additionally needs the Python town environment built — see [Run the coupled town](#run-the-coupled-town-host-only-no-vm-needed) below.
 
 The operations view (`/lifeline/ops`) follows control-room display practice: a neutral map where color marks only lost (red), threatened (amber) or changed-by-LIFELINE (blue); detect → predict → coordinate panels; a power/water toggle; a timeline; and the recorded comparison. Pitch script: [docs/pitch/lifeline-pitch.md](docs/pitch/lifeline-pitch.md). Promo video: [docs/demo/lifeline-promo.mp4](docs/demo/lifeline-promo.mp4) (2:40 — [notes](docs/demo/lifeline-promo.md)).
 
@@ -82,6 +90,12 @@ The operations view (`/lifeline/ops`) follows control-room display practice: a n
 </table>
 
 ## Platform underneath
+
+LIFELINE v2 (above) is what we're submitting. Everything below is the research platform and
+full evaluation log underneath it — including the earlier architecture that **didn't** work and
+the experiments that said so. We're including it because the honest version of this story (an
+architecture that works, built directly on evidence from one that didn't) is the more convincing
+one, not because a hackathon README is supposed to grade its own homework.
 
 - An emergency-communications prototype on a real packet network, with a Meta-assisted investigator.
 - Qualified power (pandapower) and water (EPANET 2.2 via WNTR) plants, each with conventional controls and scored forecasts.
@@ -205,6 +219,10 @@ The town is a small development model:
 
 No claim about lives saved, real emergency traffic, utility operation or field deployment.
 
-## Legacy prototype
+## Appendix: earlier prototype
 
-The earlier **Blackbox Apprentice** device-learning demo still runs at `http://127.0.0.1:3210/` (`npm start`, no VM needed). Its notes are in [docs/competition.md](docs/competition.md). Its results are separate and are not LIFELINE results.
+Before LIFELINE, this repo started as **Blackbox Apprentice**, a device-learning demo (an agent
+discovering an unfamiliar control mechanism through experiment). It still runs at
+`http://127.0.0.1:3210/` (`npm start`, no VM needed) and its notes are in
+[docs/competition.md](docs/competition.md), kept for history. Its results are separate and are
+not LIFELINE results.

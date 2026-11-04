@@ -1,9 +1,10 @@
 {
-  "name": "blackbox-apprentice",
-  "version": "0.1.0",
+  "name": "lifeline",
+  "version": "2.0.0",
   "private": true,
   "type": "module",
-  "description": "Observation-driven discovery and control of unfamiliar devices",
+  "description": "AI operations layer for critical infrastructure: reads human-written warning signs, verifies every response in physics simulation, and arms interventions before failures spread.",
+  "homepage": "https://github.com/Richard-Y-W/Meta_Hackathon",
   "engines": { "node": ">=22" },
   "scripts": {
     "dev": "node --env-file-if-exists=.env server.mjs",
