@@ -92,3 +92,24 @@ test('the stub brain reads the storylines as intended (offline rehearsal only)',
   const r = parseBrain((await stubBrain()({ prompt: p.text })).text, p);
   assert.deepEqual([r.threats.length, r.dismissed.length], [0, 1]);
 });
+
+test('RED: in a live session the town keeps running during the model call; act-now plans from the model snapshot time', async () => {
+  // Live regression (Nov 3): the brain previewed "act now" at the request time, which the running town had
+  // already passed, and the worker rejected the plan as in the past.
+  const story = STORIES.find(s => s.id === 'storm-north-ridge');
+  const requestedUs = 15 * MIN, snapshotUs = 27 * MIN;
+  const loss = { waterEssentialUnmetM3: 20, powerEssentialUnservedJ: 5e9, waterNonessentialUnmetM3: 0, constraintSeconds: 0, fuelUsedJ: {}, events: [], firstEssentialLossUs: 55 * MIN };
+  const none = { ...loss, waterEssentialUnmetM3: 0, powerEssentialUnservedJ: 0, firstEssentialLossUs: null };
+  const town = { ...fakeTown(), admittedModel: async () => ({ modelId: 'm', atUs: snapshotUs }),
+    preview: async (plan, m, assume) => {
+      for (const s of plan.steps) if (s.atUs < snapshotUs || s.atUs % MIN) throw Object.assign(new Error('invalid_plan: step is off the coupling grid or in the past'), { code: 'invalid_plan' });
+      for (const a of assume) if (a.atUs <= snapshotUs) throw new Error('assumption in the past');
+      const tie = plan.steps.some(s => s.action.type === 'set_switch');
+      return assume.length && !tie ? loss : none;
+    } };
+  const shared = { threats: [], advisory: null, calls: [], log: [] };
+  const brain = brainLayer({ policy: POLICY, callModel: stubBrain(), reports: story.reports, shared, log: e => shared.log.push(e) });
+  const plan = await brain.decide({ town, nowUs: requestedUs, obs: await town.observe() });
+  assert.equal(plan.planId, 'brain-act-now');
+  assert.ok(plan.steps.every(s => s.atUs >= snapshotUs));
+});

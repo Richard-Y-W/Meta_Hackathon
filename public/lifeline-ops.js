@@ -218,7 +218,10 @@ function renderResults() {
     const title = meta?.cases?.find(c => c.caseId === st)?.title ?? st;
     return `<tr><td>${esc(title)}</td>${ctrls.map(c => { const r = rs[c]; if (!r) return '<td class="n">—</td>';
       const lost = r.waterEssentialUnmetM3 > 0.01 || r.powerEssentialUnservedJ > 1e6;
-      return `<td class="n ${cell(r) === best && c === 'lifeline' ? 'best' : lost ? 'lost' : ''}">${r.waterEssentialUnmetM3.toFixed(1)} m³ · ${mj(r.powerEssentialUnservedJ)}</td>`; }).join('')}</tr>`;
+      // Blue only where LIFELINE is best and either lost nothing or did strictly better than every other controller.
+      const others = ctrls.filter(k => k !== c).map(k => cell(rs[k])).filter(v => v != null);
+      const win = c === 'lifeline' && cell(r) === best && (!lost || others.every(v => cell(r) < v));
+      return `<td class="n ${win ? 'best' : lost ? 'lost' : ''}">${r.waterEssentialUnmetM3.toFixed(1)} m³ · ${mj(r.powerEssentialUnservedJ)}</td>`; }).join('')}</tr>`;
   }).join('');
   $('results').innerHTML = `<table><thead><tr><th>Scenario (essential loss: hospital/fire water · essential power)</th>${ctrls.map(c => `<th class="n">${names[c]}</th>`).join('')}</tr></thead><tbody>${body}</tbody></table>`;
 }

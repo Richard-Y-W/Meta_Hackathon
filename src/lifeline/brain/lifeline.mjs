@@ -77,8 +77,9 @@ const EVENT_TEXT = {
   generator_fuel_exhausted: () => 'portable generator out of fuel', generator_overload: () => 'portable generator overloaded',
 };
 // Predicted spread of one threat: the cascade with no intervention, from the coupled simulation.
-export async function predictSpread({ town, modelId, nowUs, threat, horizonUs, gridUs = 60 * S }) {
-  const tripAt = nowUs + Math.ceil(Math.max(threat.windowMin[0], 1) * MIN / gridUs) * gridUs;
+export async function predictSpread({ town, modelId, nowUs, earliestUs = nowUs, threat, horizonUs, gridUs = 60 * S }) {
+  // The window is relative to when the brain was asked; the trip cannot be simulated before the snapshot.
+  const tripAt = Math.max(nowUs + Math.ceil(Math.max(threat.windowMin[0], 1) * MIN / gridUs) * gridUs, earliestUs + gridUs);
   const assume = [{ domain: 'power', faultId: `brain-${threat.id}`, atUs: tripAt, type: threatType(threat.assetId), assetId: threat.assetId }];
   const dark = GRID.lines[threat.assetId] ? deenergized([threat.assetId]) : ['all buses'];
   const o = await town.preview({ steps: [], horizonUs }, modelId, assume);
@@ -129,17 +130,20 @@ export function brainLayer({ policy, callModel, reports = [], providerCapS = 45,
       const parsed = parseBrain(res.text, prompt);
       call.parse = parsed.ok ? 'ok' : parsed.code;
       if (!parsed.ok) { log({ kind: 'brain', atUs: nowUs, text: `brain answer rejected (${parsed.code}); previous threats kept` }); return { planId: 'brain-rejected', steps: [], redecideAtUs: nowUs + policy.gridUs }; }
-      const { modelId } = await town.admittedModel();
-      const horizonUs = Math.min(policy.durationUs - nowUs, 150 * MIN);
+      // In a live session the town keeps running while the model thinks; plan from the time of the model
+      // snapshot actually simulated (in batch runs the world waits, and this equals the request time).
+      const { modelId, atUs } = await town.admittedModel();
+      const baseUs = Math.max(nowUs, atUs ?? nowUs);
+      const horizonUs = Math.min(policy.durationUs - baseUs, 150 * MIN);
       const threats = [], steps = [];
       const quiet = horizonUs > 0 ? await town.preview({ steps: [], horizonUs }, modelId, []) : null;
       let allocated = Boolean(state.resources['gen-portable']?.allocatedTo);
       for (const t of parsed.threats) {
-        const spread = horizonUs > 0 ? await predictSpread({ town, modelId, nowUs, threat: t, horizonUs, gridUs: policy.gridUs }) : null;
+        const spread = horizonUs > 0 ? await predictSpread({ town, modelId, nowUs, earliestUs: baseUs, threat: t, horizonUs, gridUs: policy.gridUs }) : null;
         const reflex = GRID.lines[t.assetId] ? reflexTies(deenergized([t.assetId]), state.layout ?? DEFAULT_LAYOUT) : [];
         const threat = { ...t, assessedAtUs: nowUs, spread, reflex };
         log({ kind: 'threat', atUs: nowUs, text: `threat ${t.assetId} in ${t.windowMin[0]}-${t.windowMin[1]} min (confidence ${t.confidence}): ${t.why}`, threat });
-        const act = horizonUs > 0 ? await preArm({ town, modelId, nowUs, threat, spread, horizonUs, quiet, allocated }) : null;
+        const act = horizonUs > 0 ? await preArm({ town, modelId, nowUs: baseUs, threat, spread, horizonUs, quiet, allocated }) : null;
         const before = shared.threats.find(x => x.assetId === t.assetId && x.actNow);
         if (before && !act) threat.actNow = { ...before.actNow, done: true }; // already protected by an earlier act-now
         if (act) {
